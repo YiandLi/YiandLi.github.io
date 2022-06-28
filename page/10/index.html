@@ -177,6 +177,483 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Python%E5%BA%93/Pytorch/1.2.%20Torch.tensor%E8%AE%A1%E7%AE%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Python%E5%BA%93/Pytorch/1.2.%20Torch.tensor%E8%AE%A1%E7%AE%97/" class="post-title-link" itemprop="url">1.2 torch.tensor 计算</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:08:30" itemprop="dateCreated datePublished" datetime="2021-09-22T23:08:30+08:00">2021-09-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-05-21 20:05:53" itemprop="dateModified" datetime="2022-05-21T20:05:53+08:00">2022-05-21</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="tensor内部"><a class="markdownIt-Anchor" href="#tensor内部"></a> tensor内部</h2>
+<h3 id="平方根"><a class="markdownIt-Anchor" href="#平方根"></a> 平方根</h3>
+<ul>
+<li>内部方法：<code>tensor.sqrt()</code></li>
+<li>torch函数形式：<code>torch.sqrt()</code><br />
+这两个方法需要设置返回tensor来接收。</li>
+<li>原地操作：<code>tensor.sqrt_</code></li>
+</ul>
+<h3 id="求和"><a class="markdownIt-Anchor" href="#求和"></a> 求和</h3>
+<p><code>tensor.sum()</code>和<code>torch.sum()</code><br />
+注意可以传入维度列表参数选定维度。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[  0,   1],</span><br><span class="line">        [  2,   3],</span><br><span class="line">        [100, 100]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.sum(1)</span><br><span class="line">tensor([  1,   5, 200])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.sum(0)</span><br><span class="line">tensor([102, 104])</span><br></pre></td></tr></table></figure>
+<h2 id="tensor间"><a class="markdownIt-Anchor" href="#tensor间"></a> tensor间</h2>
+<p>注意两 tensor 的 dtype 一致。</p>
+<h3 id="element-wise"><a class="markdownIt-Anchor" href="#element-wise"></a> element wise</h3>
+<p><code>= - * /</code> 或者 <code>add()</code>,<code>sub()</code>,<code>mul()</code>,<code>dic()</code></p>
+<p>如果张量中只有一个元素，可以使用<code>tensor.item()</code>得到这个单一元素。</p>
+<h3 id="矩阵乘法点乘方法"><a class="markdownIt-Anchor" href="#矩阵乘法点乘方法"></a> 矩阵乘法/点乘方法</h3>
+<p><code>tensor1 @ tensor2.T</code> ，是 <code>matmul</code> 的缩写。</p>
+<p><code>tensor1.matmul(tensor2.T)</code> / <code>torch.matmul()</code></p>
+<ul>
+<li>如果两个tensor都是一维的，则为点乘运算，每个元素对应相乘求和。</li>
+<li>如果两个都是二维的，那么就如同<code>torch.mm</code>。</li>
+<li>如果第一个入参是一维的，第二个入参是二维的，则第一个参数增加一个一维，做<strong>矩阵乘法</strong>，结果然后去掉一维。</li>
+<li>如果第一个入参是二维的，第二个是一维，则将第二个参数扩展一维，做矩阵乘法。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.tensor([[1,2],[2,3]])</span><br><span class="line">&gt;&gt;&gt; b = torch.tensor([1,-1])</span><br><span class="line">&gt;&gt;&gt; a.matmul(b)</span><br><span class="line">tensor([-1, -1])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>最后如果维度不同，涉及到batch乘法，<strong>（广播后）batch维度匹配</strong>：
+<ul>
+<li>两边shape的rank要相同，最后两维是用来做mm计算的</li>
+<li>如果shape的rank不同，则可以通过广播使得batch维度相同。<br />
+如<code>matmul(shape(10,4,2),shape(2,3))</code>则变为 <code>matmul(shape(10,4,2),shape(1,2,3))</code></li>
+</ul>
+</li>
+</ul>
+<p><code>tensor1.mm(tensor2.T)</code> / <code>torch.mm()</code></p>
+<ul>
+<li>不建议使用：仅提供矩阵相乘使用，使用范围较为狭窄。</li>
+<li>如果维度超过二维，则会报错。RuntimeError: self must be a matrix</li>
+</ul>
+<p><code>tensor1.bmm(tensor2)</code> / <code>torch.bmm()</code><br />
+batch-mm，不推荐，因为不支持自动broadcast。</p>
+<h3 id="torcheinsum"><a class="markdownIt-Anchor" href="#torcheinsum"></a> torch.einsum()</h3>
+<p>利用了爱因斯坦求和简介高效的表示方法，从而表示任何复杂的矩阵计算操作。</p>
+<h4 id="原理"><a class="markdownIt-Anchor" href="#原理"></a> 原理</h4>
+<p>缩并（Contraction）：对于更大维度的tensor乘法，需要决定tensor乘积结果需要沿着哪些维度求和。</p>
+<p>现在考虑情况 <code>shape(3,3,3,2)</code> 和 <code>shape(2,4,2,3)</code> ，将最后两维度看作instance。<br />
+我们想求，前后每两个instance的矩阵乘法结果。即答案为<code>shape(3,3,2,4,3,3)</code>，用<code>@</code>是无法求的，因为这不是batch乘法。<br />
+同时即使维度相同，有时候也表示不同的batch/特征维度，还是两两相乘。</p>
+<p>对于<code>einsum(A,B) =C</code>，首先将对应维度的下标（和维度无关）分为三类：</p>
+<ul>
+<li>ABC都共享：则下标对应的一系列元素需要作两两乘积（张量积）。</li>
+<li>AB共享，C不共享：下表对应的元素需要做乘积求和（内积）。</li>
+<li>AB共享，且维度相同，C只出现一次：按位置做乘法。</li>
+</ul>
+<h4 id="方法"><a class="markdownIt-Anchor" href="#方法"></a> 方法</h4>
+<ul>
+<li>输入的参数：
+<ul>
+<li><code>quation (str)</code>：输入tensor的下标和输出tensor的形状，以不同字母作区分。</li>
+<li><code>operands (Tensor, [Tensor, …])</code>：数量及维度需与前面对应</li>
+</ul>
+</li>
+<li>规则：
+<ul>
+<li>两个矩阵重复的index，会作乘积求和</li>
+<li>省略的index会被加和</li>
+<li>可以任意转换维度</li>
+</ul>
+</li>
+<li>自由标和哑标：输入标记中仅出现一次的下标为自由标（free index），重复出现的下标为哑标（dummy/summation index），哑标对应的维度分量将被规约消去。</li>
+<li>广播维度：省略号<code>...</code>表示维度的广播分量，例如，<code>i…j</code> 表示首末分量除外的维度需进行广播对齐</li>
+<li><a target="_blank" rel="noopener" href="https://viatorsun.blog.csdn.net/article/details/122710515?spm=1001.2101.3001.6650.1&amp;utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ELandingCtr%7ERate-1.queryctrv4&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ELandingCtr%7ERate-1.queryctrv4&amp;utm_relevant_index=2">具体计算参考博客</a></li>
+</ul>
+<h4 id="例子"><a class="markdownIt-Anchor" href="#例子"></a> 例子</h4>
+<p>一些乘法操作：</p>
+<ul>
+<li>Matrix Mult</li>
+<li>Element-wise Mult/哈达玛积</li>
+<li>Permutation</li>
+<li>Dot product/Inner product：对应矩阵元素的积之和（形状相同）,sum(element_wise_dot)</li>
+<li>Outer product/张量积: shape(m),shape(n)-&gt;shape(m,n)</li>
+<li>Specific Summation</li>
+<li>Batch Matrix Mult</li>
+<li>教程：<a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1XZ4y1Q7Ya?spm_id_from=333.337.search-card.all.click">https://www.bilibili.com/video/BV1XZ4y1Q7Ya?spm_id_from=333.337.search-card.all.click</a></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[[ 0,  1,  2],</span><br><span class="line">         [ 3,  4,  5]],</span><br><span class="line">        [[ 6,  7,  8],</span><br><span class="line">         [ 9, 10, 11]]])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>permutation</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ijk-&gt;jik&quot;, a)</span><br><span class="line">tensor([[[ 0,  1,  2],</span><br><span class="line">         [ 6,  7,  8]],</span><br><span class="line">        [[ 3,  4,  5],</span><br><span class="line">         [ 9, 10, 11]]])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>column sum</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ijk-&gt;ik&quot;, a)</span><br><span class="line">tensor([[ 3,  5,  7],</span><br><span class="line">        [15, 17, 19]])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>row sum</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ijk-&gt;ij&quot;, a)</span><br><span class="line">tensor([[ 3, 12],</span><br><span class="line">        [21, 30]])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Matrix Mult, <code>matmul()</code></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a.shape</span><br><span class="line">torch.Size([2, 3, 4])</span><br><span class="line">&gt;&gt;&gt; b.shape</span><br><span class="line">torch.Size([2, 4, 3])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; torch.einsum(&quot;bnk,bkl-&gt;bnl&quot;, a,b).shape</span><br><span class="line">torch.Size([2, 3, 3])</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Dot product</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ijk,ijk-&gt;&quot;,a,a)</span><br><span class="line">tensor(506)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Element-wise Mult</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ij,ij-&gt;ij&quot;,a,a)</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Python%E5%BA%93/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Python%E5%BA%93/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/" class="post-title-link" itemprop="url">1.3 torch.tensor 极值和排序</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:08:30" itemprop="dateCreated datePublished" datetime="2021-09-22T23:08:30+08:00">2021-09-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-05-23 14:24:49" itemprop="dateModified" datetime="2022-05-23T14:24:49+08:00">2022-05-23</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="argmax-argmin"><a class="markdownIt-Anchor" href="#argmax-argmin"></a> argmax() / argmin()</h2>
+<p><code>tensor.argmax()</code>，传入维度<br />
+<code>torch.argmax()</code>，传入tensor和维度<br />
+返回的是每个维度对应的序号</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.tensor(</span><br><span class="line">            [[0, 1, 2],</span><br><span class="line">            [3, 10, 5],</span><br><span class="line">            [60, 7, 1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(0)</span><br><span class="line">tensor([2, 1, 1])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(1)</span><br><span class="line">tensor([2, 1, 0])</span><br></pre></td></tr></table></figure>
+<h2 id="max-min"><a class="markdownIt-Anchor" href="#max-min"></a> max() / min()</h2>
+<p>返回位置和具体的值，返回的是元组形式。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a.max(1)</span><br><span class="line">torch.return_types.max(</span><br><span class="line">    values=tensor([ 2, 10, 60]),</span><br><span class="line">    indices=tensor([2, 1, 0]))</span><br></pre></td></tr></table></figure>
+<p>使用<code>a.max(1)[1]</code>来得到最大值结果。</p>
+<h2 id="sort"><a class="markdownIt-Anchor" href="#sort"></a> sort()</h2>
+<p><code>tensor.sort()</code> / <code>torch.sort()</code><br />
+排序并且返回一个<code>namedtuple</code>:<code>(values, indices)</code>，即排序后的tensor，和tensor元素的原始位置。</p>
+<p>参数：</p>
+<ul>
+<li><code>dim (int, optional)</code></li>
+<li><code>descending = False (bool, optional)</code>：是否降序，默认为False（升序）</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[ 0,  1,  2],</span><br><span class="line">        [ 3, 10,  5],</span><br><span class="line">        [60,  7,  1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.sort(0)</span><br><span class="line">torch.return_types.sort(</span><br><span class="line">values=tensor([[ 0,  1,  1],</span><br><span class="line">                [ 3,  7,  2],</span><br><span class="line">                [60, 10,  5]]),</span><br><span class="line">indices=tensor([[0, 0, 2],</span><br><span class="line">                [1, 2, 0],</span><br><span class="line">                [2, 1, 1]]))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a = torch.ones(2,3)</span><br></pre></td></tr></table></figure>
+<p>使用<code>a.sort(1)[0]</code>得到排序后结果。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Python%E5%BA%93/Pytorch/1.%20Torch.tensor/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Python%E5%BA%93/Pytorch/1.%20Torch.tensor/" class="post-title-link" itemprop="url">1. torch.tensor</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:08:29" itemprop="dateCreated datePublished" datetime="2021-09-22T23:08:29+08:00">2021-09-22</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-05-24 13:45:34" itemprop="dateModified" datetime="2022-05-24T13:45:34+08:00">2022-05-24</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="tensors-介绍"><a class="markdownIt-Anchor" href="#tensors-介绍"></a> Tensors 介绍</h2>
+<p>和<code>ndarray</code>类似，区别在于<code>tensor</code>可以在GPU或者其他硬件上运行。<br />
+<code>tensor</code>和<code>ndarray</code>共享底层空间，所以不需要再次拷贝数据。</p>
+<h2 id="tensor-属性"><a class="markdownIt-Anchor" href="#tensor-属性"></a> Tensor 属性</h2>
+<ul>
+<li><code>tensor.shape</code></li>
+<li><code>tensor.dtype</code></li>
+<li><code>tensor.device</code>：当前张量的设备名</li>
+</ul>
+<h2 id="tensor-构造方法"><a class="markdownIt-Anchor" href="#tensor-构造方法"></a> Tensor 构造方法</h2>
+<h3 id="从数组创建"><a class="markdownIt-Anchor" href="#从数组创建"></a> 从数组创建</h3>
+<ul>
+<li><code>torch.tensor(arr)</code></li>
+</ul>
+<h3 id="从ndarray创建"><a class="markdownIt-Anchor" href="#从ndarray创建"></a> 从<code>ndarray</code>创建</h3>
+<ul>
+<li><code>torch.from_numpy(ndarray)</code>：从<code>ndarray</code>创建</li>
+</ul>
+<h3 id="从其他的tensor创建"><a class="markdownIt-Anchor" href="#从其他的tensor创建"></a> 从其他的tensor创建</h3>
+<p>默认<code>shape</code>和<code>dtype</code>一致。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">t = torch.randn(3,3)</span><br><span class="line"></span><br><span class="line">torch.zeros_like(t)</span><br><span class="line">torch.ones_like(t)</span><br><span class="line">torch.rand_like(t)</span><br><span class="line">torch.randn_like(t)</span><br></pre></td></tr></table></figure>
+<h3 id="随机值或者任意值填充"><a class="markdownIt-Anchor" href="#随机值或者任意值填充"></a> 随机值或者任意值填充</h3>
+<p>指定张量的形状，返回给定形状的张量。<br />
+注意：<br />
+形状参数可以传入列表 <code>[1,2,3]</code>或者组<code>(1,2,3)</code>，也可以直接当做参数传入 <code>1,2,3</code>。<br />
+同时直接以参数形式传入，可以在后面使用<code>dtype</code>参数设置类型。</p>
+<ul>
+<li><code>torch.rand()</code>生成的服从<code>[0，1)</code>上的<strong>均匀分布</strong>。</li>
+<li><code>torch.randn()</code>生成的张量服从平均值为 0 ，标准差为 1 的<strong>正态分布</strong>。</li>
+<li><code>torch.zeros()</code>生成全为 0 的张量，<code>ones()</code>全为 1 。</li>
+<li><code>torch.eye(n)</code>生成 n*n 单位矩阵</li>
+<li><code>torch.randint(0,10, (3,3))</code> 生成 <code>[0,10)</code> 均匀分布整数的矩阵。</li>
+<li><code>torch.full(shape, fill_value)</code>生成一个尺寸为<code>shape</code>参数的<code>tensor</code>，元素全都哦是<code>fill_value</code>，数据类型为<code>torch.float</code>。</li>
+</ul>
+<h3 id="与numpy共享内存"><a class="markdownIt-Anchor" href="#与numpy共享内存"></a> 与Numpy共享内存</h3>
+<p>在CPU中的张量可以与Numpy数组共享底层内存地址。<br />
+同时，改变其中一个，同时会改变另一个数值。</p>
+<ul>
+<li><code>tensor.numpy()</code>：tensor转ndarray</li>
+<li><code>torch.from_numpy(ndarray)</code>：ndarray转ndarray</li>
+</ul>
+<h2 id="设置存储设备"><a class="markdownIt-Anchor" href="#设置存储设备"></a> 设置存储设备</h2>
+<p>CPU / GPU<br />
+两个或者多个张量之间的运算，只有在<strong>相同的设备</strong>上才能进行。<br />
+没有指定设备时，张量会被<strong>默认创建在CPU上</strong>。想转移 GPU 时，需要指定 目标GPU设备。<br />
+将大型数组拷贝到GPU中需要耗费大量时间和资源。<br />
+一般 GPU 设备以 <code>cuda:0</code>,<code>cuda:1</code>,… 指定。 查看显卡的信息可以使用<code>nvidia-smi</code>命令。</p>
+<h3 id="设置设备"><a class="markdownIt-Anchor" href="#设置设备"></a> 设置设备</h3>
+<h4 id="创建时设置"><a class="markdownIt-Anchor" href="#创建时设置"></a> 创建时设置</h4>
+<p>在前面创建张量的方法中，可以使用<code>device</code>参数来选择存储位置。</p>
+<h4 id="创建后转移"><a class="markdownIt-Anchor" href="#创建后转移"></a> 创建后转移</h4>
+<ul>
+<li>使用转移方法<code>.to</code>：<code>to(&quot;cpu&quot;)</code> / <code>to(&quot;cuda&quot;)</code> / <code>to(&quot;cuda:1&quot;)</code></li>
+<li>直接使用 <code>cpu()</code>，<code>cuda()</code>方法。<code>cuda()</code> 方法可以传入目标设备编号参数。<br />
+<strong>注意方法不会更改原始张量的存储设备，而是会返回一个新的在指定设备上的张量。</strong></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.rand(2,2)</span><br><span class="line">&gt;&gt;&gt; a.device</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.to(&quot;cuda:1&quot;).device</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.cuda(2).device</span><br></pre></td></tr></table></figure>
+<h3 id="常用方法"><a class="markdownIt-Anchor" href="#常用方法"></a> 常用方法</h3>
+<p>开局指定一个设备，赋值给 <code>device</code> 参数，后面直接调用 <code>.to()</code> 方法。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">device = &#x27;cuda&#x27; if torch.cuda.is_available() else &#x27;cpu&#x27;</span><br><span class="line">print(&#x27;Using &#123;&#125; device&#x27;.format(device))</span><br><span class="line"></span><br><span class="line">if torch.cuda.is_available():</span><br><span class="line">    tensor = tensor.to(&#x27;cuda&#x27;)</span><br></pre></td></tr></table></figure>
+<h2 id="维度相关的方法"><a class="markdownIt-Anchor" href="#维度相关的方法"></a> 维度相关的方法</h2>
+<h3 id="查询一些属性"><a class="markdownIt-Anchor" href="#查询一些属性"></a> 查询一些属性</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">t = torch.randn(3,4)</span><br><span class="line">t.ndimension() # 维度数目：2</span><br><span class="line">t.nelement() # 张量元素总数：12</span><br><span class="line">t.size() / t.shape # 张量每个维度的大小：torch.Size([2, 3])</span><br><span class="line">t.size(0) # 张量维度0的大小：3</span><br></pre></td></tr></table></figure>
+<h3 id="改变形状元素类型"><a class="markdownIt-Anchor" href="#改变形状元素类型"></a> 改变形状/元素类型</h3>
+<h4 id="view"><a class="markdownIt-Anchor" href="#view"></a> view()</h4>
+<p><code>t.view()</code>，可以传入<code>*shape</code>或者<code>dtype</code>来返回一个新的视图。<br />
+该方法<strong>不改变底层数据</strong>，即地址相同，存储方式都是<strong>横向线性</strong>的。修改「view后张量」会改变「原来的张量」。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.ones(2,2)</span><br><span class="line">&gt;&gt;&gt; b = a.view(-1)</span><br><span class="line">tensor([1., 1., 1., 1.])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; b[0] = 0</span><br><span class="line">&gt;&gt;&gt; b</span><br><span class="line">tensor([0., 1., 1., 1.])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[0., 1.],</span><br><span class="line">        [1., 1.]])</span><br></pre></td></tr></table></figure>
+<p>获取数据指针（地址）：<code>data_ptr()</code>方法。<br />
+当用另一个变量得到<code>view()</code>的结果后，地址会改变，但是变量本身的地址不变。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a.data_ptr() == a.view(-1).data_ptr()</span><br><span class="line">True</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.transpose(0,1).data_ptr()  == a.data_ptr()</span><br><span class="line">True</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; b = a.view(-1)</span><br><span class="line">&gt;&gt;&gt; b.data_ptr() == a.data_ptr()</span><br><span class="line">True</span><br></pre></td></tr></table></figure>
+<p><code>view()</code>只是重新定义了访问张量的规则，使得取出的张量按照我们希望的形状展现。<br />
+即只是重新定义下标与元素的对应关系的。换句话说，这种操作不进行数据拷贝和数据的改变，变的是元数据。这些操作是 <code>narrow()</code>，<code>view()</code>，<code>expand()</code>和<code>transpose()</code>。<br />
+转置的tensor和原tensor的内存是共享的！<br />
+当调用<code>contiguous()</code>时，会强制拷贝一份tensor。<br />
+总之，如果想要新建一个新的tensor，就加上<code>contiguous()</code>吧，或者以后都加上吧。</p>
+<h4 id="reshape"><a class="markdownIt-Anchor" href="#reshape"></a> reshape()</h4>
+<p>当维度不兼容时，会加上<code>contiguous()</code>方法，这时采用直接调用<code>reshape()</code>方法，自动生成一个新的张量（等于<code>view()</code>+<code>contiguous()</code>）。<br />
+区别是<code>view()</code>只能操作contiguous的tensor，且<code>view()</code>后的tensor和原tensor共享存储，<code>reshape()</code>对于是否contiuous的tensor都可以操作。</p>
+<h2 id="contiguous"><a class="markdownIt-Anchor" href="#contiguous"></a> contiguous()</h2>
+<p>由于pytorch的底层实现是C，也就是行优先存储。<br />
+由最后输出的faltten后的结果可以看出存储的内容确实改变了，由此完全弄懂了为什么有的时候要contiguous。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt;t = torch.arange(12).reshape(3,4)</span><br><span class="line">&gt;&gt;&gt;t</span><br><span class="line">tensor([[ 0,  1,  2,  3],</span><br><span class="line">        [ 4,  5,  6,  7],</span><br><span class="line">        [ 8,  9, 10, 11]])</span><br><span class="line">&gt;&gt;&gt;t.stride()</span><br><span class="line">(4, 1)</span><br><span class="line">&gt;&gt;&gt;t2 = t.transpose(0,1)</span><br><span class="line">&gt;&gt;&gt;t2</span><br><span class="line">tensor([[ 0,  4,  8],</span><br><span class="line">        [ 1,  5,  9],</span><br><span class="line">        [ 2,  6, 10],</span><br><span class="line">        [ 3,  7, 11]])</span><br><span class="line">&gt;&gt;&gt;t2.stride()</span><br><span class="line">(1, 4)</span><br><span class="line">&gt;&gt;&gt;t.data_ptr() == t2.data_ptr() # 底层数据是同一个一维数组</span><br><span class="line">True</span><br><span class="line">&gt;&gt;&gt;t.is_contiguous(),t2.is_contiguous() # t连续，t2不连续</span><br><span class="line">(True, False)</span><br><span class="line">&gt;&gt;&gt;print(t1.flatten())</span><br><span class="line">tensor([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11])</span><br><span class="line">&gt;&gt;&gt;t2 = t2.contiguous()</span><br><span class="line">&gt;&gt;&gt;print(t2.flatten())</span><br><span class="line">tensor([ 0,  4,  8,  1,  5,  9,  2,  6, 10,  3,  7, 11])</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Python%E5%BA%93/Numpy/13.%E6%95%B0%E7%BB%84%E7%9A%84%E5%89%AF%E6%9C%AC%E5%92%8C%E8%A7%86%E5%9B%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Python%E5%BA%93/Numpy/13.%E6%95%B0%E7%BB%84%E7%9A%84%E5%89%AF%E6%9C%AC%E5%92%8C%E8%A7%86%E5%9B%BE/" class="post-title-link" itemprop="url">13.数组的副本和视图</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-09-22 16:42:16 / Modified: 18:12:15" itemprop="dateCreated datePublished" datetime="2021-09-22T16:42:16+08:00">2021-09-22</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="副本和视图"><a class="markdownIt-Anchor" href="#副本和视图"></a> 副本和视图</h2>
+<h3 id="副本"><a class="markdownIt-Anchor" href="#副本"></a> 副本</h3>
+<p>是一个数据的完整的拷贝，如果我们对副本进行修改，它不会影响到原始数据，物理内存不在同一位置。</p>
+<ul>
+<li><code>ndarray.copy()</code> 函数创建一个副本。 对副本数据进行修改，不会影响到原始数据，它们物理内存不在同一位置。</li>
+</ul>
+<h3 id="视图"><a class="markdownIt-Anchor" href="#视图"></a> 视图</h3>
+<p>数据的一个别称或引用，通过该别称或引用亦便可访问、操作原有数据，但原有数据不会产生拷贝。<br />
+如果我们对视图进行修改，它会影响到原始数据，物理内存在同一位置。<br />
+- numpy 的<strong>切片操作</strong>返回原数据的视图。<br />
+- 调用 ndarray 的 <code>view()</code> 函数产生一个视图。</p>
+<ul>
+<li><code>ndarray.view()</code> 方会创建一个新的数组对象，该方法创建的新数组的维数变化不会改变原始数据的维数。</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Python%E5%BA%93/Numpy/12.%E6%8E%92%E5%BA%8F%E3%80%81%E6%9D%A1%E4%BB%B6%E7%AD%9B%E9%80%89%E5%87%BD%E6%95%B0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -749,396 +1226,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/20/Python%E5%BA%93/Numpy/6.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E6%8B%BC%E6%8E%A5%E5%92%8C%E5%88%86%E5%89%B2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/20/Python%E5%BA%93/Numpy/6.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E6%8B%BC%E6%8E%A5%E5%92%8C%E5%88%86%E5%89%B2/" class="post-title-link" itemprop="url">6.数组操作-拼接和分割</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-20 14:41:05" itemprop="dateCreated datePublished" datetime="2021-09-20T14:41:05+08:00">2021-09-20</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-09-22 18:12:15" itemprop="dateModified" datetime="2021-09-22T18:12:15+08:00">2021-09-22</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="拼接数组"><a class="markdownIt-Anchor" href="#拼接数组"></a> 拼接数组</h2>
-<ul>
-<li><code>numpy.concatenate((a1, a2, ...), axis=0, out=None, dtype=None, casting=&quot;same_kind&quot;)</code><br />
-沿指定轴连接相同形状的两个或多个数组，
-<ul>
-<li><code>axis</code>：被拼接的轴，默认为0，对二维数组来说表示纵向拼接。</li>
-<li><code>casting</code>：{‘no’, ‘equiv’, ‘safe’, ‘same_kind’, ‘unsafe’}, optional</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.array([[1, 2], [3, 4]])</span><br><span class="line">&gt;&gt;&gt; b = np.array([[5, 6]])</span><br><span class="line">&gt;&gt;&gt; np.concatenate((a, b), axis=0)</span><br><span class="line">array([[1, 2],</span><br><span class="line">       [3, 4],</span><br><span class="line">       [5, 6]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.concatenate((a, b.T), axis=1)</span><br><span class="line">array([[1, 2, 5],</span><br><span class="line">       [3, 4, 6]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.concatenate((a, b), axis=None)</span><br><span class="line">array([1, 2, 3, 4, 5, 6])</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>numpy.stack(arrays, axis=0, out=None)</code>，沿新轴连接数组序列。返回数组的维度为基本数组的+1。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.array([1, 2, 3])</span><br><span class="line">&gt;&gt;&gt; b = np.array([4, 5, 6])</span><br><span class="line">&gt;&gt;&gt; np.stack((a, b))</span><br><span class="line">array([[1, 2, 3],</span><br><span class="line">       [4, 5, 6]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.stack((a, b), axis=-1)</span><br><span class="line">array([[1, 4],</span><br><span class="line">       [2, 5],</span><br><span class="line">       [3, 6]])</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>numpy.hstack((arr1, arr2, ...))</code>：水平堆叠</li>
-<li><code>numpy.vstack((arr1, arr2, ...))</code>：竖直堆叠</li>
-</ul>
-<h2 id="分割数组"><a class="markdownIt-Anchor" href="#分割数组"></a> 分割数组</h2>
-<ul>
-<li><code>numpy.split(ary, indices_or_sections, axis=0)</code> ：沿特定的轴将数组分割为子数组，返回一个ndarray数组。
-<ul>
-<li><code>indices_or_sections</code>：如果是一个整数，就用该数平均切分，不能整除时会报错。如果是一个数组，为沿轴切分的位置（左开右闭）。</li>
-<li><code>axis</code>：设置沿着哪个方向进行切分，默认为 0，横向切分，即水平方向。为 1 时，纵向切分，即竖直方向。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.arange(9)</span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line">[0 1 2 3 4 5 6 7 8]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.split(a,3)</span><br><span class="line">[array([0, 1, 2]), array([3, 4, 5]), array([6, 7, 8])]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.split(a,[4,7])</span><br><span class="line">[array([0, 1, 2, 3]), array([4, 5, 6]), array([7, 8])]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a = np.arange(16).reshape(4, 4)</span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line">[[ 0  1  2  3]</span><br><span class="line"> [ 4  5  6  7]</span><br><span class="line"> [ 8  9 10 11]</span><br><span class="line"> [12 13 14 15]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.split(a,2)</span><br><span class="line">[ array([[0, 1, 2, 3],</span><br><span class="line">         [4, 5, 6, 7]]), </span><br><span class="line">  array([[ 8,  9, 10, 11],</span><br><span class="line">         [12, 13, 14, 15]]) ]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.split(a,2,1)</span><br><span class="line">[array([[ 0,  1],</span><br><span class="line">        [ 4,  5],</span><br><span class="line">        [ 8,  9],</span><br><span class="line">        [12, 13]]), </span><br><span class="line"> array([[ 2,  3],</span><br><span class="line">        [ 6,  7],</span><br><span class="line">        [10, 11],</span><br><span class="line">        [14, 15]])]</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>numpy.hsplit(ary, indices_or_sections)</code>，水平（列向）将数组拆分为多个子阵列，相当于<code>axis=1</code>。</li>
-<li><code>numpy.vsplit(ary, indices_or_sections)</code>，垂直（纵向）将数组拆分为多个子阵列，相当于<code>axis=0</code>。</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/19/Python%E5%BA%93/Numpy/5.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E7%BF%BB%E8%BD%AC%E6%95%B0%E7%BB%84%E5%92%8C%E4%BF%AE%E6%94%B9%E7%BB%B4%E5%BA%A6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/19/Python%E5%BA%93/Numpy/5.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E7%BF%BB%E8%BD%AC%E6%95%B0%E7%BB%84%E5%92%8C%E4%BF%AE%E6%94%B9%E7%BB%B4%E5%BA%A6/" class="post-title-link" itemprop="url">5.数组操作-翻转数组和修改维度</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-19 18:40:56" itemprop="dateCreated datePublished" datetime="2021-09-19T18:40:56+08:00">2021-09-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-02-14 23:33:03" itemprop="dateModified" datetime="2022-02-14T23:33:03+08:00">2022-02-14</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="翻转数组"><a class="markdownIt-Anchor" href="#翻转数组"></a> 翻转数组</h2>
-<ul>
-<li>
-<p><code>numpy.transpose(ndarray, axes)</code>：对换数组的维度<br />
-<code>ndarray.T</code>与之类似，表示数组转秩。<br />
-<code>axes</code>默认时，和<code>ndarray.T</code>一样，返回一个新的调换数组，<strong>不会改变原本的数组</strong>。</p>
-<ul>
-<li><code>axes</code>：整数列表，对应维度，通常所有维度都会对换。</li>
-</ul>
-</li>
-<li>
-<p><code>numpy.rollaxis(arr, axis, start=0)</code>：向后滚动特定的轴到一个特定位置。</p>
-</li>
-<li>
-<p><code>numpy.swapaxes(arr, axis1, axis2)</code>：用于交换数组的两个轴。</p>
-</li>
-<li>
-<p><code>numpy.permute()</code>!!!</p>
-</li>
-</ul>
-<h2 id="修改数组的维度"><a class="markdownIt-Anchor" href="#修改数组的维度"></a> 修改数组的维度</h2>
-<ul>
-<li><code>numpy.broadcast(ndarray1, ndarray2)</code> ：使用两个数组作为输入参数，用于模仿广播的对象，它返回一个广播对象，该对象封装了将一个数组广播到另一个数组的结果。<br />
-即，这个对象经过广播操作之后的广播数组，这两个广播数组是等shape的，用于运算操作。<br />
-广播对象有<code>shape</code>和<code>nd/ndim</code>属性，用于返回广播形状和广播维度。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; x = np.array([[1], [2], [3]])</span><br><span class="line">&gt;&gt;&gt; y = np.array([4, 5, 6])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; b = np.broadcast(x,y)</span><br><span class="line">&gt;&gt;&gt; r,c = b.iters</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; next(r)</span><br><span class="line">1</span><br><span class="line">&gt;&gt;&gt; next(r)</span><br><span class="line">1</span><br><span class="line">&gt;&gt;&gt; next(c)</span><br><span class="line">4</span><br><span class="line">&gt;&gt;&gt; next(c)</span><br><span class="line">5</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; b.shape</span><br><span class="line">(3,3)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; e = np.empty(b.shape)</span><br><span class="line">&gt;&gt;&gt; e.flat = [u + v for (u,v) in b]</span><br><span class="line">&gt;&gt;&gt; e</span><br><span class="line">[[5. 6. 7.]</span><br><span class="line"> [6. 7. 8.]</span><br><span class="line"> [7. 8. 9.]]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>
-<p><code>numpy.broadcast_to(array, shape, subok=False)</code>：用于广播数组到新的形状。它在原始数组上返回只读视图，即不改变原数组，可以通过返回值接收。</p>
-<ul>
-<li><code>subok</code></li>
-</ul>
-</li>
-<li>
-<p><code>numpy.expand_dims(arr, axis)</code>：通过在指定位置插入新的轴来扩展数组形状。</p>
-<ul>
-<li><code>axis</code>：新轴插入的情况</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; x = np.array(([1,2],[3,4]))</span><br><span class="line">&gt;&gt;&gt; x</span><br><span class="line">[[1 2]</span><br><span class="line"> [3 4]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; y =np.expand_dims(x, axis = 0)</span><br><span class="line">&gt;&gt;&gt; y</span><br><span class="line">[[[1 2]</span><br><span class="line">  [3 4]]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; x.shape, y.shape</span><br><span class="line">(2, 2) (1, 2, 2)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; y =np.expand_dims(x, axis = 1)</span><br><span class="line">&gt;&gt;&gt; y</span><br><span class="line">[[[1 2]]</span><br><span class="line"> [[3 4]]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; x.shape, y.shape</span><br><span class="line">(2, 2) (2, 1, 2)</span><br></pre></td></tr></table></figure>
-<ul>
-<li>直接通过None索引也可以直接增加维度</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.array([[1 2]</span><br><span class="line">                  [3 4]])</span><br><span class="line">&gt;&gt;&gt; a[None,:,:]</span><br><span class="line">[[[1 2]]</span><br><span class="line"> [[3 4]]]</span><br></pre></td></tr></table></figure>
-<p>同时，如果只是在前面插入维度，如上，可以省去后面的<code>:</code>，直接<code>a[None]</code>。</p>
-<ul>
-<li><code>numpy.squeeze(arr, axis=None)</code>：从给定数组的形状中删除一维的条目。
-<ul>
-<li><code>axis</code>：整数或整数元组，用于选择形状中一维条目的子集。如果<code>axis</code>选定的轴长&gt;1，则报错。<br />
-如果<code>axis</code>没有设置，则会删除所有轴长为<code>1</code>的维度。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; x = np.array([[[0], [1], [2]]])</span><br><span class="line">&gt;&gt;&gt; x.shape</span><br><span class="line">(1, 3, 1)</span><br><span class="line">&gt;&gt;&gt; np.squeeze(x).shape</span><br><span class="line">(3,)</span><br><span class="line">&gt;&gt;&gt; np.squeeze(x, axis=0).shape</span><br><span class="line">(3, 1)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; x = np.arange(9).reshape(1,3,3)</span><br><span class="line">&gt;&gt;&gt; x</span><br><span class="line">[[[0 1 2]</span><br><span class="line">  [3 4 5]</span><br><span class="line">  [6 7 8]]]</span><br><span class="line">&gt;&gt;&gt; np.squeeze(x)</span><br><span class="line">[[0 1 2]</span><br><span class="line"> [3 4 5]</span><br><span class="line"> [6 7 8]]</span><br></pre></td></tr></table></figure>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/18/Python%E5%BA%93/Numpy/4.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E4%BF%AE%E6%94%B9%E6%95%B0%E7%BB%84%E5%BD%A2%E7%8A%B6/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/18/Python%E5%BA%93/Numpy/4.%E6%95%B0%E7%BB%84%E6%93%8D%E4%BD%9C-%E4%BF%AE%E6%94%B9%E6%95%B0%E7%BB%84%E5%BD%A2%E7%8A%B6/" class="post-title-link" itemprop="url">4.数组操作-修改数组形状</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-18 23:46:33" itemprop="dateCreated datePublished" datetime="2021-09-18T23:46:33+08:00">2021-09-18</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-09-22 18:12:15" itemprop="dateModified" datetime="2021-09-22T18:12:15+08:00">2021-09-22</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <ul>
-<li><code>numpy.reshape(ndarray, newshape, order='C')</code><br />
-/<code>ndarray.reshape(newshape, order='C')</code><br />
-在不改变数据的条件下修改形状，返回变形数组，<strong>不改变原数组的形状</strong>。
-<ul>
-<li>ndarray：原数组</li>
-<li>newshape：整数或者整数数组，表示新的数组形状。</li>
-<li>order：‘C’ – 按行，‘F’ – 按列，‘A’ – 原顺序，‘k’ – 元素在内存中的出现顺序。</li>
-</ul>
-</li>
-<li><code>ndarray.flat</code>，可以理解为一个数组的实例变量，返回的是一个<strong>迭代器</strong>，可以用for访问数组每一个元素。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a= np.arange(12).reshape([3,4])</span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line">array([[ 0,  1,  2,  3],</span><br><span class="line">       [ 4,  5,  6,  7],</span><br><span class="line">       [ 8,  9, 10, 11]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; for i in a.flat:</span><br><span class="line">...     print(i) </span><br><span class="line">0</span><br><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>ndarray.flatten(order='C')</code>，数组的方法，返回一份<strong>数组拷贝</strong>，对拷贝所做的修改不会影响原始数组。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.arange(8).reshape(2,4)</span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line"></span><br><span class="line">[[0 1 2 3]</span><br><span class="line"> [4 5 6 7]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.flatten()</span><br><span class="line"></span><br><span class="line">[0 1 2 3 4 5 6 7]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.flatten(order = &#x27;F&#x27;)</span><br><span class="line"></span><br><span class="line">[0 4 1 5 2 6 3 7]</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>numpy.ravel(ndarray, order='C')</code>，展平的数组元素，顺序通常是&quot;C风格&quot;，返回的是数组视图（view，有点类似 C/C++引用reference的意味），修改会影响原始数组。</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/18/Python%E5%BA%93/Numpy/3.%E8%BF%AD%E4%BB%A3%E6%95%B0%E7%BB%84/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/18/Python%E5%BA%93/Numpy/3.%E8%BF%AD%E4%BB%A3%E6%95%B0%E7%BB%84/" class="post-title-link" itemprop="url">3.迭代数组</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-18 22:43:14" itemprop="dateCreated datePublished" datetime="2021-09-18T22:43:14+08:00">2021-09-18</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-09-22 18:12:15" itemprop="dateModified" datetime="2021-09-22T18:12:15+08:00">2021-09-22</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>NumPy 迭代器对象 <code>numpy.nditer</code> 提供了一种灵活访问一个或者多个数组元素的方式。</p>
-<h2 id="基本用法"><a class="markdownIt-Anchor" href="#基本用法"></a> 基本用法</h2>
-<ul>
-<li>顺序是和<strong>数组内存布局</strong>一致的，这样做是为了提升访问的效率，默认是<strong>行序优先</strong>。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.arange(6).reshape(2,3)</span><br><span class="line">&gt;&gt;&gt; a</span><br><span class="line"></span><br><span class="line">[[0 1 2]</span><br><span class="line"> [3 4 5]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; for x in np.nditer(a):</span><br><span class="line">        print (x, end=&quot;, &quot; )</span><br><span class="line"></span><br><span class="line">0, 1, 2, 3, 4, 5, </span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; for x in np.nditer(a.T):</span><br><span class="line">        print (x, end=&quot;, &quot; )</span><br><span class="line"></span><br><span class="line">0, 1, 2, 3, 4, 5, </span><br></pre></td></tr></table></figure>
-<p>可以看到，是与内存布局一致的。</p>
-<h2 id="参数"><a class="markdownIt-Anchor" href="#参数"></a> 参数</h2>
-<ul>
-<li>
-<p>可以通过构造参数<code>order</code>控制行序优先还是列顺优先。</p>
-<ul>
-<li><code>for x in np.nditer(a, order='F')</code>：Fortran order，即是<strong>列序优先</strong>；</li>
-<li><code>for x in np.nditer(a, order='C')</code>：C order，即是<strong>行序优先</strong>；</li>
-</ul>
-</li>
-<li>
-<p>nditer 对象有另一个可选参数<code>op_flags</code> 。默认情况下，<code>nditer</code>将视待迭代遍历的数组为只读对象（read-only），为了在遍历数组的同时，实现对数组元素值得修改，必须指定<code>read-write</code>或者<code>write-only</code>的模式，即<code>np.nditer(a, op_flags=['readwrite'])</code>。</p>
-</li>
-<li>
-<p><code>nditer</code>类的构造器拥有<code>flags</code>参数</p>
-</li>
-</ul>
-<h2 id="广播迭代"><a class="markdownIt-Anchor" href="#广播迭代"></a> 广播迭代</h2>
-<p>如果两个数组是可广播的，nditer 组合对象能够同时迭代它们。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.arange(0,60,5).reshape(3,4)  </span><br><span class="line"></span><br><span class="line">[[ 0  5 10 15]</span><br><span class="line"> [20 25 30 35]</span><br><span class="line"> [40 45 50 55]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; b = np.array([1,  2,  3,  4], dtype =  int) </span><br><span class="line"></span><br><span class="line">[1 2 3 4]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; for x,y in np.nditer([a,b]):  </span><br><span class="line">        print (&quot;%d:%d&quot;  %  (x,y), end=&quot;, &quot; )</span><br><span class="line"></span><br><span class="line">0:1, 5:2, 10:3, 15:4, 20:1, 25:2, 30:3, 35:4, 40:1, 45:2, 50:3, 55:4,</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1207,7 +1294,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">226</span>
+          <span class="site-state-item-count">230</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>

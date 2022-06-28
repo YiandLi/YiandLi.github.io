@@ -177,6 +177,465 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E7%BC%93%E5%AD%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E7%BC%93%E5%AD%98/" class="post-title-link" itemprop="url">Mybatis 缓存</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-06 14:52:05" itemprop="dateCreated datePublished" datetime="2021-04-06T14:52:05+08:00">2021-04-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:57:50" itemprop="dateModified" datetime="2021-06-14T20:57:50+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>问题：在每次查询时，都需要连接数据库得到数据是比较消耗资源的。<br />
+解决方案：可以讲一次查询的结果暂存在一个可以直接取到的地方 – <strong>内存</strong>中。这个操作就称为缓存。</p>
+<h2 id="缓存"><a class="markdownIt-Anchor" href="#缓存"></a> 缓存</h2>
+<ul>
+<li>特征：减少和数据库的交互次数，减少系统开销，提高系统效率。</li>
+<li>目标数据：经常查询，不经常改变的数据。</li>
+<li>两级缓存：
+<ol>
+<li>默认情况下，mybatis只开启了一级缓存：SqlSession级别的缓存，也称为本地缓存。</li>
+<li>二级缓存需要手动开启与配置，他是基于namespace级别的缓存。</li>
+<li>此外，Mybatis还定义了缓存接口Cache，我们可以通过实现Cache接口来定义二级缓存。</li>
+</ol>
+</li>
+</ul>
+<h3 id="一级缓存"><a class="markdownIt-Anchor" href="#一级缓存"></a> 一级缓存</h3>
+<ul>
+<li>测试步骤：1.开启日志 2.测试在一个Session中查询两次相同记录 3. 查看日志输出<br />
+则可以看到只打开了一次JDBC连接</li>
+<li>失效情况：
+<ol>
+<li>查询不同的东西</li>
+<li>增删改操作，可能会改变原数据，所以一定会刷新缓存。</li>
+<li>查询不同的Mapper.xml</li>
+<li>手动清理缓存 <code>sqlSession.clearCache();</code></li>
+</ol>
+</li>
+<li>特点：
+<ul>
+<li>一级缓存是默认开启的</li>
+<li>只在一次SqlSession中有效，也就是连接sqlSession到关闭sqlSession的过程。</li>
+<li>一级缓存就是一个map</li>
+</ul>
+</li>
+</ul>
+<h3 id="二级缓存"><a class="markdownIt-Anchor" href="#二级缓存"></a> 二级缓存</h3>
+<ul>
+<li>默认情况下，MyBatis只启用本地的会话缓存。当需要使用二级缓存时，只需要在sql映射文件中添加一行<code>&lt;cache/&gt;</code></li>
+<li>定义的功能：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;cache</span><br><span class="line">    eviction = &quot;FIFO&quot;</span><br><span class="line">    flushInterval = &quot;60000&quot;</span><br><span class="line">    size = &quot;512&quot;</span><br><span class="line">    readOnly = &quot;true &quot;/&gt;</span><br></pre></td></tr></table></figure>
+<pre><code>1. eviction 清除策略：
+    a. LRU 移除最长时间不被使用的对象
+    b. FIFO 先进先出
+    c. SOFT 软引用
+    d. WEAK 弱引用
+2. flushInterval 刷新的时间间隔，单位为毫秒。
+3. size 最多可以存储的结果对象或者列表引用。
+4. readOnly 反对的对象是否为只读的，用来保证线程安全。
+</code></pre>
+<ul>
+<li>
+<p><strong>注意在添加<code>&lt;cache/&gt;</code>标签之前需要显示开启全局缓存。</strong><br />
+在<code>mybatis-config.xml</code>文件中的<code>&lt;setting&gt;</code>标签中开启全局缓存：<code>&lt;setting name=&quot;cacheEnabled&quot; value=&quot;true&quot;/&gt;</code></p>
+</li>
+<li>
+<p>特点：一条会话查询一条数据，这个数据就会被放在当前会话的一级缓存中。如果当前会话关闭了，这个会话对应的一级缓存就没了，但是在开启二级缓存之后，一级缓存中的数据会被保存到二级缓存中去。这样新的会话查询信息就可以从二级缓存中获得内容。<br />
+不同的mapper查出的数据会放在自己对应的缓存中去。</p>
+</li>
+<li>
+<p>测试情况：</p>
+<ul>
+<li>二级缓存不可以使用注解的查询方式</li>
+<li>在test方法中：两个查询都在同一个mapper中，则第二次查询会直接从二级缓存中得到数据。</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">   @Test</span><br><span class="line">public void test()&#123;</span><br><span class="line">	SqlSession sqlSession = MybatisUtil.getSqlSession();</span><br><span class="line">	SqlSession sqlSession2 = MybatisUtil.getSqlSession();</span><br><span class="line"></span><br><span class="line">	// 第一次查询</span><br><span class="line">	BlogMapper mapper = sqlSession.getMapper(BlogMapper.class);</span><br><span class="line">	Blog blog = mapper.queryBlogById(1);</span><br><span class="line">	System.out.println(blog);</span><br><span class="line">	sqlSession.close();</span><br><span class="line"></span><br><span class="line">	// 关闭第一次事务，开始第二次查询</span><br><span class="line">	BlogMapper mapper2 = sqlSession2.getMapper(BlogMapper.class);</span><br><span class="line">	Blog blog2 = mapper2.queryBlogById(1);</span><br><span class="line">	System.out.println(blog2);</span><br><span class="line">	sqlSession2.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[com.lyl.dao.BlogMapper]-Cache Hit Ratio [com.lyl.dao.BlogMapper]: 0.0</span><br><span class="line">[org.apache.ibatis.transaction.jdbc.JdbcTransaction]-Opening JDBC Connection</span><br><span class="line">[org.apache.ibatis.datasource.pooled.PooledDataSource]-Created connection 1794717576.</span><br><span class="line">[org.apache.ibatis.transaction.jdbc.JdbcTransaction]-Setting autocommit to false on JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6af93788]</span><br><span class="line">[com.lyl.dao.BlogMapper.queryBlogById]-==&gt;  Preparing: select * from bjpowernode.blog where id=?</span><br><span class="line">[com.lyl.dao.BlogMapper.queryBlogById]-==&gt; Parameters: 1(Integer)</span><br><span class="line">[com.lyl.dao.BlogMapper.queryBlogById]-&lt;==      Total: 0</span><br><span class="line">null</span><br><span class="line">[org.apache.ibatis.transaction.jdbc.JdbcTransaction]-Resetting autocommit to true on JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6af93788]</span><br><span class="line">[org.apache.ibatis.transaction.jdbc.JdbcTransaction]-Closing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6af93788]</span><br><span class="line">[org.apache.ibatis.datasource.pooled.PooledDataSource]-Returned connection 1794717576 to pool.</span><br><span class="line">[com.lyl.dao.BlogMapper]-Cache Hit Ratio [com.lyl.dao.BlogMapper]: 0.5</span><br><span class="line">null</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>问题，我们要将实体类序列化：<code>implements Serializable</code></p>
+</li>
+</ul>
+<h2 id="mybatis缓存原理"><a class="markdownIt-Anchor" href="#mybatis缓存原理"></a> Mybatis缓存原理</h2>
+<ul>
+<li>一级缓存
+<ol>
+<li>sqlSession向数据库建立连击，索要数据。</li>
+<li>数据库将数据交给sqlSession，sqlSession开辟一个内置空间存放这些数据，即为一级缓存。</li>
+</ol>
+</li>
+</ul>
+<p>缓存顺序：第一次查询数据库放在一级缓存中</p>
+<ul>
+<li>二级缓存<br />
+3. 当sqlSession关闭时，他会找到对应的mapper，将一级缓存提交给mapper。<br />
+4. mapper收到后，存放在自己的内置空间里，即为二级缓存。</li>
+<li>查询顺序
+<ol>
+<li>查询时先看二级缓存有没有</li>
+<li>然后再看一级缓存中有没有</li>
+<li>最后查询数据库</li>
+</ol>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E5%8A%A8%E6%80%81SQL/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E5%8A%A8%E6%80%81SQL/" class="post-title-link" itemprop="url">Mybatis 动态SQL</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-05 21:51:05" itemprop="dateCreated datePublished" datetime="2021-04-05T21:51:05+08:00">2021-04-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:57:42" itemprop="dateModified" datetime="2021-06-14T20:57:42+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><strong>问题描述</strong>：在使用JDBC时，常常需要根据条件来拼接sql语句。<br />
+在拼接时需要保证<strong>不能忘记添加必须的空格</strong>，而且还要特意注意<strong>删除最后一列的逗号</strong>，这是非常麻烦的。<br />
+可以在mybatis中使用动态sql命令来拼接字符串。<br />
+动态sql本质还是sql语句，只是可以在sql层面增加一个逻辑代码。<br />
+动态sql就是在拼接sql语句，只要保证其正确性，去排列组合就可以了。<br />
+建议先写出sql命令，再使用动态拼接。</p>
+<ol>
+<li><strong>IF标签</strong><code>&lt;if test=&quot;判断语句&quot;&gt; &lt;/if&gt;</code><br />
+注意在第二行中的<code>where 1=1</code>，不会妨碍正常的查询，其次方便了下面and条件的拼接。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&lt;select id=&quot;&quot; parameterType=&quot;map&quot;&gt;</span><br><span class="line">    select * from mybatis.blog where 1=1</span><br><span class="line">    &lt;if test=&quot; title!= null &quot;&gt;</span><br><span class="line">        and title = #&#123;title&#125;</span><br><span class="line">    &lt;/if&gt;</span><br><span class="line">    &lt;if test=&quot; author!=null &quot;&gt;</span><br><span class="line">        and author = #&#123;author&#125;</span><br><span class="line">    &lt;/if&gt;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li><strong>where元素</strong>：只会在至少有一个子元素返回sql子句的情况下才插入Where子句。而且如语句的开头为AND或者OR，Where会自动删除这些标签。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;select id=&quot;&quot; parameterType=&quot;map&quot;&gt;</span><br><span class="line">    select * from mybatis.blog</span><br><span class="line">    &lt;where&gt;</span><br><span class="line">        &lt;if test=&quot; title!= null &quot;&gt;</span><br><span class="line">            title = #&#123;title&#125;</span><br><span class="line">        &lt;/if&gt;</span><br><span class="line">        &lt;if test=&quot; author!=null &quot;&gt;</span><br><span class="line">            and author = #&#123;author&#125;</span><br><span class="line">        &lt;/if&gt;</span><br><span class="line">    &lt;/where&gt;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li><strong>choose，when， otherwise标签</strong>：只会拼接一个when标签下的sql命令，如果都不满足，则会拼接otherwise标签下的sql命令。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;select id=&quot;&quot; parameterType=&quot;map&quot;&gt;</span><br><span class="line">    select * from mybatis.blog</span><br><span class="line">    &lt;where&gt;</span><br><span class="line">        &lt;choose&gt;</span><br><span class="line">            &lt;when test=&quot; title!= null &quot;&gt;</span><br><span class="line">                title = #&#123;title&#125;</span><br><span class="line">            &lt;/when&gt;</span><br><span class="line">            &lt;when test=&quot; author!=null &quot;&gt;</span><br><span class="line">                and author = #&#123;author&#125;</span><br><span class="line">            &lt;/when&gt;</span><br><span class="line">            &lt;otherwise&gt;</span><br><span class="line">                and views = #&#123;views&#125;</span><br><span class="line">            &lt;/otherwise&gt;</span><br><span class="line">        &lt;/choose&gt;</span><br><span class="line">    &lt;/where&gt;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li><strong>set标签</strong>：会动态前置set关键字，同时删除无关的逗号。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&lt;update id=&quot;&quot; parameterType=&quot;map&quot;&gt;</span><br><span class="line">    update mybatis.blog</span><br><span class="line">    &lt;set&gt;</span><br><span class="line">        &lt;if test=&quot; title!= null &quot;&gt;</span><br><span class="line">            title = #&#123;title&#125;,</span><br><span class="line">        &lt;/if&gt;</span><br><span class="line">        &lt;if test=&quot; author!=null &quot;&gt;</span><br><span class="line">            and author = #&#123;author&#125;</span><br><span class="line">        &lt;/if&gt;</span><br><span class="line">    &lt;/set&gt;</span><br><span class="line">    where id = #&#123;id&#125;</span><br><span class="line">&lt;/update&gt;</span><br></pre></td></tr></table></figure>
+<ol start="5">
+<li><strong>复用</strong></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;!--设置复用代码块--&gt;</span><br><span class="line">&lt;sql id=&quot;codeBlock1&quot;&gt;</span><br><span class="line">    &lt;if test=&quot; title!= null &quot;&gt;</span><br><span class="line">        title = #&#123;title&#125;,</span><br><span class="line">    &lt;/if&gt;</span><br><span class="line">    &lt;if test=&quot; author!=null &quot;&gt;</span><br><span class="line">        and author = #&#123;author&#125;</span><br><span class="line">    &lt;/if&gt;</span><br><span class="line">&lt;/sql&gt;</span><br><span class="line"></span><br><span class="line">&lt;!-- 使用include标签复用 --&gt;</span><br><span class="line">&lt;select id=&quot;&quot; parameterType=&quot;map&quot;&gt;</span><br><span class="line">    select * from mybatis.blog</span><br><span class="line">    &lt;where&gt;</span><br><span class="line">        &lt;include refid=&quot;codeBlock1&quot;&gt;&lt;/include&gt;</span><br><span class="line">    &lt;/where&gt;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<ol start="6">
+<li><strong>foreach遍历</strong><br />
+在sql语句中有时需要很多的or来表示多个情况：<code>select * from user where id=1 or id=2 or id=3</code><br />
+在这时可以传入一个list集合，使用<code>foreach</code>标签对其进行遍历。通常是在构建IN条件语句的时候使用，</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- 查询第1，2，3号记录的博客 --&gt;</span><br><span class="line">&lt;!-- 现在传递一个万能的map，该map中包含一个名为ids的list，里面存放id --&gt;</span><br><span class="line">&lt;select id=&quot;&quot; parameterType=&quot;map&quot; resultType=&quot;blog&quot;&gt;</span><br><span class="line">    select * from blog</span><br><span class="line">    &lt;where&gt;</span><br><span class="line">        &lt;foreach collection=&quot;ids&quot; item=&quot;id&quot; open=&quot;and(&quot; close=&quot;)&quot; separator=&quot;or&quot;&gt;</span><br><span class="line">            id = #&#123;id&#125;</span><br><span class="line">        &lt;/foreach&gt;</span><br><span class="line">    &lt;/where&gt;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<p>在使用中：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">HashMap map = new HashMap();</span><br><span class="line">ArrayList&lt;Integer&gt; ids =  new ArrayList&lt;Integer&gt;();</span><br><span class="line">// 增加集合中的id</span><br><span class="line">ids.add(1);</span><br><span class="line">map.put(&quot;ids&quot;, ids);</span><br><span class="line">// 调用并且得到返回值</span><br><span class="line">List&lt;Blog&gt; blogs = mapper.query.....</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E4%BD%BF%E7%94%A8%E6%B3%A8%E8%A7%A3%E5%BC%80%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E4%BD%BF%E7%94%A8%E6%B3%A8%E8%A7%A3%E5%BC%80%E5%8F%91/" class="post-title-link" itemprop="url">Mybatis 使用注解开发</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-05 11:29:02" itemprop="dateCreated datePublished" datetime="2021-04-05T11:29:02+08:00">2021-04-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:58:11" itemprop="dateModified" datetime="2021-06-14T20:58:11+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><strong>面向接口编程</strong></p>
+<ul>
+<li>接口反应了一个设计人员对系统的<strong>抽象理解</strong>。</li>
+<li>接口有两类：
+<ol>
+<li>对一个个体的抽象，可以应用为一个抽象体(abstract class)。</li>
+<li>对一个个体某一方面的抽象，即形成一个抽象面(interface)。</li>
+</ol>
+</li>
+</ul>
+<p><strong>注解开发的本质</strong><br />
+直接在接口上实现，使用反射机制实现，底层为动态代理。</p>
+<h3 id="param注释"><a class="markdownIt-Anchor" href="#param注释"></a> @Param()注释</h3>
+<ol>
+<li>参数为：基本类型或者String类型，需要加上。</li>
+<li>引用数据类型不需要加，直接在注解中填入其实例变量。</li>
+<li>如果只有一个基本类型则可以忽略，但是还是推荐加上。</li>
+<li>在sql中<code>#&#123;&#125;</code>引用的就是我们这里的<code>@Param()</code>设定的属性名称</li>
+</ol>
+<h3 id="注解增删改查操作"><a class="markdownIt-Anchor" href="#注解增删改查操作"></a> 注解增删改查操作</h3>
+<h4 id="查询命令"><a class="markdownIt-Anchor" href="#查询命令"></a> 查询命令</h4>
+<h5 id="无参数的操作"><a class="markdownIt-Anchor" href="#无参数的操作"></a> 无参数的操作：</h5>
+<ol>
+<li>在config文件中配置mapper接口</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;mappers&gt;</span><br><span class="line">    &lt;mapper class=&#x27;com.lyl.dao.UserMapper&#x27; /&gt;</span><br><span class="line">&lt;/mappers&gt;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>在接口中使用注解创建方法</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">//使用注解进行开发</span><br><span class="line">@Select(&quot;select * from user&quot;)</span><br><span class="line">List&lt;User&gt; getUserListByCommet();</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>然后使用即可</li>
+</ol>
+<h5 id="含参数的操作时"><a class="markdownIt-Anchor" href="#含参数的操作时"></a> 含参数的操作时</h5>
+<p>需要使用<code>@Param</code>注解，<code>@Param</code>标识的变量对应注解中<code>#&#123;&#125;</code>标识的变量。</p>
+<ul>
+<li>在接口中：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@Select(&quot;select * from user where id = #&#123;id1&#125;&quot;)</span><br><span class="line">User getUserByIdByCommet(@Param(&quot;id1&quot;) int id);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>在接口和实现类中</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">User getUserByIdByComment(@Param(&quot;id1&quot;) int id);</span><br><span class="line"></span><br><span class="line">&lt;select id=&quot;getUserByIdByComment&quot; resultType=&quot;user&quot;&gt;</span><br><span class="line">    select * from mybatis.user where id = #&#123;id1&#125;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<h4 id="增加插入数据操作"><a class="markdownIt-Anchor" href="#增加插入数据操作"></a> 增加/插入数据操作</h4>
+<ul>
+<li>参数为实例对象，不需要<code>@Param</code></li>
+<li>注意<code>#&#123;&#125;</code>中的内容需要和实体类中的变量名称一致。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@Insert(&quot;insert into user(id, name, pwd) values ( #&#123;id&#125;, #&#123;name&#125;, #&#123;password&#125; )&quot;)</span><br><span class="line">int addUserByComment(User user);</span><br></pre></td></tr></table></figure>
+<h4 id="修改操作"><a class="markdownIt-Anchor" href="#修改操作"></a> 修改操作：</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@Update(&quot;update user set name=#&#123;name&#125;, pwd=#&#123;password&#125; where id=#&#123;id&#125;&quot;)</span><br><span class="line">int updateUserByComment(User user);</span><br></pre></td></tr></table></figure>
+<h4 id="删除操作"><a class="markdownIt-Anchor" href="#删除操作"></a> 删除操作：</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@Delete( &quot;delete from user where id = #&#123;uid&#125;&quot; )</span><br><span class="line">int deleteFromUserByComment(@Param(&quot;uid&quot;) int id);</span><br></pre></td></tr></table></figure>
+<h3 id="弊端"><a class="markdownIt-Anchor" href="#弊端"></a> 弊端</h3>
+<p>使用注解完成简洁的语句可以方便，但是复杂的语句不建议使用，因为不可以使用resultMap来映射试实例属性。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E5%88%86%E9%A1%B5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/05/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E5%88%86%E9%A1%B5/" class="post-title-link" itemprop="url">Mybatis 分页</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-05 10:39:56" itemprop="dateCreated datePublished" datetime="2021-04-05T10:39:56+08:00">2021-04-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:57:45" itemprop="dateModified" datetime="2021-06-14T20:57:45+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="limit-分页"><a class="markdownIt-Anchor" href="#limit-分页"></a> Limit 分页</h2>
+<p>在mysql数据库命令中，当查询得到的数据量过于庞大时，可以使用limit分页功能。</p>
+<ol>
+<li><code>select * from [表名称] limit [startIndex, pageSize]</code></li>
+<li><code>select * from [表名称] limit [Index]</code> 得到[0, n]的行数</li>
+</ol>
+<h2 id="在mybatis中使用分页"><a class="markdownIt-Anchor" href="#在mybatis中使用分页"></a> 在Mybatis中使用分页</h2>
+<ol>
+<li>
+<p>首先在Mapper接口中添加对应的抽象方法，参数为map<br />
+<code>List&lt;User&gt; getUserByLimit(Map&lt;String, Integer&gt; map);</code></p>
+</li>
+<li>
+<p>然后在其实现类，xml文件中添加对应的语句，注意parametertype设置为map</p>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;!--分页查询标签--&gt;</span><br><span class="line">&lt;select id=&quot;getUserByLimit&quot; parameterType=&quot;map&quot; resultType=&quot;user&quot;&gt;</span><br><span class="line">    select * from mybatis.user limit #&#123;startIndex&#125;, #&#123;pageSize&#125;</span><br><span class="line">&lt;/select&gt;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>在调用该方法时，传入参数map，并且设置该map的键值对与实现类对应。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">HashMap&lt;String, Integer&gt; map = new HashMap&lt;String, Integer&gt;();</span><br><span class="line">map.put(&quot;startIndex&quot;, 0);</span><br><span class="line">map.put(&quot;pageSize&quot;, 1);</span><br><span class="line">List&lt;User&gt; userList =  userMapper.getUserByLimit(map);</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/04/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mybatis/Mybatis%E6%97%A5%E5%BF%97%E5%B7%A5%E5%8E%82/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -801,442 +1260,6 @@ mapper标签中的namespace一定要绑定正确 <code>&lt;mapper namespace=&quo
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/23/Python%E5%BA%93/tensorflow/%E5%88%9B%E5%BB%BATensor/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/23/Python%E5%BA%93/tensorflow/%E5%88%9B%E5%BB%BATensor/" class="post-title-link" itemprop="url">创建Tensor</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-03-23 13:23:24 / Modified: 14:00:45" itemprop="dateCreated datePublished" datetime="2021-03-23T13:23:24+08:00">2021-03-23</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <ul>
-<li>新建Tensor数组</li>
-</ul>
-<ol>
-<li>numpy数据直接得到：<code>tf.convert_to_numpy( np.ones([2,3]) )</code></li>
-<li>从list得到： <code>tf.convert_to_numpy( [2,3] )</code></li>
-<li>格式化新建数组</li>
-</ol>
-<ul>
-<li><code>tf.zeros( [2,2] )</code>，注意参数为shape</li>
-<li><code>tf.zeros_like( a )</code>，参数为一个数组，根据数组a的尺寸建立<br />
-上<strong>面的<code>zeros</code>可以换成<code>ones</code></strong></li>
-<li><code>tf.fill( [2,2],0 )</code>，参数为尺寸和填充的元素值</li>
-</ul>
-<ol start="4">
-<li>随机新建数组</li>
-</ol>
-<ul>
-<li>正态分布：<code>tf.random.normal( [2,2], mean=1, stddev=1 )</code>，参数为尺寸，均值，标准差。均值标准差可以不写。</li>
-<li>截断正态分布：<code>tf.random.truncated_normal( [2,2], mean=1, stddev=1 )</code><br />
-范围为 <strong>[ mean - 2 * stddev, mean + 2 * stddev ]</strong></li>
-</ul>
-<ol start="5">
-<li>均匀分布：<code>tf.random.uniform( [2,2], minval=0, maxval=1 )</code>，参数为尺寸，和值域。</li>
-</ol>
-<ul>
-<li>随机打散功能<br />
-假设有10张图片，需要随机分布其索引号。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">idx = tf.random(10)</span><br><span class="line">idx = tf.random.shuffle( idx )</span><br></pre></td></tr></table></figure>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/23/Python%E5%BA%93/tensorflow/Tensorflow%E6%95%B0%E6%8D%AE%E5%B1%9E%E6%80%A7%E8%BF%90%E7%AE%97/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/23/Python%E5%BA%93/tensorflow/Tensorflow%E6%95%B0%E6%8D%AE%E5%B1%9E%E6%80%A7%E8%BF%90%E7%AE%97/" class="post-title-link" itemprop="url">tensorflow数据常用属性和运算</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-03-23 12:05:07 / Modified: 19:42:29" itemprop="dateCreated datePublished" datetime="2021-03-23T12:05:07+08:00">2021-03-23</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="数据类型"><a class="markdownIt-Anchor" href="#数据类型"></a> 数据类型</h2>
-<ul>
-<li>scalar：标量</li>
-<li>vector：一维数组</li>
-<li>matrix：二维数组/矩阵</li>
-<li>tensor：维度&gt;2的数组</li>
-</ul>
-<h3 id="创建数据"><a class="markdownIt-Anchor" href="#创建数据"></a> 创建数据</h3>
-<ul>
-<li><strong>tf.constant(value，dtype)</strong> : 创建一个普通的数据
-<ul>
-<li>dtype可以省略，主要的数据类型有</li>
-</ul>
-<ol>
-<li>整数</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tf.int8：8位整数</span><br><span class="line">tf.int16：16位整数</span><br><span class="line">tf.int32：32位整数</span><br><span class="line">tf.int64：64位整数</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>无符号整数</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tf.uint8：8位无符号整数</span><br><span class="line">tf.uint16：16位无符号整数</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>浮点型</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tf.float16：16位浮点数</span><br><span class="line">tf.float32：32位浮点数</span><br><span class="line">tf.float64：64位浮点数</span><br><span class="line">tf.double：等同于tf.float64</span><br></pre></td></tr></table></figure>
-<ol start="4">
-<li>字符串型：<code>tf.string</code></li>
-<li>布尔型：<code>tf.bool</code></li>
-<li>复数：</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tf.complex64：64位复数</span><br><span class="line">tf.complex128：128位复数</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="检测数据类型"><a class="markdownIt-Anchor" href="#检测数据类型"></a> 检测数据类型</h3>
-<p><code>tf.is_tensor(a)</code></p>
-<h3 id="数据类型转换"><a class="markdownIt-Anchor" href="#数据类型转换"></a> 数据类型转换</h3>
-<ul>
-<li><code>tf.convert_to_tensor</code>方法：将其他数据类型转换成tensor数据类型</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = np.arange(5)</span><br><span class="line">aa = tf.convert_to_tensor(a)</span><br><span class="line">aa = tf.convert_to_tensor(a, dtype=tf.int32)</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>tf.cast(aa, dtype=tf.float_32)</code>方法：转换tensor数据的数据类型</li>
-</ul>
-<h2 id="tensorflow数据所在设备"><a class="markdownIt-Anchor" href="#tensorflow数据所在设备"></a> tensorflow数据所在设备</h2>
-<ul>
-<li><code>aa.device</code>：返回数据所在设备</li>
-<li><code>tf.device()</code>：默认在gpu上</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">with tf.device(&quot;cpu&quot;):</span><br><span class="line">    a = tf.constant(1)</span><br><span class="line"></span><br><span class="line">with tf.device(&quot;gpu&quot;):</span><br><span class="line">    b = tf.constant([1])</span><br></pre></td></tr></table></figure>
-<p>cpu/gpu只能使用对应的操作，无法跨硬件进行数据交互</p>
-<ul>
-<li>转换</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">aa = a.gpu()</span><br><span class="line">bb = b.cpu()</span><br></pre></td></tr></table></figure>
-<h3 id="数据维度"><a class="markdownIt-Anchor" href="#数据维度"></a> 数据维度</h3>
-<ul>
-<li><code>a.ndim</code>：返回常数值</li>
-<li><code>tf.rank(a)</code>：返回tensor类型的数值</li>
-</ul>
-<h3 id="variable"><a class="markdownIt-Anchor" href="#variable"></a> Variable</h3>
-<p>对于线性代数<code>y=wx+b</code>，w与b除了是tensor型数据外，还需要被求导，即更新。可以设置w和b为<code>variable</code>型数据。设置Variable属性之后，就自动提供了梯度下降的功能。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = tf.range(5)</span><br><span class="line">b = tf.Variable(a)</span><br><span class="line">b.trainable = True</span><br></pre></td></tr></table></figure>
-<h3 id="numpy方法"><a class="markdownIt-Anchor" href="#numpy方法"></a> numpy方法</h3>
-<p>tensor数据的<code>numpy方法</code>可以直接返回其numpy数据<br />
-对于标量，可以直接使用<code>int(a)</code>或者<code>float(a)</code></p>
-<h2 id="数据运算"><a class="markdownIt-Anchor" href="#数据运算"></a> 数据运算</h2>
-<ol>
-<li>element-wise : <code>+ - * /</code></li>
-<li>matrix-wise: <code>@ matmul</code>
-<ul>
-<li>[b,3,4]@[b,4,5] = [b,3,5] 多维度的操作</li>
-</ul>
-</li>
-<li>dim-wise: <code>reduce_mean/max/min</code></li>
-<li>求对数：<code>tf.math.log(a)</code> 以e为底数<br />
-<code>tf.math.log(a)</code>/<code>tf.math.log(2)</code> 以2为底数</li>
-<li>e的幂值：<code>tf.exp</code></li>
-<li>多次方：<code>tf.pow(b,d)</code>/<code>b**d</code></li>
-<li>开方：<code>tf.sqrt(a)</code></li>
-<li>矩阵点乘：<code>a@b</code>/<code>tf.matmul(a,b)</code><br />
-这个操作是可以并行处理的，比如[b,2,3]@[b,3,5] = [b,2,5]<br />
-同时可以支持broadcast处理：</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">a.shape # [4,2,3]</span><br><span class="line">b.shape # [3,5]</span><br><span class="line">bb = tf.broadcast_to(b, [4,3,5])</span><br><span class="line">a@bb    # [4,2,5]</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/22/basic%20operation/maven/Maven%E6%8A%80%E5%B7%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/22/basic%20operation/maven/Maven%E6%8A%80%E5%B7%A7/" class="post-title-link" itemprop="url">Maven技巧</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-03-22 21:52:53 / Modified: 23:09:53" itemprop="dateCreated datePublished" datetime="2021-03-22T21:52:53+08:00">2021-03-22</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="技巧1-刷新"><a class="markdownIt-Anchor" href="#技巧1-刷新"></a> 技巧1 ： 刷新</h2>
-<ul>
-<li>pom文件的依赖等更新后，idea可能无法自动更新下。<br />
-<img src="https://i.loli.net/2021/03/22/KtZsDLREA958f7e.png" alt="" /><br />
-或者maven窗口的刷新，上篇文章讲过。</li>
-</ul>
-<h2 id="技巧2-导入删除项目"><a class="markdownIt-Anchor" href="#技巧2-导入删除项目"></a> 技巧2 ： 导入删除项目</h2>
-<ul>
-<li>在项目中导入或者移除项目<br />
-删除：<img src="https://i.loli.net/2021/03/22/OsKIJNku1RfLydr.png" alt="" /><br />
-导入：首先确认是带有pom的maven项目<br />
-module -&gt; + -&gt; import module<br />
-<img src="https://i.loli.net/2021/03/22/1ykqhjp9MzYlDGt.png" alt="" /><br />
-<img src="https://i.loli.net/2021/03/22/VAq91NDuW7mkJQI.png" alt="" /></li>
-</ul>
-<h2 id="maven常用操作"><a class="markdownIt-Anchor" href="#maven常用操作"></a> Maven常用操作</h2>
-<h3 id="maven属性设置-properties标签"><a class="markdownIt-Anchor" href="#maven属性设置-properties标签"></a> Maven属性设置 properties标签</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;properties&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!--编码方式，避免中文乱码--&gt;</span><br><span class="line">    &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!--编译jdk版本--&gt;</span><br><span class="line">    &lt;maven.compiler.source&gt;1.8&lt;/maven.compiler.source&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!--运行的jdk版本--&gt;</span><br><span class="line">    &lt;maven.compiler.target&gt;1.8&lt;/maven.compiler.target&gt;</span><br><span class="line">&lt;/properties&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="maven全局变量"><a class="markdownIt-Anchor" href="#maven全局变量"></a> Maven全局变量</h3>
-<ul>
-<li>两种方式：
-<ul>
-<li>在properties标签中通过<strong>自定义标签声明变量</strong>，标签名就是变量名。</li>
-<li>在pox.xml其他位置，使用 <code>$&#123;标签名&#125;</code>设置变量的值，然后在<code>dependency标签</code>中调用。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;properties&gt;</span><br><span class="line">    &lt;spring.version&gt;5.2.0&lt;spring.version&gt;</span><br><span class="line">&lt;/properties&gt;</span><br><span class="line"></span><br><span class="line">&lt;dependencies&gt;</span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">        ...</span><br><span class="line">        &lt;version&gt; &amp;&#123;spring.version&#125; &lt;/version&gt;</span><br><span class="line">    &lt;/dependency&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>自定义全局变量一般是定义<strong>依赖的版本号</strong>，当项目中需要使用多个<strong>相同</strong>的版本号时。</li>
-<li>优先使用全局变量，再使用 <code>$&#123;标签名&#125;</code> ，上述spring就是一个例子。</li>
-</ul>
-<h3 id="maven指定资源插件"><a class="markdownIt-Anchor" href="#maven指定资源插件"></a> Maven指定资源插件</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;build&gt;</span><br><span class="line">  &lt;resources&gt;</span><br><span class="line">      &lt;resource&gt;</span><br><span class="line">          &lt;directory&gt;src/main/java&lt;/directory&gt;    &lt;!--所在的目录--&gt;</span><br><span class="line"></span><br><span class="line">          &lt;includes&gt;                              &lt;!--包括目录下.properties，.xml文件都会被扫描到--&gt;</span><br><span class="line">              &lt;include&gt;**/*.properties&lt;/include&gt;</span><br><span class="line">              &lt;include&gt;**/*.xml&lt;/include&gt;</span><br><span class="line">          &lt;/includes&gt;</span><br><span class="line"></span><br><span class="line">          &lt;filtering&gt;false&lt;/filtering&gt;            &lt;!-- filtering选项false不启用过滤， *.property已经有过滤作用--&gt;</span><br><span class="line">      &lt;/resource&gt;</span><br><span class="line">  &lt;/resources&gt;</span><br><span class="line">&lt;/build&gt;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>默认没有使用<code>resources</code>时，maven执行编码时，会把<code>src/main/resources</code>目录文件拷贝到<code>target/classes</code>目录中。<br />
-对于<code>src/main/java</code>目录下的非java文件不处理</li>
-<li>如果需要用到<code>src/main/java</code>目录下的其他文件时，则需要将<code>resources</code>添加到<code>build标签</code>中。</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/22/basic%20operation/maven/Maven-idea/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/22/basic%20operation/maven/Maven-idea/" class="post-title-link" itemprop="url">Maven-idea</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2021-03-22 20:06:21 / Modified: 22:34:24" itemprop="dateCreated datePublished" datetime="2021-03-22T20:06:21+08:00">2021-03-22</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="插件"><a class="markdownIt-Anchor" href="#插件"></a> 插件</h3>
-<p>在pom.xml文件的build标签下，maven编译插件可以设置项目使用的jdk版本。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&lt;!--控制配置maven构建项目的参数设置，设置jdk的版本--&gt;</span><br><span class="line">&lt;build&gt;</span><br><span class="line">    &lt;!--配置插件--&gt;</span><br><span class="line">    &lt;plugins&gt;</span><br><span class="line">        &lt;!--配置具体的插件--&gt;</span><br><span class="line">        &lt;plugin&gt;</span><br><span class="line">            &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;</span><br><span class="line">            &lt;!--插件名称--&gt;</span><br><span class="line">            &lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;</span><br><span class="line">            &lt;!--插件版本--&gt;</span><br><span class="line">            &lt;version&gt;3.2.0&lt;/version&gt;</span><br><span class="line">            &lt;!--配置插件信息--&gt;</span><br><span class="line">            &lt;configuration&gt;</span><br><span class="line">                &lt;!--代码编译环境--&gt;</span><br><span class="line">                &lt;source&gt;1.8&lt;/source&gt;</span><br><span class="line">                &lt;!--代码运行环境--&gt;</span><br><span class="line">                &lt;target&gt;1.8&lt;/target&gt;</span><br><span class="line">            &lt;/configuration&gt;</span><br><span class="line">        &lt;/plugin&gt;</span><br><span class="line">    &lt;/plugins&gt;</span><br><span class="line">&lt;/build&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="maven-配置"><a class="markdownIt-Anchor" href="#maven-配置"></a> Maven 配置</h3>
-<p><code>-DarchetypeCatalog=internal</code><br />
-<img src="https://i.loli.net/2021/03/22/qSpO8mhgszxYfaL.png" alt="" /><br />
-<img src="https://i.loli.net/2021/03/22/YheV4BLbP9fuKHm.png" alt="" /></p>
-<h3 id="创建项目"><a class="markdownIt-Anchor" href="#创建项目"></a> 创建项目</h3>
-<ol>
-<li>使用模版创建项目 maven-archetype-quickstart ： 普通java项目<br />
-<img src="https://i.loli.net/2021/03/22/ufHWntlcivEUVPQ.png" alt="" /></li>
-<li>quickstart模版没有resources目录，用时需要手动去main目录下新建该目录。<br />
-然后设置为resources文件夹<br />
-<img src="https://i.loli.net/2021/03/22/jpToIqCkdUWuxH3.png" alt="" /><br />
-java文件夹为source-root</li>
-<li>看到pox.xml</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span><br><span class="line"></span><br><span class="line">&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span><br><span class="line">  xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;</span><br><span class="line">    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!--项目坐标--&gt;</span><br><span class="line">    &lt;groupId&gt;org.example&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;maven-moudle&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;</span><br><span class="line">    &lt;packaging&gt;jar&lt;/packaging&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;!--设置maven属性--&gt;</span><br><span class="line">    &lt;properties&gt;</span><br><span class="line">        &lt;!-- 构建项目使用的编码--&gt;</span><br><span class="line">        &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;</span><br><span class="line">        &lt;!-- 编译和运行的jdk版本--&gt;</span><br><span class="line">        &lt;maven.compiler.source&gt;1.8&lt;/maven.compiler.source&gt;</span><br><span class="line">        &lt;maven.compiler.target&gt;1.8&lt;/maven.compiler.target&gt;</span><br><span class="line">    &lt;/properties&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &lt;!--依赖--&gt;</span><br><span class="line">    &lt;dependencies&gt;</span><br><span class="line">        &lt;!--单元测试--&gt;</span><br><span class="line">        &lt;dependency&gt;</span><br><span class="line">        &lt;groupId&gt;junit&lt;/groupId&gt;</span><br><span class="line">        &lt;artifactId&gt;junit&lt;/artifactId&gt;</span><br><span class="line">        &lt;version&gt;4.11&lt;/version&gt;</span><br><span class="line">        &lt;scope&gt;test&lt;/scope&gt;</span><br><span class="line">        &lt;/dependency&gt;</span><br><span class="line">    &lt;/dependencies&gt;</span><br><span class="line"></span><br><span class="line">&lt;/project&gt;</span><br></pre></td></tr></table></figure>
-<p>注意    修改properties中的版本为1.8，build可以省略。</p>
-<h3 id="maven窗口"><a class="markdownIt-Anchor" href="#maven窗口"></a> Maven窗口</h3>
-<p><img src="https://i.loli.net/2021/03/22/xR1zYVFXudaLD6b.png" alt="" /><br />
-生命周期中，就是上一章讲过的命令。</p>
-<h3 id="利用maven创建web工程"><a class="markdownIt-Anchor" href="#利用maven创建web工程"></a> 利用maven创建web工程</h3>
-<p><img src="https://i.loli.net/2021/03/22/VehoDY48NCLdHnE.png" alt="" /><br />
-以前开发时，需要手动设置Tomcat，但是现在无需这么做了。</p>
-<ul>
-<li>增加依赖</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;javax.servlet&lt;/groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;javax.servlet-api&lt;/artifactId&gt;</span><br><span class="line">      &lt;version&gt;3.1.0&lt;/version&gt;</span><br><span class="line">      &lt;scope&gt;provided&lt;/scope&gt;</span><br><span class="line">    &lt;/dependency&gt;</span><br><span class="line"></span><br><span class="line">    &lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;javax.servlet.jsp&lt;/groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;jsp-api&lt;/artifactId&gt;</span><br><span class="line">      &lt;version&gt;2.1&lt;/version&gt;</span><br><span class="line">      &lt;scope&gt;provided&lt;/scope&gt;</span><br><span class="line">    &lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
-<p><img src="https://i.loli.net/2021/03/22/NWACLK7oyjZxi1G.png" alt="" /><br />
-<strong>粘贴之后，如果没有自动下载，则右侧边栏点reload按钮即可。</strong></p>
-<ul>
-<li>这样即可创建servlet！！！<br />
-<img src="https://i.loli.net/2021/03/22/X5TPymLAoU7RegM.png" alt="" /></li>
-</ul>
-<h3 id="maven依赖范围"><a class="markdownIt-Anchor" href="#maven依赖范围"></a> Maven依赖范围</h3>
-<ul>
-<li>在 <strong>dependency标签</strong>中使用<strong>scope</strong>标识</li>
-<li>表示依赖使用的范围，也就是在maven构建项目时的哪些阶段起作用。<br />
-阶段：清理，编译，测试，打包，安装，部署</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">      &lt;groupId&gt;junit&lt;/groupId&gt;</span><br><span class="line">      &lt;artifactId&gt;junit&lt;/artifactId&gt;</span><br><span class="line">      &lt;version&gt;4.11&lt;/version&gt;</span><br><span class="line">      &lt;scope&gt;test&lt;/scope&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
-<p>所以junit只有在测试时使用。</p>
-<ul>
-<li>scope标识：
-<ul>
-<li>compile：默认值，支持全阶段。</li>
-<li>provided：服务器提供这些东西。只在编译和测试阶段有效，在打包和安装时无需提供这个包。</li>
-<li>test：只在测试时有效。</li>
-</ul>
-</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1305,7 +1328,7 @@ java文件夹为source-root</li>
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">226</span>
+          <span class="site-state-item-count">230</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>

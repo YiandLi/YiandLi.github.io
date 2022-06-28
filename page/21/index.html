@@ -177,6 +177,586 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/16/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E8%BF%87%E6%BB%A4%E5%99%A8%E6%8E%A5%E5%8F%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/16/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E8%BF%87%E6%BB%A4%E5%99%A8%E6%8E%A5%E5%8F%A3/" class="post-title-link" itemprop="url">过滤器接口</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-16 13:49:09" itemprop="dateCreated datePublished" datetime="2021-03-16T13:49:09+08:00">2021-03-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:56:43" itemprop="dateModified" datetime="2021-06-14T20:56:43+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h3 id="filter-接口"><a class="markdownIt-Anchor" href="#filter-接口"></a> Filter 接口</h3>
+<h3 id="介绍"><a class="markdownIt-Anchor" href="#介绍"></a> 介绍</h3>
+<ul>
+<li>Servlet规范下的一个接口，在servlet-api.jar中</li>
+<li>Filter接口实现类由开发人员提供，Http服务器不负责提供</li>
+</ul>
+<h3 id="具体作用"><a class="markdownIt-Anchor" href="#具体作用"></a> 具体作用</h3>
+<ul>
+<li>Filter接口在Http服务器调用资源文件之前，负责对Http服务器进行拦截，帮助Http服务器检测当前请求的合法性</li>
+<li>拦截Http服务器，对当前请求进行增强操作</li>
+</ul>
+<h3 id="开发步骤"><a class="markdownIt-Anchor" href="#开发步骤"></a> 开发步骤</h3>
+<ol>
+<li>创建Java中的Filter接口实现类</li>
+<li>重写Filter接口中的doFilter方法</li>
+<li>在web.xml将过滤器接口实现类注册到Http服务器中</li>
+</ol>
+<h3 id="拦截作用-代码实现"><a class="markdownIt-Anchor" href="#拦截作用-代码实现"></a> 拦截作用 - 代码实现</h3>
+<p><strong>通过request的getParameter得到并且判断参数，如果通过则使用doFilter方法交给Tomcat。</strong></p>
+<ul>
+<li>Filter 文件</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">public class oneFilter implements Filter &#123;</span><br><span class="line">	@Override</span><br><span class="line">	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException ServletException &#123;</span><br><span class="line"></span><br><span class="line">		// 1. 通过拦截请求对象得到请求包中的参数信息，从而得到来访用户的年龄</span><br><span class="line">		String age = servletRequest.getParameter(&quot;age&quot;);</span><br><span class="line">		// 2. 根据年龄，帮助Http服务器判断本次请求的合法性</span><br><span class="line">		if(Integer.valueOf(age)&gt;18)&#123; // 合法</span><br><span class="line">			// 将拦截请求对象和响应对象交还给Tomcat，由Tomcat继续调用资源文件</span><br><span class="line">			filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			// 过滤器代替Http服务器拒绝请求</span><br><span class="line">			servletResponse.setContentType(&quot;text/html; charset=UTF-8&quot;);</span><br><span class="line">			PrintWriter out =  servletResponse.getWriter();</span><br><span class="line">			out.print(&quot;&lt;center&gt;&lt;font style=&#x27;color:red;font-size:40px&#x27;&gt; 别玩了，赶紧学吧 &lt;/center&gt;&quot;);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>web.xml 文件</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;!--    将过滤器类文件目录交给Tomcat   --&gt;</span><br><span class="line">&lt;filter&gt;</span><br><span class="line">    &lt;filter-name&gt;oneFilter&lt;/filter-name&gt;</span><br><span class="line">    &lt;filter-class&gt;Filter.oneFilter&lt;/filter-class&gt;</span><br><span class="line">&lt;/filter&gt;</span><br><span class="line"></span><br><span class="line">&lt;!--    通知Tomcat在调用何种资源文件时候需要被拦截    --&gt;</span><br><span class="line">&lt;filter-mapping&gt;</span><br><span class="line">    &lt;filter-name&gt;oneFilter&lt;/filter-name&gt;</span><br><span class="line">    &lt;url-pattern&gt;/pic.png&lt;/url-pattern&gt;</span><br><span class="line">&lt;/filter-mapping&gt;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>这里重复下，静态的资源文件放置在webapp目录下，和web-inf文件夹同级。</li>
+</ul>
+<h3 id="增强作用-代码实现"><a class="markdownIt-Anchor" href="#增强作用-代码实现"></a> 增强作用 - 代码实现</h3>
+<ul>
+<li>情况：在使用doPost方法时，需要设置字符集：<code>request.setCharacterEncoding(Utf-8)</code>。当存在多个servlet都需要调用这个方法时候，则可以使用Filter增强操作。</li>
+<li>解决：只要Filter实现类检测到是需要调用doPost方法时，就会自动拦截调用自己的doFilter来设置字符集，然后交还给Tomcat。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">public class oneFilter implements Filter &#123;</span><br><span class="line"></span><br><span class="line">	@Override</span><br><span class="line">	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException &#123;</span><br><span class="line"></span><br><span class="line">		// 通知拦截对象，使用utf-8字符集对当前请求体信息进行一次重新编辑</span><br><span class="line">		servletRequest.setCharacterEncoding(&quot;utf-8&quot;);</span><br><span class="line">		// 交还res和req</span><br><span class="line">		filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;!--    注册filter--&gt;</span><br><span class="line">&lt;filter&gt;</span><br><span class="line">    &lt;filter-name&gt;oneFilter&lt;/filter-name&gt;</span><br><span class="line">    &lt;filter-class&gt;Filter.oneFilter&lt;/filter-class&gt;</span><br><span class="line">&lt;/filter&gt;</span><br><span class="line"></span><br><span class="line">&lt;filter-mapping&gt;</span><br><span class="line">    &lt;filter-name&gt;oneFilter&lt;/filter-name&gt;</span><br><span class="line">    &lt;url-pattern&gt; /* &lt;/url-pattern&gt;</span><br><span class="line">&lt;/filter-mapping&gt;</span><br></pre></td></tr></table></figure>
+<p><strong>注意 <code>/*</code>表示了调用所有资源文件之前都调用oneFilter</strong></p>
+<h4 id="filter拦截地址的格式"><a class="markdownIt-Anchor" href="#filter拦截地址的格式"></a> Filter拦截地址的格式</h4>
+<ul>
+<li>命令格式：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;filter-mapping&gt;</span><br><span class="line">    &lt;filter-name&gt;oneFilter&lt;/filter-name&gt;</span><br><span class="line">    &lt;url-pattern&gt; 拦截地址 &lt;/url-pattern&gt;</span><br><span class="line">&lt;/filter-mapping&gt;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>调用某一具体的文件,直接使用文件地址： <code>/img/pic.png</code></li>
+<li>调用某一文件夹下的任意资源文件，使用 * 表示文件名： <code>/img/*</code></li>
+<li>调用任意文件夹下的某种文件类型： <code>*.jpg</code></li>
+<li>任意文件： <code>/*</code></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/14/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/servlet%E7%9B%91%E5%90%AC%E5%99%A8%E6%8E%A5%E5%8F%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/14/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/servlet%E7%9B%91%E5%90%AC%E5%99%A8%E6%8E%A5%E5%8F%A3/" class="post-title-link" itemprop="url">servlet监听器接口</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-14 15:08:43" itemprop="dateCreated datePublished" datetime="2021-03-14T15:08:43+08:00">2021-03-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:56:53" itemprop="dateModified" datetime="2021-06-14T20:56:53+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="介绍"><a class="markdownIt-Anchor" href="#介绍"></a> 介绍</h2>
+<ol>
+<li>是一组来自于Servlet规范下的接口，共有8个接口。存在于servlet-api.jar包中。</li>
+<li>监听器接口需要开发人员亲自实现，Http服务器提供jar包并没有对应的实现类。</li>
+<li>监听器接口用于监控<strong>作用域对象生命周期的变化时刻</strong>以及<strong>作用域对象共享数据的变化时刻</strong>。</li>
+</ol>
+<h2 id="作用域对象"><a class="markdownIt-Anchor" href="#作用域对象"></a> 作用域对象</h2>
+<ul>
+<li>定义：存在于服务端内存中，可以在某些条件下为两个Servlet之间提供数据共享方案的对象。</li>
+<li>类型：
+<ol>
+<li>ServletContext：全局作用域对象</li>
+<li>HttpSession：会话作用域对象</li>
+<li>HttpServletRequest：请求作用域对象</li>
+</ol>
+</li>
+</ul>
+<h2 id="监听器接口实现类开发规范"><a class="markdownIt-Anchor" href="#监听器接口实现类开发规范"></a> 监听器接口实现类开发规范</h2>
+<ol>
+<li>根据监听的实际情况，选择对应监听接口来实现</li>
+<li>重写监听器接口中<strong>监听事件处理方法</strong></li>
+<li>在Web.xml文件中将监听器接口实现类注册到<strong>Http服务器</strong>上</li>
+</ol>
+<p>  </p>
+<h2 id="servletcontextlistener接口"><a class="markdownIt-Anchor" href="#servletcontextlistener接口"></a> ServletContextListener接口</h2>
+<h3 id="作用"><a class="markdownIt-Anchor" href="#作用"></a> 作用</h3>
+<p>通过这个接口合法地检测全局作用域对象被初始化的时刻以及被撤销的时刻</p>
+<h3 id="代码实现"><a class="markdownIt-Anchor" href="#代码实现"></a> 代码实现</h3>
+<ol>
+<li>监听器一般放置新建的<strong>listener文件目录下</strong>，是一个ServletContextListener接口实现类，并且重写了如下两个方法。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">public class oneListener implements ServletContextListener &#123;</span><br><span class="line">    // 在全局作用域对象被Http服务器初始化时被调用</span><br><span class="line">	@Override</span><br><span class="line">	public void contextInitialized(ServletContextEvent sce) &#123;</span><br><span class="line">		System.out.println(&quot;begin&quot;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    // 在全局作用域对象被Http服务器销毁时被调用</span><br><span class="line">	@Override</span><br><span class="line">	public void contextDestroyed(ServletContextEvent sce) &#123;</span><br><span class="line">		System.out.println(&quot;end&quot;);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>同时需要在web.xml文件中注册监听器接口实现类</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;listener&gt;</span><br><span class="line">    &lt;listener-class&gt;com.listener.oneListener&lt;/listener-class&gt;</span><br><span class="line">&lt;/listener&gt;</span><br></pre></td></tr></table></figure>
+<p> <br />
+ </p>
+<h2 id="servletcontextattributelistener接口"><a class="markdownIt-Anchor" href="#servletcontextattributelistener接口"></a> ServletContextAttributeListener接口</h2>
+<h3 id="作用-2"><a class="markdownIt-Anchor" href="#作用-2"></a> 作用</h3>
+<p>通过这个接口合法地监控全局作用域对象共享数据变化的时刻</p>
+<h3 id="代码实现-2"><a class="markdownIt-Anchor" href="#代码实现-2"></a> 代码实现</h3>
+<ol>
+<li>public void attributeAdded(); //全局作用对象添加共享数据</li>
+<li>public void attributeReplace(); //全局作用对象更新共享数据</li>
+<li>public void attributeRemove(); //全局作用对象删除共享数据</li>
+</ol>
+<ul>
+<li>全局作用对象共享数据变化时刻：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ServletContext application = request.getServletContext();</span><br><span class="line">application.setAttribute(&quot;key1&quot;, 100);  // 添加共享数据</span><br><span class="line">application.setAttribute(&quot;key1&quot;, 200);  // 更新共享数据</span><br><span class="line">application.removeAttribute(&quot;key1&quot;);    // 删除共享数据</span><br></pre></td></tr></table></figure>
+<p>  </p>
+<h2 id="监听器接口应用提前建立connection"><a class="markdownIt-Anchor" href="#监听器接口应用提前建立connection"></a> 监听器接口应用：提前建立Connection</h2>
+<ul>
+<li>
+<p>问题：通过监听器得到整个操作的时间。</p>
+</li>
+<li>
+<p>解决：JDBC规范中，Connection创建与销毁的操作最浪费时间。我们应该尝试在Http服务器初始化时，就建立一批Connection实现类。</p>
+</li>
+<li>
+<p>代码实现：</p>
+<ul>
+<li>在Tomcat启动时，预先建立20个Connection，在userDao.add方法执行时直接使用创建好的Connection</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">public class oneListener implements ServletContextListener &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void contextInitialized(ServletContextEvent sce)&#123;</span><br><span class="line">        Map conList = new HashMap();</span><br><span class="line">        for (int i=1; i&lt;20; i++)&#123;</span><br><span class="line">            jdbcUtil ju = new jdbcUtil();</span><br><span class="line">            Connection con = ju.createCon();</span><br><span class="line">            conList.put(con, true); // true:表示处于空闲的状态</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // 为了在http服务器运行期间，一直可以使用这20个Connection，将Connection保存到全局作用域对象中</span><br><span class="line">        ServletContext application = sce.getServletContext();</span><br><span class="line">        application.setAttribute(&quot;conList&quot;,conList);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    // 在Http服务器在被关闭时，要销毁Connection</span><br><span class="line">    @Override</span><br><span class="line">    public void contextDestroyed(ServletContextEvent sce) &#123;</span><br><span class="line">        ServletContext application = sce.getServletContext();</span><br><span class="line">        Map conLid = (Map)application.getAttribute(&quot;conList&quot;);</span><br><span class="line">        // 迭代Map，销毁所有connection</span><br><span class="line">        Iterator it = conLid.keySet().iterator();</span><br><span class="line">        while (it.hasNext())&#123;</span><br><span class="line">            Connection con = (Connection) it.next();</span><br><span class="line">            if (con!=null) &#123;</span><br><span class="line">                try &#123;</span><br><span class="line">                    con.close();</span><br><span class="line">                &#125; catch (SQLException throwables) &#123;</span><br><span class="line">                    throwables.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>记得需要注册该文件</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;listener&gt;</span><br><span class="line">    &lt;listener-class&gt;com.listener.oneListener&lt;/listener-class&gt;</span><br><span class="line">&lt;/listener&gt;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>然后在jdbcUtil文件中重载createCon方法, createPreparedStatement方法 和 close方法</li>
+<li><strong>其实不是重载了createCon方法，而是创建了一个getCon方法</strong>：先前的方法是在jdbc中createCon()通过注册，登陆得到并返回一个通道Connection，交给createPreparedStatement(String sql)方法，最终得到结果。<br />
+而上文中重载的contextInitialized(ServletContextEvent sce)方法，中是直接调用了createCon()方法的，需要利用方法内的身份信息生成管道，再放入一个request变量的map属性中。<br />
+重载的createCon(HttpServletRequest request)方法，其实更精确表达为getCon(HttpServletRequest request)中，无需身份验证，直接从map中得到之前生成的管道。</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">   // 重载createCon方法  ---&gt; 新建getCon(request)方法</span><br><span class="line">public Connection getCon(HttpServletRequest request) &#123;</span><br><span class="line">	String url = &quot;jdbc:mysql://localhost:3306/bjpowernode&quot;;</span><br><span class="line">	ServletContext application =request.getServletContext();</span><br><span class="line"></span><br><span class="line">	// 从全局作用域对象得到map</span><br><span class="line">	Map conList = (Map)application.getAttribute(&quot;conList&quot;);</span><br><span class="line"></span><br><span class="line">	// 从map中得到空闲的Conection</span><br><span class="line">	Iterator it = conList.keySet().iterator();</span><br><span class="line">	while (it.hasNext())&#123;</span><br><span class="line">		con = (Connection) it.next();</span><br><span class="line">		// 空闲状态则直接得到</span><br><span class="line">		if ((boolean)conList.get(con) ==true) &#123;</span><br><span class="line">			conList.put(con,false);</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	return con;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   // 重载createPreparedStatement方法</span><br><span class="line">public PreparedStatement createPreparedStatement(HttpServletRequest request, String sql) &#123;</span><br><span class="line">	try &#123;</span><br><span class="line">		this.ps = getCon(request).prepareStatement(sql);</span><br><span class="line">	&#125; catch (SQLException var4) &#123;</span><br><span class="line">		var4.printStackTrace();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return this.ps;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   // 重载close方法</span><br><span class="line">   public void close(HttpServletRequest request) &#123;</span><br><span class="line">	ServletContext application = request.getServletContext();</span><br><span class="line">	Map conList = (Map)application.getAttribute(&quot;conList&quot;);</span><br><span class="line">	conList.put(con,true);</span><br><span class="line"></span><br><span class="line">	try &#123;</span><br><span class="line">		if (this.ps != null) this.ps.close();</span><br><span class="line">	&#125; catch (SQLException var2) &#123;</span><br><span class="line">		var2.printStackTrace();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后重载userDao中调用上述方法的方法。</p>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/13/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E5%A4%9A%E4%B8%AAServlet%E4%B9%8B%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%85%B1%E4%BA%AB%E6%96%B9%E6%A1%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/13/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E5%A4%9A%E4%B8%AAServlet%E4%B9%8B%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%85%B1%E4%BA%AB%E6%96%B9%E6%A1%88/" class="post-title-link" itemprop="url">多个Servlet之间的数据共享方案</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-13 11:20:50" itemprop="dateCreated datePublished" datetime="2021-03-13T11:20:50+08:00">2021-03-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:56:45" itemprop="dateModified" datetime="2021-06-14T20:56:45+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="多个servlet之间的数据共享实现方案"><a class="markdownIt-Anchor" href="#多个servlet之间的数据共享实现方案"></a> 多个Servlet之间的数据共享实现方案</h2>
+<ul>
+<li>数据共享：Oneservlet工作完毕后，将产生的数据交给TwoServlet来使用。</li>
+<li>四种数据共享方案：
+<ol>
+<li>ServletContext接口</li>
+<li>Cookie接口</li>
+<li>HttpSession接口</li>
+<li>HttpServletRequest接口</li>
+</ol>
+</li>
+</ul>
+<h2 id="servletcontext接口"><a class="markdownIt-Anchor" href="#servletcontext接口"></a> ServletContext接口</h2>
+<h3 id="介绍"><a class="markdownIt-Anchor" href="#介绍"></a> 介绍</h3>
+<ul>
+<li>来自于Servlet规范</li>
+<li>存在于servlet-api.jar</li>
+<li>如果两个Servlet来自于<strong>同一个网站</strong>。彼此之间通过网站的<strong>ServletContext实例对象</strong>实现数据共享</li>
+<li>开发人员习惯于称之为<strong>全局作用域对象</strong></li>
+</ul>
+<h3 id="原理相当于一个map有key-value键值对"><a class="markdownIt-Anchor" href="#原理相当于一个map有key-value键值对"></a> 原理：相当于一个map，有key : value键值对。</h3>
+<p><img src="https://i.loli.net/2021/03/13/TcMabQjROg7CZwm.jpg" alt="" /><br />
+每一个网站都存在一个全局作用域对象。这个网站中每一个Servlet都可以将一个数据存入到全局作用域对象中，也都可以从全局作用域对象中得到这个数据进行使用。</p>
+<h3 id="生命周期"><a class="markdownIt-Anchor" href="#生命周期"></a> 生命周期</h3>
+<ol>
+<li>http服务器启动过程中，都会自动为网站创建一个<strong>ServletContext实例对象</strong></li>
+<li>运行期间一个网站只有一个全局对象</li>
+<li>http服务器运行期间，全局对象一直存活</li>
+<li>http服务器准备关闭前，全局对象进行销毁</li>
+</ol>
+<h3 id="命令实现"><a class="markdownIt-Anchor" href="#命令实现"></a> 命令实现</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">OneServlet&#123;</span><br><span class="line"></span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1.通过请求对象向Tomcat请求全局作用对象，习惯用application命名</span><br><span class="line">        ServletContext application = request.getServletContext();</span><br><span class="line"></span><br><span class="line">        // 2. 将数据添加到全局作用对象中</span><br><span class="line">        application.setAttribute(&quot;key&quot;，value);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">-----------------------------------------------------------------</span><br><span class="line">TwoServlet&#123;</span><br><span class="line"></span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1.通过请求对象向Tomcat请求全局作用对象，习惯用application命名</span><br><span class="line">        ServletContext application = request.getServletContext();</span><br><span class="line"></span><br><span class="line">        // 2. 从全局作用对象中得到指定关键字对象数据</span><br><span class="line">        Object 数据名 = application.getAttribute(&quot;key&quot;);</span><br><span class="line"></span><br><span class="line">        // 3. 后面根据需要作数据类型转换</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="cookie"><a class="markdownIt-Anchor" href="#cookie"></a> Cookie</h2>
+<h3 id="介绍-2"><a class="markdownIt-Anchor" href="#介绍-2"></a> 介绍</h3>
+<ul>
+<li>Cookie来自于Servlet规范中的一个工具类</li>
+<li>存在于servlet-api.jar中</li>
+<li>存放当前用户的私人数据，在共享数据过程中提高服务质量，用于记录私人记录</li>
+<li>前提：两个Servlet来自于<strong>同一个网站</strong>，并且为<strong>同一个浏览器</strong>提供服务</li>
+</ul>
+<h3 id="过程"><a class="markdownIt-Anchor" href="#过程"></a> 过程</h3>
+<p><img src="https://i.loli.net/2021/03/13/ujnRGPfSMQhAcTF.jpg" alt="" /></p>
+<ol>
+<li>用户通过浏览器第一次向myWeb网站发送请求申请OneServlet。OneServlet在运行期间创建一个Cookie储存与当前用户相关的数据。</li>
+<li>OneServlet工作完毕后，将Cookie写入到<strong>响应头</strong>中交还给当前浏览器。</li>
+<li>浏览器接收到响应包中，将cookie存储在<strong>浏览器的缓存</strong>中。</li>
+<li>下次该用户通过同一个浏览器再次向myWeb网站发送请求申请TwoServlet时，浏览器需要无条件将<strong>之前的Cookie</strong>写入到请求头中发送过去。</li>
+</ol>
+<h3 id="规则"><a class="markdownIt-Anchor" href="#规则"></a> 规则</h3>
+<ul>
+<li>Cookie相当于一个map</li>
+<li>一个cookie只能存放一个键值对</li>
+<li>这个键值对的key与value只能是String</li>
+<li>key不能是中文</li>
+</ul>
+<h3 id="代码实现"><a class="markdownIt-Anchor" href="#代码实现"></a> 代码实现</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">OneServlet&#123;</span><br><span class="line">    public void doGet( request, response )&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 创建cookie对象，保存共享数据（当前用户数据）</span><br><span class="line">        Cookie card1 = new Cookie( &quot;key1&quot;, &quot;value1&quot; );</span><br><span class="line">        Cookie card2 = new Cookie( &quot;key2&quot;, &quot;value2&quot; );</span><br><span class="line">        ......</span><br><span class="line"></span><br><span class="line">        // 2. 将cookie写入到响应头中，交给浏览器</span><br><span class="line">        response.addCookie(card1);</span><br><span class="line">        response.addCookie(card2);</span><br><span class="line">        ......</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">-----------------------------------------------------------------</span><br><span class="line"></span><br><span class="line">浏览器/用户 &lt;---响应包 [  200  ]</span><br><span class="line">                    [  cookie: key1 = value1</span><br><span class="line">                               key2 = value2  ]</span><br><span class="line">                    []</span><br><span class="line">                    [  处理结果  ]</span><br><span class="line">浏览器向myWeb网站发送请求访问TwoServlet ---&gt; 请求包 [  url: myWeb/two  method:get  ]</span><br><span class="line">                                               [  请求参数： xxxx</span><br><span class="line">                                                   cookie： key1 = value1</span><br><span class="line">                                                            key2 = value2     ]</span><br><span class="line">                                                [       ]</span><br><span class="line">                                                [       ]</span><br><span class="line">-----------------------------------------------------------------</span><br><span class="line">TwoServlet&#123;</span><br><span class="line">    public void doGet( request, response )&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 调用请求对象从请求头中得到浏览器返回的Cookie</span><br><span class="line">        Cookie cookieArray[] = request.getCookies() // 以数组的方式返回cookie</span><br><span class="line"></span><br><span class="line">        // 2. 循环遍历数据得到每一个Cookie的key与value</span><br><span class="line">        for (Cookie card : cookieArray)&#123;</span><br><span class="line">            String key = card.getName(); //得到key值</span><br><span class="line">            String value = card.getValue(); //得到value值</span><br><span class="line">            // 提供后续服务</span><br><span class="line">            ......</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="实例会员卡在线点餐"><a class="markdownIt-Anchor" href="#实例会员卡在线点餐"></a> 实例：会员卡在线点餐</h3>
+<p><img src="https://i.loli.net/2021/03/13/daswvFyOMrokDPp.jpg" alt="" /><br />
+Git: <code>https://gist.github.com/Yili-lab/23737030ca03922185b3db85fc81ca61</code></p>
+<h3 id="销毁的时机"><a class="markdownIt-Anchor" href="#销毁的时机"></a> 销毁的时机</h3>
+<ol>
+<li>在默认情况下，cookie对象存放在浏览器缓存中，所以只要浏览器关闭，cookie就会被销毁。</li>
+<li>手动设置情况下，可以设置浏览器将接收到的cookie存放在客户端计算机硬盘上，同时需要指定cookie在硬盘上存活的时间。在存活范围内，关机都不会导致其销毁。<br />
+<code>cookie.setMaxAge(60) //存活一分钟</code></li>
+</ol>
+<h2 id="httpsession接口"><a class="markdownIt-Anchor" href="#httpsession接口"></a> HttpSession接口</h2>
+<h3 id="介绍-3"><a class="markdownIt-Anchor" href="#介绍-3"></a> 介绍</h3>
+<ul>
+<li>HttpSession接口来自于Servlet规范下的一个接口。存在于servlet-api.jar中</li>
+<li>实现类由http服务器提供</li>
+<li>习惯称之为<strong>会话作用域对象</strong></li>
+<li>前提：两个Servlet来自于<strong>同一个网站</strong>，并且为<strong>同一个浏览器/用户</strong>提供服务，此时借助于<strong>HttpSession对象</strong>进行数据共享</li>
+</ul>
+<h3 id="与cookie区别"><a class="markdownIt-Anchor" href="#与cookie区别"></a> 与Cookie区别</h3>
+<ol>
+<li>存储位置：
+<ul>
+<li>Cookie：存放于客户端计算机中</li>
+<li>HttpSession：存放于服务端计算机内存中</li>
+</ul>
+</li>
+<li>数据类型：
+<ul>
+<li>Cookie：存储对象只能String</li>
+<li>HttpSession：存储任意类型的共享数据Object</li>
+</ul>
+</li>
+<li>数据数量：
+<ul>
+<li>Cookie：1 for 1</li>
+<li>HttpSession：使用map集合，可以存储任意数量的共享数据</li>
+</ul>
+</li>
+<li>参照物：
+<ul>
+<li>Cookie：相当于客户在服务点<strong>会员卡</strong></li>
+<li>HttpSession：相当于<strong>私人保险柜</strong></li>
+</ul>
+</li>
+</ol>
+<h3 id="tomcat-辨别不同浏览器的session"><a class="markdownIt-Anchor" href="#tomcat-辨别不同浏览器的session"></a> Tomcat 辨别不同浏览器的session</h3>
+<p>Tomcat在创建HttpSession对象时，会自动地为这个Session对象生成一个唯一的编号。<br />
+Tomcat将这个编号保存到Cookie对象中，推送到当前浏览器的缓存中。<br />
+Cookie： JSESSIONID = 编号<br />
+<img src="https://i.loli.net/2021/03/14/3owJsZphALrjeGq.jpg" alt="" /></p>
+<h3 id="命令实现-2"><a class="markdownIt-Anchor" href="#命令实现-2"></a> 命令实现</h3>
+<ul>
+<li>同一个网站下OneServlet将数据传递给TwoServlet</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">OneServlet&#123;</span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 调用请求对象向Tomcat索要当前用户在服务端的私人储物柜</span><br><span class="line">        HttpSession session = request.getSession();</span><br><span class="line"></span><br><span class="line">        // 2. 将数据添加到私人储物柜中</span><br><span class="line">        session.setAttribute(&quot;key1&quot;, value1);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>浏览器访问同一个网站 /myWeb/TwoServlet，想要拿到OneServlet存储的数据</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">TwoServlet&#123;</span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 索要私人储物柜</span><br><span class="line">        HttpSession session = request.getSession();</span><br><span class="line"></span><br><span class="line">        // 2. 从会话作用域对象得到共享数据</span><br><span class="line">        Object value1 = session.getAttribute(&quot;key1&quot;);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>getSession()与getSession(false)
+<ul>
+<li>getSession()：如果已经拥有了自己的私人储物柜，则返回这个私人储物柜。如果没有，则为之新建一个新的储物柜。&lt;-- 用于已登陆用户。</li>
+<li>getSession(false)：如果已经拥有了自己的私人储物柜，则返回这个私人储物柜。如果没有，则直接返回null。   &lt;-- 用于游客。</li>
+</ul>
+</li>
+</ul>
+<h4 id="实例模拟购物车"><a class="markdownIt-Anchor" href="#实例模拟购物车"></a> 实例：模拟购物车</h4>
+<p><img src="https://i.loli.net/2021/03/14/3ujGVqoSKntE1Nz.jpg" alt="" /></p>
+<h4 id="注意"><a class="markdownIt-Anchor" href="#注意"></a> 注意</h4>
+<ol>
+<li>可以遍历session中的所有对象，得到一个枚举对象。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// 1. 调用请求对象</span><br><span class="line">HttpSession session = request.getSession();</span><br><span class="line"></span><br><span class="line">// 2. 将session中所有key读取出来，存放在一个枚举对象</span><br><span class="line">Enumeration goodsNames = session.getAttributeNames();</span><br><span class="line">while(goodsNames.hasMoreElements())&#123;</span><br><span class="line">    String goodsName = (String)goodsNames.nextElement();</span><br><span class="line">    int goodsNum = (int)session.getAttribute(goodsName);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li><code>getAttribute()</code>方法得到的是一个object对象，可以强制转换为转化为Integer而不是int，避免空指针异常，然后再后续的操作中判断Integer类型的值是否为空。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Integer	value1 = (Integer) session.getAttribute(good);</span><br><span class="line">if (value1==null) ... else ...</span><br></pre></td></tr></table></figure>
+<h3 id="生命周期-2"><a class="markdownIt-Anchor" href="#生命周期-2"></a> 生命周期</h3>
+<ol>
+<li>用户与HttpSession关联时使用的Cookie只能存放在浏览器缓存中</li>
+<li>浏览器关闭时，意味着用户与HttpSession之间的关系被切断了</li>
+<li>Tomcat无法检测浏览器何时关闭，因此浏览器关闭时不会导致Tomcat将浏览器关联的HttpSession进行销毁</li>
+<li>Tomcat会为每一个HttpSession对象设置空闲时间，默认为30mins，达到时Tomcat会删除Session</li>
+</ol>
+<h4 id="空闲时间手动设置"><a class="markdownIt-Anchor" href="#空闲时间手动设置"></a> 空闲时间手动设置</h4>
+<p>当前网站/web/web-inf/web.xml</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;session-config&gt;</span><br><span class="line">    &lt;session-timeout&gt;5&lt;/session-timeout&gt; //最大时间5分钟</span><br><span class="line">&lt;/session-config&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="httpservletrequest接口"><a class="markdownIt-Anchor" href="#httpservletrequest接口"></a> HttpServletRequest接口</h2>
+<ul>
+<li>介绍：在同一个网站中，如果两个Servlet之间通过<strong>请求转发</strong>的方式进行调用，两者将会共享同一个请求协议包。而一个请求协议包只对应一个请求对象，因此Servlet之间共享同一个请求对象，所以可以利用这个请求对象在两个Servlet之间实现数据共享。</li>
+<li>通常称为<strong>请求作用域对象</strong></li>
+<li>命令实现：<br />
+OneServlet通过请求转发申请调用TwoServlet时，需要给Servlet提供共享数据。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">OneServlet&#123;</span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 将数据添加到请求作用域对象中的attribute属性</span><br><span class="line">        request.setAttribute(&quot;key1&quot;, value1);</span><br><span class="line"></span><br><span class="line">        // 2. 申请调用TwoServlet</span><br><span class="line">        request.getRequestDispatcher(&quot;/two&quot;).forward(request, response);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">TwoServlet&#123;</span><br><span class="line">    public void doGet(request, response)&#123;</span><br><span class="line"></span><br><span class="line">        // 1. 直接拿出数据</span><br><span class="line">        Object value1 = request.getAttribute(&quot;key1&quot;);</span><br><span class="line">        // 后续做类型转换</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/13/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E5%A4%9A%E4%B8%AAservlet%E4%B9%8B%E9%97%B4%E7%9A%84%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/13/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E5%A4%9A%E4%B8%AAservlet%E4%B9%8B%E9%97%B4%E7%9A%84%E8%B0%83%E7%94%A8%E8%A7%84%E5%88%99/" class="post-title-link" itemprop="url">多个servlet之间的调用规则</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-13 00:29:14" itemprop="dateCreated datePublished" datetime="2021-03-13T00:29:14+08:00">2021-03-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-06-14 20:56:48" itemprop="dateModified" datetime="2021-06-14T20:56:48+08:00">2021-06-14</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="描述"><a class="markdownIt-Anchor" href="#描述"></a> 描述</h2>
+<p>某些来源于浏览器发送请求，往往需要服务端中多个servlet协同处理。但是浏览器一次只能访问一个servlet，导致用户需要手动发起多次请求，<br />
+这样增加了用户获得服务的难度。</p>
+<h2 id="解决方案"><a class="markdownIt-Anchor" href="#解决方案"></a> 解决方案</h2>
+<ol>
+<li>重定向解决方案</li>
+<li>请求转发解决方案</li>
+</ol>
+<h3 id="重定向解决方案"><a class="markdownIt-Anchor" href="#重定向解决方案"></a> 重定向解决方案</h3>
+<ul>
+<li>原理： 用户第一次通过手动的方式通知浏览器访问第一个servlet，servlet将下一个servlet地址放到响应头中。浏览器会自根据location中地址发起第二次请求。第二次请求是浏览器自动发送的。<br />
+<img src="https://i.loli.net/2021/03/13/U8pHALEWPChj9ey.jpg" alt="" /></li>
+<li>实现命令：<code>response.sendRedirect(请求地址)</code></li>
+<li>请求地址：
+<ol>
+<li>当前网站内部资源文件：<code>/网站名/资源文件名</code></li>
+<li>其他网站资源文件：<code>http://ip:port:网站名:资源文件名</code></li>
+</ol>
+</li>
+<li>请求方式：get</li>
+<li>问题：因为需要访问两次，所以浪费了大量的时间。</li>
+</ul>
+<h3 id="请求转发解决方案"><a class="markdownIt-Anchor" href="#请求转发解决方案"></a> 请求转发解决方案</h3>
+<ul>
+<li>原理：一个servlet工作完毕后，通过当前请求对象代替浏览器向http服务器申请调用下一个servlet，最后一次性返回给浏览器。<br />
+<img src="https://i.loli.net/2021/03/13/Wq4dQvk37DZhfrj.jpg" alt="" /></li>
+<li>实现命令：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// 1. 通过当前呢请求对象生成资源文件申请报告对象</span><br><span class="line">RequestDispatcher report = request.getRequestDispatcher(&quot;资源文件名&quot;); //用斜线‘/’开头，不要写网站名称</span><br><span class="line"></span><br><span class="line">// 2. 将报告发送给Tomcat</span><br><span class="line">report.forward(当前请求对象，当前响应对象);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>优点：
+<ol>
+<li>无论本次请求涉及多少Servlet，用户只需要手动通过浏览器发送一次请求</li>
+<li>Servlet之间调用发生在服务端计算机上，节省了往返的次数，减少速度。</li>
+</ol>
+</li>
+<li>特征：
+<ol>
+<li>请求次数为1</li>
+<li>请求地址只能向Tomcat服务器申请调用当前网络下的资源文件地址</li>
+<li>请求方式：转发过程中，浏览器只发送了一个Http请求协议包。参与本次请求的所有Servlet共享一个请求协议包。因此，这些servlet接收的请求方式与浏览器发送的请求方式保持一致。</li>
+</ol>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/12/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Java%20Web/%E9%BB%98%E8%AE%A4%E6%AC%A2%E8%BF%8E%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6%E5%92%8Chttp%E7%8A%B6%E6%80%81%E7%A0%81/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -895,613 +1475,6 @@ jar包需要在web文件夹手动新建文件夹lib，然后将jar包放进去�
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/08/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-3-%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/08/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-3-%E4%BA%8B%E5%8A%A1%E7%AE%A1%E7%90%86/" class="post-title-link" itemprop="url">JDBC-3-事务管理</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-03-08 14:19:54" itemprop="dateCreated datePublished" datetime="2021-03-08T14:19:54+08:00">2021-03-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-06-14 20:57:12" itemprop="dateModified" datetime="2021-06-14T20:57:12+08:00">2021-06-14</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="mysql事务命令"><a class="markdownIt-Anchor" href="#mysql事务命令"></a> MySql事务命令</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">START TRANSACTION //创建事务</span><br><span class="line">DELETE FROM dept WHERE deptno = 30 #dep.bak</span><br><span class="line">DELETE FROM emp WHERE deptno = 30  #emp.bak</span><br><span class="line">ROLLBACK // 如果出现错误，则回滚</span><br><span class="line">COMMIT  //如果没有错误，则提交</span><br></pre></td></tr></table></figure>
-<h3 id="jdbc命令"><a class="markdownIt-Anchor" href="#jdbc命令"></a> JDBC命令</h3>
-<h4 id="1-注册"><a class="markdownIt-Anchor" href="#1-注册"></a> 1  注册</h4>
-<h4 id="2-建立连接"><a class="markdownIt-Anchor" href="#2-建立连接"></a> 2  建立连接</h4>
-<h4 id="31-在建立交通工具之前开启事务"><a class="markdownIt-Anchor" href="#31-在建立交通工具之前开启事务"></a> 3.1    在建立交通工具之前，开启事务</h4>
-<p><code>con.setAutoCommit(false);</code></p>
-<h4 id="32-建立交通工具"><a class="markdownIt-Anchor" href="#32-建立交通工具"></a> 3.2    建立交通工具</h4>
-<h4 id="4-推送命令"><a class="markdownIt-Anchor" href="#4-推送命令"></a> 4  推送命令</h4>
-<p>在出现错误时，抛出异常，所以使用<code>try&#123;sql命令&#125;...catch(SQLException ex)&#123;...&#125;</code><br />
-<strong>Connection类</strong>下的 <strong>commit()</strong> 方法可以向MySql服务器推送 <strong>COMMIT命令</strong><br />
-<strong>Connection类</strong>下的 <strong>rollback()</strong> 方法可以向MySql服务器推送 <strong>ROLLBACK命令</strong><br />
-所以：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// 推送命令</span><br><span class="line">try &#123;</span><br><span class="line">    ps.executeUpdate(sql_1);</span><br><span class="line">    ps.executeUpdate(sql_2);</span><br><span class="line">    con.commit(); // 向服务器推送commit</span><br><span class="line">&#125;catch(SQLException ex)&#123;</span><br><span class="line">    // connection通知mysql服务器将所有的表文件备份覆盖表文件，取消本次次操作</span><br><span class="line">    con.rollback(); // 向服务器推送rollback</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="5-然后销毁所有资源"><a class="markdownIt-Anchor" href="#5-然后销毁所有资源"></a> 5  然后销毁所有资源</h4>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/07/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-2-%E5%BC%80%E5%8F%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/07/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-2-%E5%BC%80%E5%8F%91/" class="post-title-link" itemprop="url">JDBC-2-开发</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-03-07 17:17:18" itemprop="dateCreated datePublished" datetime="2021-03-07T17:17:18+08:00">2021-03-07</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-06-14 20:57:10" itemprop="dateModified" datetime="2021-06-14T20:57:10+08:00">2021-06-14</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><strong>Project是工作空间，里面用于存放module工程，工程一般是按照功能划分的。</strong><br />
-将jar包引入后，可以在对应目录下看到Driver文件。<br />
-<img src="https://i.loli.net/2021/03/07/Z74m6jIK8c1Elgy.png" alt="" /><br />
-然后根据步骤与MySql服务器交互：</p>
-<h2 id="实现传输步骤"><a class="markdownIt-Anchor" href="#实现传输步骤"></a> 实现传输步骤</h2>
-<h3 id="-将mysql服务器提供的jar包中的driver接口实现类注册到jvm中"><a class="markdownIt-Anchor" href="#-将mysql服务器提供的jar包中的driver接口实现类注册到jvm中"></a> - 将Mysql服务器提供的jar包中的Driver接口实现类注册到JVM中</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Driver driver = new com.mysql.cj.jdbc.Driver();</span><br><span class="line">DriverManager.registerDriver(driver);</span><br></pre></td></tr></table></figure>
-<p>或者</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Class.forName(&quot;com.mysql.jdbc.Driver&quot;);</span><br></pre></td></tr></table></figure>
-<h3 id="-通过drivermanager在java工程与mysql服务器中开启一个通道"><a class="markdownIt-Anchor" href="#-通过drivermanager在java工程与mysql服务器中开启一个通道"></a> - 通过DriverManager在java工程与MySql服务器中开启一个通道</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">String url = &quot;jdbc:mysql://localhost:3306/bjpowernode&quot;;</span><br><span class="line">Connection con = DriverManager.getConnection(url,&quot;root&quot;，&quot;----&quot;);</span><br></pre></td></tr></table></figure>
-<p>url表示地址，其固定格式为<code>&quot;jdbc:mysql://服务器所在计算机ip地址：服务器端口号/数据库&quot;</code><br />
-getConnection参数为：地址，mysql服务器用户名和密码。</p>
-<h3 id="-在通道上建立交通工具"><a class="markdownIt-Anchor" href="#-在通道上建立交通工具"></a> - 在通道上建立交通工具</h3>
-<p><code>PreparedStatement ps = con.prepareStatement(&quot; &quot;);</code><br />
-注意：prepareStatement参数不可以为空字符串，所以用一个空格&quot; &quot;。</p>
-<h3 id="-通过交通工具将sql命令推送到mysq服务器上来执行并且待会结果"><a class="markdownIt-Anchor" href="#-通过交通工具将sql命令推送到mysq服务器上来执行并且待会结果"></a> - 通过交通工具将sql命令推送到MySq服务器上来执行并且待会结果</h3>
-<p>根据sql命令不同，有两种返回值。</p>
-<h4 id="推送建立和修改命令"><a class="markdownIt-Anchor" href="#推送建立和修改命令"></a> 推送建立和修改命令：</h4>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">String sql = &quot;insert into dept(deptno, dname, loc) values(100, &#x27;大额贷款部门&#x27;, &#x27;上海&#x27;),(110, &#x27;大额贷款部门&#x27;, &#x27;北京&#x27;)&quot;;</span><br><span class="line">int result = ps.executeUpdate(sql);</span><br></pre></td></tr></table></figure>
-<p>这里sql为命令，可以根据用户需求更改。</p>
-<h4 id="推送查询命令查询命令的结果其实就是一个临时表"><a class="markdownIt-Anchor" href="#推送查询命令查询命令的结果其实就是一个临时表"></a> 推送查询命令：查询命令的结果其实就是一个临时表</h4>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">String sql = &quot;select * from dept&quot;;</span><br><span class="line">ResultSet set = ps.executeQuery(sql);</span><br></pre></td></tr></table></figure>
-<p>可以看到两种返回的结果是不同的</p>
-<h3 id="-得到结果psexecuteupdate和psexecutequery"><a class="markdownIt-Anchor" href="#-得到结果psexecuteupdate和psexecutequery"></a> - 得到结果：ps.executeUpdate和ps.executeQuery：</h3>
-<ol>
-<li>ps.executeUpdate负责推送插入insert，更新命令update和删除命令delete<br />
-返回值为操作时影响的<strong>行数</strong></li>
-<li>ps.executeQuery负责推送查询命令，返回查询命令得到的<strong>临时表</strong>，需要交给 <strong>ResultSet接口</strong> 实现类管理，返回 <strong>ResultSet实例对象</strong>。
-<ul>
-<li><strong>ResultSet对象</strong>，是通过指针来管理临时表：
-<ol>
-<li>next()方法：要求指针向下移动一行，如果指针指向位置是一个具体数据行，则next()方法返回true，否则返回false。</li>
-<li>得到结果：使用<strong>get方法</strong>来得到具体数据。</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">while(rs.next())&#123;</span><br><span class="line">    int deptNo = rs.getInt(&quot;deptNo&quot;);</span><br><span class="line">    String dname = rs.getString(&quot;dname&quot;);</span><br><span class="line">    String loc = rs.getString(&quot;loc&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>rs对象同样需要销毁</li>
-</ol>
-</li>
-</ul>
-</li>
-</ol>
-<h3 id="-销毁相关资源连接和交通工具"><a class="markdownIt-Anchor" href="#-销毁相关资源连接和交通工具"></a> - 销毁相关资源：连接和交通工具</h3>
-<ul>
-<li>在推送建立和修改命令时，需要销毁连接通道和传输工具</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">if(ps!=null)&#123;</span><br><span class="line">    ps.close();</span><br><span class="line">&#125;</span><br><span class="line">if(con!=null)&#123;</span><br><span class="line">    con.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>在推送查询命令时，还需要销毁ResultSet对象</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">if (rs!=null)&#123;</span><br><span class="line">    rs.close();</span><br><span class="line">&#125;</span><br><span class="line">if(ps!=null)&#123;</span><br><span class="line">    ps.close();</span><br><span class="line">&#125;</span><br><span class="line">if(con!=null)&#123;</span><br><span class="line">    con.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="预编译技术"><a class="markdownIt-Anchor" href="#预编译技术"></a> 预编译技术：</h2>
-<ul>
-<li>问题：</li>
-</ul>
-<ol>
-<li>SQL书写起来很麻烦</li>
-<li>PreparedStatement对象每次只能推送一条sql命令，浪费大量时间</li>
-</ol>
-<ul>
-<li>解决：通过预编译实现批处理操作</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">// 预编译形式的sql命令，预编译的sql相当于一个模具，在后续开发时只需要将数据填充到占位符即可。</span><br><span class="line">String sql = &quot;insert into dept(deptno, dname, loc) values(?,?,?)&quot;;</span><br><span class="line">// 1.注册</span><br><span class="line">Class.forName(&quot;com.mysql.cj.jdbc.Driver&quot;);</span><br><span class="line">// 2. 建立通道</span><br><span class="line">String url = &quot;jdbc:mysql://localhost:3306/bjpowernode&quot;;</span><br><span class="line">Connection con = DriverManager.getConnection(url,&quot;root&quot;,&quot;mysql123&quot;);</span><br><span class="line">// 3. 建立交通工具时，需要将预编译的SQL命令注册到PreparedStatement</span><br><span class="line">PreparedStatement ps = con.prepareStatement(sql);</span><br><span class="line">// 4. 通过交通工具传递并带回数据</span><br><span class="line">//    推送100条数据</span><br><span class="line">for (int i=1;i&lt;=100;i++)&#123;</span><br><span class="line">    // 通过预编译填充SQL数据，生成全新的SQL命令</span><br><span class="line">    ps.setInt(1,i);// insert into dept (deptno, dname, loc) values (1, ?, ?)</span><br><span class="line">    ps.setString(2,&quot;dept_&quot;+i);</span><br><span class="line">    ps.setString(3,&quot;BeiJing&quot;);</span><br><span class="line">    // 在新的sql语言生效后，将SQL命令作为子弹添加到Ps的弹夹中</span><br><span class="line">    ps.addBatch();//[sql1, sql2, sql3 ...]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// 5. 一次性推出所有sql命令</span><br><span class="line">ps.executeBatch(); // 推送所有数据</span><br><span class="line"></span><br><span class="line">// 6. 销毁相关资源</span><br><span class="line">if(ps!=null)&#123;</span><br><span class="line">    ps.close();</span><br><span class="line">&#125;</span><br><span class="line">if(con!=null)&#123;</span><br><span class="line">    con.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ul>
-<li>细节：
-<ul>
-<li>首先1注册，2建立通道，3建立交通工具</li>
-<li>然后再推送命令：
-<ol>
-<li>预编译形式的sql命令，预编译的sql相当于一个模具，在后续开发时只需要将数据填充到占位符即可<br />
-<code>String sql = &quot;insert into dept(deptno, dname, loc) values(?,?,?)&quot;;</code></li>
-<li>推送数据时，使用PreparedStatement对象的put方法填充预编译的模版命令，生成一条完整的命令</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ps.setInt(1,i);// insert into dept (deptno, dname, loc) values (1, ?, ?)</span><br><span class="line">ps.setString(2,&quot;dept_&quot;+i);</span><br><span class="line">ps.setString(3,&quot;BeiJing&quot;);</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>将填充完成的命令填充到<strong>弹夹</strong>中去<br />
-<code>ps.addBatch();</code></li>
-<li>一次性推出弹夹中的所有sql命令<br />
-<code>ps.executeBatch();</code></li>
-</ol>
-</li>
-<li>最后销毁资源</li>
-</ul>
-</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/07/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-1-JAR%E5%8C%85/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/07/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/JDBC/JDBC-1-JAR%E5%8C%85/" class="post-title-link" itemprop="url">JDBC-1-JAR包与介绍</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-03-07 15:08:47" itemprop="dateCreated datePublished" datetime="2021-03-07T15:08:47+08:00">2021-03-07</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-06-14 20:57:07" itemprop="dateModified" datetime="2021-06-14T20:57:07+08:00">2021-06-14</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="jar包"><a class="markdownIt-Anchor" href="#jar包"></a> JAR包</h3>
-<ol>
-<li>定义：Java Archive File，主要放置类文件，提高类文件复用性。</li>
-<li>建立：<strong>IntelliJ IDEA/File/New/Module</strong>
-<ul>
-<li><code>command+n</code>可以自动创建方法<br />
-一个模块需要使用另一个模块的jar包：<br />
-<img src="https://i.loli.net/2021/03/07/51HnR3eDcvlayVw.png" alt="" /><br />
-<img src="https://i.loli.net/2021/03/07/pIP9fLvohbiKFXn.png" alt="" /><br />
-Build:build artifacts:build<br />
-在out/artifacts中可以看到导出的jar包<br />
-复制<br />
-然后在另一个模块下粘贴<br />
-<img src="https://i.loli.net/2021/03/07/2n1SdzqTZkfAJVL.png" alt="" /><br />
-<img src="https://i.loli.net/2021/03/07/MceIJrO1pnmHbxi.png" alt="" /></li>
-</ul>
-</li>
-</ol>
-<h3 id="javaee规范和javase规范"><a class="markdownIt-Anchor" href="#javaee规范和javase规范"></a> JAVAEE规范和JAVASE规范</h3>
-<ul>
-<li>JAVASE：<br />
-指java类在单独执行，在单独处理业务时需要遵守的语法规则。</li>
-<li>JAVAEE：<br />
-指java在商业开发时遵守的开发规则。需要java类与不同的服务器进行沟通来解决当前业务。<br />
-由于在商业开发过程中，java需要与13种不同的服务器进行沟通，因此SUN公司指定了13套接口，这13套接口统称为javaEE规范。<br />
-不同的实现类由不同的<strong>服务器厂商</strong>进行实现。服务器厂商完成的实现类以jar包形式提供。<br />
-程序员通过<strong>jar包</strong>得到接口中的实现类，从而实现与指定服务器之间交流。</li>
-</ul>
-<h3 id="jdbc规范"><a class="markdownIt-Anchor" href="#jdbc规范"></a> JDBC规范</h3>
-<ol>
-<li>是JAVAEE中的一种规范，指定java类与关系型数据服务器之间的沟通规则。</li>
-<li>提供的接口存在于<strong>JDKJAR</strong>中，在<strong>java.sql</strong>包下。</li>
-<li>JDBC接口实现类由不同关系型数据库厂商以jar包形式提供。<br />
-即： JDBC指定了与数据库之前的规则接口JDK.jar，MySql服务器实现了这个接口，给出实现类mysql_jdbc.jar</li>
-</ol>
-<h4 id="jdbc调用流程"><a class="markdownIt-Anchor" href="#jdbc调用流程"></a> JDBC调用流程</h4>
-<ol>
-<li>将MySql厂商的<strong>Driver接口实现类</strong>注册到JVM中，明确与MySql连接</li>
-<li>通过JDBC规范中的<strong>DriverManager工具类</strong>在JAVA工程中与MySql服务器之间建立<strong>连接通道</strong></li>
-<li>通过MySql服务器厂商提供Connection接口实现类建立一个交通工具<strong>PreparedStatement</strong></li>
-<li>通过交通工具<strong>PreparedStatement</strong>将SQL命令从JAVA工具推送到MySql服务器上执行并且返回结果</li>
-<li>销毁本次操作涉及的所有资源对象：<br />
-a. Connection接口实现类(管理连接通道)<br />
-b. PreparedStatement接口实现类对象(管理交通工具)<br />
-c. ResultSet接口实现类对象(查询命令返回临时表)<br />
-<img src="https://i.loli.net/2021/03/07/IwlfTsakO1ZuN3W.jpg" alt="" /></li>
-</ol>
-<h4 id="jdbc规范下接口介绍"><a class="markdownIt-Anchor" href="#jdbc规范下接口介绍"></a> JDBC规范下接口介绍</h4>
-<ul>
-<li>位置：JDBC规范下的接口存在于<strong>JDK.jar</strong>下的<strong>java.sql</strong>包中</li>
-<li>分类：
-<ol>
-<li><strong>java.sql.DriverManager类</strong>：存在<strong>JDK</strong>下。负责将数据库厂商的<strong>Driver接口实现</strong>进行注册。同时负责在Java与mysql服务器之间建立一个<strong>连接通道</strong>。</li>
-<li><strong>java.sql.Connection接口</strong>：管理连接通道</li>
-<li><strong>java,sql.PreparedStatement接口</strong>：管理往返交通的交通工具</li>
-<li><strong>java.sql.ResultSet接口</strong>：管理服务器返回的临时表</li>
-</ol>
-</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mysq%20info/mysql%E8%A1%A8%E6%96%87%E4%BB%B6%E5%85%B3%E7%B3%BB%E6%93%8D%E4%BD%9C/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/mysq%20info/mysql%E8%A1%A8%E6%96%87%E4%BB%B6%E5%85%B3%E7%B3%BB%E6%93%8D%E4%BD%9C/" class="post-title-link" itemprop="url">mysql表文件查询</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-03-06 00:41:04" itemprop="dateCreated datePublished" datetime="2021-03-06T00:41:04+08:00">2021-03-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-03-09 13:33:33" itemprop="dateModified" datetime="2021-03-09T13:33:33+08:00">2021-03-09</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="表文件的关系"><a class="markdownIt-Anchor" href="#表文件的关系"></a> 表文件的关系</h1>
-<ul>
-<li>mysql通过表文件的数据关系来描述现实生活中的隶属关系。</li>
-<li>隶属关系角色划分：
-<ol>
-<li>一方：拥有资源的一方</li>
-<li>多方：依附于一方的资源</li>
-</ol>
-</li>
-</ul>
-<h1 id="表文件字段的分类"><a class="markdownIt-Anchor" href="#表文件字段的分类"></a> 表文件字段的分类</h1>
-<ul>
-<li>主键字段：
-<ol>
-<li>存放主键编号，每一个表都应该有一个主键字段。</li>
-<li>用来区分表中的唯一的一个元组/对象。</li>
-<li>不为null，同一表中不可重复。</li>
-</ol>
-</li>
-<li>非主键字段：描述主键编号。</li>
-<li>外键字段：
-<ol>
-<li>只存在多方表，描述多方数据与一方数据的依赖关系。</li>
-<li>外键字段的值应该来源于一方表中的主键值。</li>
-</ol>
-</li>
-</ul>
-<h1 id="多表查询"><a class="markdownIt-Anchor" href="#多表查询"></a> 多表查询</h1>
-<ul>
-<li>本质：将多张表数据合并到同一个临时表中，然后使用六个查询命令，根据需求得到需要的数据。</li>
-<li>关键：如何将多张表中的数据合并到同一张表中。</li>
-<li>多张表数据合并方案：
-<ol>
-<li>连接查询合并方案<br />
-a. 首先确保两张表之间存在了<strong>隶属关系</strong>。<br />
-b. 将两张表的内容<strong>水平方向</strong>拼接。<br />
-c. 最终得到拥有<strong>完整隶属关系</strong>的新数据行。</li>
-<li>联合查询合并方案<br />
-a. 不需要两张表存在隶属关系。<br />
-b. 两张表的数据行沿着<strong>垂直方向</strong>堆砌。</li>
-</ol>
-</li>
-</ul>
-<p><img src="https://i.loli.net/2021/03/06/bP5EAJrKw6UmITV.png" alt="" /><br />
-<img src="https://i.loli.net/2021/03/06/az4oADiXKqUeNuf.png" alt="" /></p>
-<h2 id="连接查询合并方案"><a class="markdownIt-Anchor" href="#连接查询合并方案"></a> 连接查询合并方案</h2>
-<p>例子：查询各个部门名称及其部门下的职员名称。</p>
-<ul>
-<li>数据来源：Dept.dname 和 Emp.ename</li>
-<li>表文件的关系：Emp隶属于Dept</li>
-<li>命令：<code>join</code></li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT Dept.dname, Emp.ename</span><br><span class="line">FROM Dept JOIN Emp  &lt;-- join两边表的位置对结果没有影响</span><br></pre></td></tr></table></figure>
-<ul>
-<li>运算过程：</li>
-</ul>
-<ol>
-<li>JOIN将两个表水平拼接生成一张新的临时表，字段由两个表相加而成，新的字段名格式为<strong>表明.字段名</strong>，这样解决了重复字段名的问题。</li>
-<li>临时表行数为原表行数做乘法，是一个笛卡尔积。</li>
-<li>临时表中会删除不合法，即主客键数据冲突的信息（脏数据），然后放置在一个新的临时表中，接受后续操作。</li>
-</ol>
-<p><strong>连接查询过滤方案</strong>：将合法数据行与脏数据行进行剥离的形为。</p>
-<ul>
-<li>命令格式： <code>FROM 一方表 JOIN 多方表 ON 定位合法数据行条件</code></li>
-<li>合法数据行与脏数据行区分原则：
-<ol>
-<li>表文件<strong>存在明显外键字段</strong>：<code>ON 当前数据行来自于一方表主键字段 = 当前数据行来自于多方表外键字段</code></li>
-<li>表文件<strong>没有明显外键字段</strong>：<code>ON 根据实际隶属关系进行判断</code></li>
-</ol>
-</li>
-<li>分类：内连接过滤方案和外连接过滤方案</li>
-</ul>
-<h3 id="内连接过滤方案"><a class="markdownIt-Anchor" href="#内连接过滤方案"></a> <strong>内连接过滤方案</strong></h3>
-<ul>
-<li>例子：<br />
-<img src="https://i.loli.net/2021/03/06/7nL35adAqH9xK8Z.jpg" alt="" /></li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SELECT Dept.Dname, Emp.job, COUNT(*)</span><br><span class="line">FROM Dept JOIN Emp</span><br><span class="line">ON Dept.Deptno = Emp.Deptno</span><br><span class="line">WHERE Dept.Deptno=20</span><br><span class="line">GROUP BY Emp.job</span><br></pre></td></tr></table></figure>
-<ul>
-<li>顺序：
-<ol>
-<li>FROM Dept JOIN Emp<br />
-<img src="https://i.loli.net/2021/03/06/K7NBW9jegCGcdJM.jpg" alt="" /></li>
-<li>ON Dept.Deptno = Emp.Deptno<br />
-<img src="https://i.loli.net/2021/03/06/ZXmcUFJVAs45tg7.jpg" alt="" /></li>
-<li>WHERE Dept.Deptno=20<br />
-<img src="https://i.loli.net/2021/03/06/FtNBRG6uZWO2alx.jpg" alt="" /></li>
-<li>GROUP BY Emp.job <strong>生成两个临时表</strong><br />
-<img src="https://i.loli.net/2021/03/06/zRvmacoNsYyelQC.jpg" alt="" /></li>
-<li>SELECT Dept.Dname, Emp.job, COUNT(*) <strong>对每一个临时表进行操作</strong><br />
-<img src="https://i.loli.net/2021/03/06/6fELZ4BOCcqgpTx.jpg" alt="" /></li>
-</ol>
-</li>
-</ul>
-<h3 id="外连接过滤方案"><a class="markdownIt-Anchor" href="#外连接过滤方案"></a> <strong>外连接过滤方案</strong></h3>
-<ul>
-<li>查询各个部门以及其部门下的人数：</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SELECT dept.dname, COUNT(*)</span><br><span class="line">FROM dept JOIN EMP</span><br><span class="line">ON dept.deptno=emp.deptno</span><br><span class="line">GROUP BY dept.dname</span><br></pre></td></tr></table></figure>
-<ul>
-<li>
-<p>场景介绍：服务器在执行<code>ON dept.deptno=emp.deptno</code>时，如果dept.deptno存在一个数据，但是emp.deptno不存在该匹配数据，服务器不会保存该数据。但是我们要求保存该数据，这时需要使用外连接过滤方案。</p>
-</li>
-<li>
-<p>外连接过滤方案表文件角色划分：</p>
-<ol>
-<li>需要被帮助表</li>
-<li>不需要被帮助表</li>
-</ol>
-</li>
-<li>
-<p>执行原理：如果<strong>需要被帮助表</strong>中某行数据与<strong>不需要被帮助表</strong>中的所有数据行都无法拼接成为合法的数据。此时将这个数据行作为一个独立的数据行。</p>
-</li>
-<li>
-<p>代码格式：</p>
-<ol>
-<li>左外连接查询：</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FROM 需要被帮助表 LEFT JOIN 不需要被帮助表</span><br><span class="line">ON 合法数据定位条件</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>右外连接查询：</li>
-</ol>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FROM 不需要被帮助表 RIGHT JOIN 需要被帮助表</span><br><span class="line">ON 合法数据定位条件</span><br></pre></td></tr></table></figure>
-</li>
-<li>
-<p>临时表例子：<br />
-需求：查询所有部门的名称及其人数，无论是否有人，都需要展示出来。<br />
-<img src="https://i.loli.net/2021/03/06/5i1EWtFDmSYuIZQ.jpg" alt="" /></p>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SELECT dept.dname, COUNT(*)</span><br><span class="line">FROM dept LEFT JOIN emp</span><br><span class="line">ON dept.deptno = emp.deptno</span><br><span class="line">GROUP BY dept.dname</span><br></pre></td></tr></table></figure>
-<ul>
-<li>
-<p>执行顺序：</p>
-<ol>
-<li><code>FROM dept LEFT JOIN emp</code><br />
-<img src="https://i.loli.net/2021/03/06/4ep8scuLDGgAN5y.jpg" alt="" /></li>
-<li><code>ON dept.deptno = emp.deptno</code> <strong>外链接影响的就是on步骤的删除数据行操作</strong><br />
-<img src="https://i.loli.net/2021/03/06/SjtZW4PQDK7Fp1h.jpg" alt="" /></li>
-<li><code>GROUP BY dept.dname</code><br />
-<img src="https://i.loli.net/2021/03/06/hq3JyTwfI7kBMXE.jpg" alt="" /></li>
-<li><code>SELECT dept.dname, COUNT(*)</code><br />
-<img src="https://i.loli.net/2021/03/06/Hajp7eFmAyz24YC.jpg" alt="" /></li>
-</ol>
-<p>需要改成<code>count(emp.deptno)</code><br />
-即：<code>SELECT dept.dname, COUNT(emp.deptno)</code><br />
-<img src="https://i.loli.net/2021/03/06/Pfz1bsqYZeS5c82.jpg" alt="" /></p>
-</li>
-</ul>
-<h2 id="联合查询合并方案"><a class="markdownIt-Anchor" href="#联合查询合并方案"></a> 联合查询合并方案</h2>
-<ul>
-<li>定义：将两张表沿着垂直方向进行堆砌</li>
-<li>要求：
-<ol>
-<li>参与合并的临时表字段结构保持一致，即<strong>字段个数</strong>和<strong>类型顺序</strong>保持一致。</li>
-<li>联合查询生成临时表的字段只能来自于<strong>第一个临时表字段</strong>。即表头使用前面的父表。</li>
-</ol>
-</li>
-<li>例子：
-<ul>
-<li>需求：将部门编号，部门名称，职员编号，职员名称展示出来</li>
-<li>命令：  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT deptno, dname FROM dept</span><br><span class="line">UNION</span><br><span class="line">SELECT  empno, ename FROM emp</span><br></pre></td></tr></table></figure>
-</li>
-<li>临时表：
-<ol>
-<li><code>SELECT deptno, dname FROM dept</code></li>
-<li><code>SELECT empno, ename FROM emp</code></li>
-<li>通过<code>UNION</code>命令，将两个临时表沿着垂直方向堆砌。</li>
-</ol>
-</li>
-</ul>
-</li>
-<li><code>UNION</code>会自动删除重复行，使用<code>UNION ALL</code>则不会删除重复数据。</li>
-</ul>
-<h1 id="子查询"><a class="markdownIt-Anchor" href="#子查询"></a> 子查询</h1>
-<ul>
-<li>定义：在查询时无法从当前临时表得到需要的数据，此时mysql服务器，允许开发人员通过<strong>完整查询语句</strong>从<strong>别的表</strong>中得到需要的数据，从而保证查询正常执行。这个起到帮助作用的<strong>完整查询语句</strong>相当于外援，在技术上被称之为<strong>子查询</strong>。</li>
-<li>用法：使用小括号放置查询命令，令其返回一个值。可以看成调用了一次简单的函数。</li>
-<li>例子：查看工资高于公司平均工资的职员信息</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE sal &gt; (SELECT avg(sal) FROM emp)</span><br></pre></td></tr></table></figure>
-<ul>
-<li>可用范围：
-<ul>
-<li>SELECT 命令：<code>SELECT ename,sal,(SELECT AVG(sal) FROM emp) AS 'avg'</code></li>
-<li>FROM 命令：除了将能够将硬盘上的表文件加载到内存中生成一个临时表，还可以指向内存中已经存在的临时表。</li>
-<li>WHERE 命令：通过子查询得到进行判断的数据。</li>
-<li>HAVING 命令：通过子查询来得到判断标准。<code>HAVING avg(sal)&gt;(SELECT avg(sal) FROM emp)</code></li>
-</ul>
-</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1570,7 +1543,7 @@ b. 两张表的数据行沿着<strong>垂直方向</strong>堆砌。</li>
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">226</span>
+          <span class="site-state-item-count">230</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
