@@ -177,6 +177,184 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/09/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Spring/JAVA%E5%8F%8D%E5%B0%84%E6%9C%BA%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/09/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/Spring/JAVA%E5%8F%8D%E5%B0%84%E6%9C%BA%E5%88%B6/" class="post-title-link" itemprop="url">JAVA反射机制</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-04-09 15:47:54 / Modified: 20:50:07" itemprop="dateCreated datePublished" datetime="2021-04-09T15:47:54+08:00">2021-04-09</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="反射机制介绍"><a class="markdownIt-Anchor" href="#反射机制介绍"></a> 反射机制介绍：</h2>
+<ul>
+<li>Java代码在计算机中经历了三个阶段：
+<ol>
+<li>Source 源代码阶段：用户定义的<code>.java</code>文件，在保存之后，就会立刻经过javac编译并且生成对应的<code>.class</code>字节码文件。字节码文件放置的是成员变量，构造方法和成员方法。</li>
+<li>Class 类对象阶段：<strong>类加载器(ClassLoader)<strong>将字节码文件加载为</strong>Class类对象</strong>。<br />
+Class类对象储存了对应的成员变量，构造方法和成员方法，并且依次将其储存在 <strong>Field[] fields, Constructor[] cons</strong> 和<strong>Method[] methods</strong>数组中。</li>
+<li>Runtime 运行时阶段：创建对应的对象。</li>
+</ol>
+</li>
+<li>定义：将类的的各个组成部分（成员变量，成员方法，构造方法）封装为其他对象。</li>
+<li>优势：
+<ol>
+<li>在程序<strong>运行过程中</strong>操作这些对象。</li>
+<li>可以降低程序耦合性，来提高程序可拓展性。</li>
+</ol>
+</li>
+</ul>
+<h2 id="代码实现"><a class="markdownIt-Anchor" href="#代码实现"></a> 代码实现</h2>
+<h3 id="获取class类对象的方式"><a class="markdownIt-Anchor" href="#获取class类对象的方式"></a> 获取Class类对象的方式</h3>
+<ol>
+<li>Source源代码阶段，将字节码文件加载进内存，返回class对象<br />
+<code>Class userClass = Class.forName(&quot;包名.类名&quot;);</code>
+<ul>
+<li>多用于读取文件，加载类。</li>
+</ul>
+</li>
+<li>Class类对象阶段，已经加载进内存，通过类名的属性来获取<br />
+<code>Class userClass = 类名.class;</code>
+<ul>
+<li>多用于参数的传递</li>
+</ul>
+</li>
+<li>Runtime运行时阶段，使用getClass()方法获得<br />
+<code>Class userClass = 对象.getClass();</code>
+<ul>
+<li>多用于对象获取字节码文件</li>
+</ul>
+</li>
+</ol>
+<p>这三者返回的Class对象都是相同的。<br />
+所以，<strong>同一个字节码文件在一次程序运行的过程中，只会被加载一次，无论通过哪一种方式获得的class对象都是同一个</strong>。</p>
+<h3 id="class对象的功能方法"><a class="markdownIt-Anchor" href="#class对象的功能方法"></a> Class对象的功能方法</h3>
+<h4 id="获取成员变量数组"><a class="markdownIt-Anchor" href="#获取成员变量数组"></a> 获取成员变量数组</h4>
+<ul>
+<li>
+<p>方法：</p>
+<ol>
+<li>Field[] getFields() 获得所有<code>public</code>修饰的成员对象数组</li>
+<li>Field getField(String name) 获得<code>public</code>修饰的名称为name参数的成员对象，否则抛出异常</li>
+<li>Field[] getDeclaredFields() 获取所有的成员变量</li>
+<li>Field getDeclaredField(String name) 获得名称为name参数的成员对象，否则抛出异常</li>
+</ol>
+</li>
+<li>
+<p>成员对象的操作：</p>
+<ol>
+<li>获得值：<code>Field.get(对象)</code><br />
+无参构造，返回值为默认值（String=&gt;null， int=&gt;0）<br />
+含参构造，返回值为对象参数对应的值</li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">User u = new User();</span><br><span class="line">Field fields = userClass1.getField(&quot;name&quot;);</span><br><span class="line">System.out.println(fields.get(u)); // null</span><br><span class="line"></span><br><span class="line">User u = new User(&quot;ll&quot;, 12, 122);</span><br><span class="line">Field fields = userClass1.getField(&quot;name&quot;);</span><br><span class="line">System.out.println(fields.get(u)); // &#x27;ll&#x27;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>设置值：<code>Field.set(对象，设置值)</code><br />
+注意，调用declared方法获得的私有成员对象，在设置值之前，需要<strong>忽视访问权限修饰符的安全检查</strong><br />
+<code>Field.setAccessible(true)</code>，这个操作也称为暴力反射</li>
+</ol>
+</li>
+</ul>
+<h4 id="获取构造方法数组"><a class="markdownIt-Anchor" href="#获取构造方法数组"></a> 获取构造方法数组</h4>
+<ul>
+<li>Constructor&lt;?&gt;[] getConstructors()</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Constructor[] constructor= userClass1.getConstructors();</span><br><span class="line">for(Constructor c: constructor)&#123;</span><br><span class="line">    System.out.println(c);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Constructor<T> getConstructor(类&lt;?&gt;… parameter Types) 参数为该构造方法需要传入的参数的类<br />
+<code>Constructor constructor= userClass1.getConstructor(String.class, int.class, int.class);</code></li>
+<li>Constructor&lt;?&gt;[] getDeclaredConstructors()</li>
+<li>Constructor<T> getDeclaredConstructor(类&lt;?&gt;… parameter Types)</li>
+</ul>
+<h5 id="constructor-构造方法对象"><a class="markdownIt-Anchor" href="#constructor-构造方法对象"></a> Constructor 构造方法对象</h5>
+<p>是用来创建对象的，使用<code>Constructor.newInstance()</code>来创建对象，参数为真正的两个参数。相当于调用了Constructor对应的原构造方法，返回一个Object类(java.lang.Object)，后面需要类型转换。<br />
+如果使用<strong>空参的构造方法对象</strong>创建对象，可以直接使用<code>Class类对象.newInstance()</code></p>
+<h4 id="获取成员方法数组"><a class="markdownIt-Anchor" href="#获取成员方法数组"></a> 获取成员方法数组</h4>
+<ul>
+<li>Method[] getMethods()</li>
+<li>Method getMethod(String name, 类&lt;?&gt;… , parameterTypes) 参数为，方法名称和参数的类对象， 没有参数只传方法名即可。</li>
+<li>Method[] getDeclaredMethods()</li>
+<li>Method getDeclaredMethod(String name, 类&lt;?&gt;… , parameterTypes)</li>
+</ul>
+<h5 id="执行方法"><a class="markdownIt-Anchor" href="#执行方法"></a> 执行方法</h5>
+<p>需要首先创建执行方法的对象p</p>
+<ol>
+<li>调用<strong>空参数</strong>方法：<code>Method.invoke(p);</code></li>
+<li>调用<strong>非空参数</strong>方法：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">User u = new User();</span><br><span class="line">Method m  = userClass1.getDeclaredMethod(&quot;eat&quot;, String.class, String.class);</span><br><span class="line">m.invoke(u, &quot;s1&quot;, &quot;s2&quot;);</span><br></pre></td></tr></table></figure>
+<h4 id="获取类名称"><a class="markdownIt-Anchor" href="#获取类名称"></a> 获取类名称</h4>
+<ul>
+<li>String getName() 获取class，method的名称</li>
+</ul>
+<h2 id="案例demo"><a class="markdownIt-Anchor" href="#案例demo"></a> 案例demo</h2>
+<ul>
+<li>情景：创建一个“框架”，使之能够在不改变任何代码的前提下，创建任意类对象并且调用其中的方法。</li>
+<li>按照传统的创建方法无法达到要求：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">User u = new User();</span><br><span class="line">u.sleep();</span><br></pre></td></tr></table></figure>
+<ul>
+<li>解决：我们将所有对象的全类名和其方法定义在配置文件中，在程序中加载读取配置文件，使用反射技术来加载类文件
+<ol>
+<li>首先我们创建pro.properties文件</li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">className=demo.reflectTest.User</span><br><span class="line">methodName=eat</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>然后编写框架</li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">public static void main(String[] args) throws ClassNotFoundException, IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException, IOException &#123;</span><br><span class="line">        // 1. 创建Properties对象</span><br><span class="line">        Properties pro = new Properties();</span><br><span class="line"></span><br><span class="line">        // 2. 加载配置文件</span><br><span class="line">        // 2.1. 获得文件目录</span><br><span class="line">        // 获得类加载器</span><br><span class="line">        ClassLoader classLoader = ReflectTest.class.getClassLoader();</span><br><span class="line">        InputStream inputStream = classLoader.getResourceAsStream(&quot;pro.properties&quot;);</span><br><span class="line">        //InputStream inputStream1 = ReflectTest.class.getResourceAsStream(&quot;pro.properties&quot;);</span><br><span class="line">        pro.load(inputStream);</span><br><span class="line"></span><br><span class="line">        // 3. 获取配置文件定义的数据</span><br><span class="line">        String className = pro.getProperty(&quot;className&quot;);</span><br><span class="line">        String methodName = pro.getProperty(&quot;methodName&quot;);</span><br><span class="line"></span><br><span class="line">        // 4. 加载该类进入内存</span><br><span class="line">        Class cls = Class.forName(className);</span><br><span class="line"></span><br><span class="line">        // 5. 创建对象</span><br><span class="line">        Object obj = cls.newInstance();</span><br><span class="line"></span><br><span class="line">        // 6. 获取方法对象</span><br><span class="line">        Method method = cls.getMethod(methodName);</span><br><span class="line"></span><br><span class="line">        // 7. 执行方法</span><br><span class="line">        method.invoke(obj);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+这里第二步没有搞懂，并且报错空指针异常，需要后续学习。<br />
+3. 后续再需要改动别的类和方法时，我们只需要改变properties文件即可。</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/08/basic%20operation/Latex%E5%85%AC%E5%BC%8F%E7%BC%96%E8%BE%91/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -208,7 +386,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-04-11 22:36:41" itemprop="dateModified" datetime="2021-04-11T22:36:41+08:00">2021-04-11</time>
+                <time title="Modified: 2022-07-03 11:22:58" itemprop="dateModified" datetime="2022-07-03T11:22:58+08:00">2022-07-03</time>
               </span>
 
           
@@ -237,7 +415,7 @@
 一级角标改为二级角标：<code>y_&#123;_N&#125;</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>y</mi><msub><mrow></mrow><mi>N</mi></msub></msub></mrow><annotation encoding="application/x-tex">y_{_N}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.680865em;vertical-align:-0.250305em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.09136em;"><span style="top:-2.35em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3567071428571427em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathdefault mtight" style="margin-right:0.10903em;">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.14329285714285717em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.250305em;"><span></span></span></span></span></span></span></span></span></span></p>
 </li>
 <li>
-<p>分式：<code>\frac&#123;分子&#125;&#123;分母&#125;</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mfrac><mrow><mi mathvariant="normal">分</mi><mi mathvariant="normal">子</mi></mrow><mrow><mi mathvariant="normal">分</mi><mi mathvariant="normal">母</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\frac{分子}{分母}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.739em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.394em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord cjk_fallback mtight">分</span><span class="mord cjk_fallback mtight">母</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord cjk_fallback mtight">分</span><span class="mord cjk_fallback mtight">子</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></p>
+<p>分式：<code>\frac&#123;1&#125;&#123;2&#125;</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><annotation encoding="application/x-tex">\frac{1}{2}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.190108em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.845108em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></p>
 </li>
 <li>
 <p>根号：<code>$\sqrt[n]&#123;ab&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mroot><mrow><mi>a</mi><mi>b</mi></mrow><mi>n</mi></mroot></mrow><annotation encoding="application/x-tex">\sqrt[n]{ab}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.04em;vertical-align:-0.10777999999999999em;"></span><span class="mord sqrt"><span class="root"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.709944em;"><span style="top:-2.994664em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size6 size1 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span></span></span></span><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.93222em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord mathdefault">a</span><span class="mord mathdefault">b</span></span></span><span style="top:-2.89222em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg width='400em' height='1.08em' viewBox='0 0 400000 1080' preserveAspectRatio='xMinYMin slice'><path d='M95,702c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,
@@ -256,16 +434,16 @@ s-235,486,-235,486c-2.7,4.7,-9,7,-19,7c-6,0,-10,-1,-12,-3s-194,-422,-194,-422
 s-65,47,-65,47z M834 80H400000v40H845z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.10777999999999999em;"><span></span></span></span></span></span></span></span></span></p>
 </li>
 <li>
-<p>求和公式： <code>$\sum_&#123;k=1&#125;^n&#123;求和项&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><msubsup><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><mi mathvariant="normal">求</mi><mi mathvariant="normal">和</mi><mi mathvariant="normal">项</mi></mrow></mrow><annotation encoding="application/x-tex">\sum_{k=1}^n{求和项}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.104002em;vertical-align:-0.29971000000000003em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight" style="margin-right:0.03148em;">k</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord cjk_fallback">求</span><span class="mord cjk_fallback">和</span><span class="mord cjk_fallback">项</span></span></span></span></span><br />
+<p>求和公式： <code>$\sum_&#123;k=1&#125;^n&#123;target&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><msubsup><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mrow><mi>t</mi><mi>a</mi><mi>r</mi><mi>g</mi><mi>e</mi><mi>t</mi></mrow></mrow><annotation encoding="application/x-tex">\sum_{k=1}^n{target}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.104002em;vertical-align:-0.29971000000000003em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight" style="margin-right:0.03148em;">k</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathdefault">t</span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">e</span><span class="mord mathdefault">t</span></span></span></span></span><br />
 无穷符号： <code>$\infty$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">∞</mi></mrow><annotation encoding="application/x-tex">\infty</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord">∞</span></span></span></span></p>
 </li>
 <li>
 <p>积分公式： <code>$\int_0^\infty&#123;e^x&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><msubsup><mo>∫</mo><mn>0</mn><mi mathvariant="normal">∞</mi></msubsup><msup><mi>e</mi><mi>x</mi></msup></mrow><annotation encoding="application/x-tex">\int_0^\infty{e^x}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.215112em;vertical-align:-0.35582em;"></span><span class="mop"><span class="mop op-symbol small-op" style="margin-right:0.19445em;position:relative;top:-0.0005599999999999772em;">∫</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8592920000000001em;"><span style="top:-2.34418em;margin-left:-0.19445em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span><span style="top:-3.2579000000000002em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">∞</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35582em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.664392em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">x</span></span></span></span></span></span></span></span></span></span></span></span></p>
 </li>
 <li>
-<p>上划线命令： <code>$\overline&#123;公式&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover accent="true"><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mo stretchy="true">‾</mo></mover></mrow><annotation encoding="application/x-tex">\overline{a+b}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.97777em;vertical-align:-0.08333em;"></span><span class="mord overline"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.89444em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span><span style="top:-3.81444em;"><span class="pstrut" style="height:3em;"></span><span class="overline-line" style="border-bottom-width:0.04em;"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.08333em;"><span></span></span></span></span></span></span></span></span><br />
-下划线命令： <code>$\underline&#123;公式&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><munder accentunder="true"><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">‾</mo></munder></mrow><annotation encoding="application/x-tex">\underline{a-b}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.97777em;vertical-align:-0.2833300000000001em;"></span><span class="mord underline"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.69444em;"><span style="top:-2.7566699999999997em;"><span class="pstrut" style="height:3em;"></span><span class="underline-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2833300000000001em;"><span></span></span></span></span></span></span></span></span><br />
-上花括弧命令： <code>$\overbrace&#123;公式&#125;^&#123;说明&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover><mover><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">⏞</mo></mover><mrow><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi></mrow></mover></mrow><annotation encoding="application/x-tex">\overbrace{a-b}^{aaaaa}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.9271619999999998em;vertical-align:-0.08333em;"></span><span class="mord mover"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.843832em;"><span style="top:-3.34244em;"><span class="pstrut" style="height:3.34244em;"></span><span class="mord mover"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3424399999999999em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span><span class="svg-align" style="top:-3.79444em;"><span class="pstrut" style="height:3em;"></span><span class="stretchy" style="height:0.548em;min-width:1.6em;"><span class="brace-left" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMinYMin slice'><path d='M6 548l-6-6v-35l6-11c56-104 135.3-181.3 238-232 57.3-28.7 117
+<p>上划线命令： <code>$\overline&#123;equation&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover accent="true"><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mo stretchy="true">‾</mo></mover></mrow><annotation encoding="application/x-tex">\overline{a+b}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.97777em;vertical-align:-0.08333em;"></span><span class="mord overline"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.89444em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span><span style="top:-3.81444em;"><span class="pstrut" style="height:3em;"></span><span class="overline-line" style="border-bottom-width:0.04em;"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.08333em;"><span></span></span></span></span></span></span></span></span><br />
+下划线命令： <code>$\underline&#123;equation&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><munder accentunder="true"><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">‾</mo></munder></mrow><annotation encoding="application/x-tex">\underline{a-b}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.97777em;vertical-align:-0.2833300000000001em;"></span><span class="mord underline"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.69444em;"><span style="top:-2.7566699999999997em;"><span class="pstrut" style="height:3em;"></span><span class="underline-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2833300000000001em;"><span></span></span></span></span></span></span></span></span><br />
+上花括弧命令： <code>$\overbrace&#123;equation&#125;^&#123;e=..&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover><mover><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">⏞</mo></mover><mrow><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi></mrow></mover></mrow><annotation encoding="application/x-tex">\overbrace{a-b}^{aaaaa}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.9271619999999998em;vertical-align:-0.08333em;"></span><span class="mord mover"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.843832em;"><span style="top:-3.34244em;"><span class="pstrut" style="height:3.34244em;"></span><span class="mord mover"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3424399999999999em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathdefault">b</span></span></span><span class="svg-align" style="top:-3.79444em;"><span class="pstrut" style="height:3em;"></span><span class="stretchy" style="height:0.548em;min-width:1.6em;"><span class="brace-left" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMinYMin slice'><path d='M6 548l-6-6v-35l6-11c56-104 135.3-181.3 238-232 57.3-28.7 117
 -45 179-50h399577v120H403c-43.3 7-81 15-113 26-100.7 33-179.7 91-237 174-2.7
  5-6 9-10 13-.7 1-7.3 1-20 1H6z'/></svg></span><span class="brace-center" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMidYMin slice'><path d='M200428 334
 c-100.7-8.3-195.3-44-280-108-55.3-42-101.7-93-139-153l-9-14c-2.7 4-5.7 8.7-9 14
@@ -275,7 +453,7 @@ c-100.7-8.3-195.3-44-280-108-55.3-42-101.7-93-139-153l-9-14c-2.7 4-5.7 8.7-9 14
 -6 6h-17c-12.7 0-19.3-.3-20-1-4-4-7.3-8.3-10-13-35.3-51.3-80.8-93.8-136.5-127.5
 s-117.2-55.8-184.5-66.5c-.7 0-2-.3-4-1-18.7-2.7-76-4.3-172-5H0V214h399571l6 1
 c124.7 8 235 61.7 331 161 31.3 33.3 59.7 72.7 85 118l7 13v35z'/></svg></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.08333em;"><span></span></span></span></span></span></span><span style="top:-4.88488em;"><span class="pstrut" style="height:3.34244em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.08333em;"><span></span></span></span></span></span></span></span></span><br />
-下花括弧命令： <code>$\underbrace&#123;公式&#125;_&#123;说明&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><munder><munder><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">⏟</mo></munder><mrow><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi></mrow></munder></mrow><annotation encoding="application/x-tex">\underbrace{a-b}_{aaaaa}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.927162em;vertical-align:-1.2327219999999999em;"></span><span class="mord munder"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6944400000000002em;"><span style="top:-1.7672780000000001em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord munder"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.69444em;"><span class="svg-align" style="top:-2.26867em;"><span class="pstrut" style="height:3em;"></span><span class="stretchy" style="height:0.548em;min-width:1.6em;"><span class="brace-left" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMinYMin slice'><path d='M0 6l6-6h17c12.688 0 19.313.3 20 1 4 4 7.313 8.3 10 13
+下花括弧命令： <code>$\underbrace&#123;equation&#125;_&#123;e=..&#125;$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><munder><munder><mrow><mi>a</mi><mo>−</mo><mi>b</mi></mrow><mo stretchy="true">⏟</mo></munder><mrow><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi><mi>a</mi></mrow></munder></mrow><annotation encoding="application/x-tex">\underbrace{a-b}_{aaaaa}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.927162em;vertical-align:-1.2327219999999999em;"></span><span class="mord munder"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6944400000000002em;"><span style="top:-1.7672780000000001em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span><span class="mord mathdefault mtight">a</span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord munder"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.69444em;"><span class="svg-align" style="top:-2.26867em;"><span class="pstrut" style="height:3em;"></span><span class="stretchy" style="height:0.548em;min-width:1.6em;"><span class="brace-left" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMinYMin slice'><path d='M0 6l6-6h17c12.688 0 19.313.3 20 1 4 4 7.313 8.3 10 13
  35.313 51.3 80.813 93.8 136.5 127.5 55.688 33.7 117.188 55.8 184.5 66.5.688
  0 2 .3 4 1 18.688 2.7 76 4.3 172 5h399450v120H429l-6-1c-124.688-8-235-61.7
 -331-161C60.687 138.7 32.312 99.3 7 54L0 41V6z'/></svg></span><span class="brace-center" style="height:0.548em;"><svg width='400em' height='0.548em' viewBox='0 0 400000 548' preserveAspectRatio='xMidYMin slice'><path d='M199572 214
@@ -312,7 +490,7 @@ c-16-25.333-24-45-24-59z'/></svg></span></span></span></span></span></span></spa
 <ol start="8">
 <li>
 <p>定界符号：<br />
-<code>$（）\big(\big)$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">（</mi><mi mathvariant="normal">）</mi><mo fence="false">(</mo><mo fence="false">)</mo></mrow><annotation encoding="application/x-tex">（）\big(\big)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="mord cjk_fallback">（</span><span class="mord cjk_fallback">）</span><span class="mord"><span class="delimsizing size1">(</span></span><span class="mord"><span class="delimsizing size1">)</span></span></span></span></span><br />
+<code>$()\big(\big)$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo stretchy="false">(</mo><mo stretchy="false">)</mo><mo fence="false">(</mo><mo fence="false">)</mo></mrow><annotation encoding="application/x-tex">()\big(\big)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="mopen">(</span><span class="mclose">)</span><span class="mord"><span class="delimsizing size1">(</span></span><span class="mord"><span class="delimsizing size1">)</span></span></span></span></span><br />
 <code>$\Big(\Big)$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo fence="false">(</mo><mo fence="false">)</mo></mrow><annotation encoding="application/x-tex">\Big(\Big)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.80002em;vertical-align:-0.65002em;"></span><span class="mord"><span class="delimsizing size2">(</span></span><span class="mord"><span class="delimsizing size2">)</span></span></span></span></span><br />
 <code>$\bigg(\bigg)$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo fence="false">(</mo><mo fence="false">)</mo></mrow><annotation encoding="application/x-tex">\bigg(\bigg)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="mord"><span class="delimsizing size3">(</span></span><span class="mord"><span class="delimsizing size3">)</span></span></span></span></span><br />
 <code>$\Bigg(\Bigg)$</code> =&gt; <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo fence="false">(</mo><mo fence="false">)</mo></mrow><annotation encoding="application/x-tex">\Bigg(\Bigg)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3.0000299999999998em;vertical-align:-1.25003em;"></span><span class="mord"><span class="delimsizing size4">(</span></span><span class="mord"><span class="delimsizing size4">)</span></span></span></span></span></p>
@@ -1282,106 +1460,6 @@ Thumb： $k \lt \sqrt n $<br />
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/SpringBoot/SpringBoot%E7%AE%80%E4%BB%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/06/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/SpringBoot/SpringBoot%E7%AE%80%E4%BB%8B/" class="post-title-link" itemprop="url">SpringBoot 简介</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-04-06 19:47:07" itemprop="dateCreated datePublished" datetime="2021-04-06T19:47:07+08:00">2021-04-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-06-14 20:58:43" itemprop="dateModified" datetime="2021-06-14T20:58:43+08:00">2021-06-14</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>官方文档： <a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using-boot">https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using-boot</a></p>
-<h2 id="微服务"><a class="markdownIt-Anchor" href="#微服务"></a> 微服务</h2>
-<h3 id="单体应用框架"><a class="markdownIt-Anchor" href="#单体应用框架"></a> 单体应用框架</h3>
-<p>all in one，指的是将一个应用中的所有服务都封装到一个war包中。<br />
-好处：易于开发测试，方便部署，多个服务器负载均衡。<br />
-弊端：修改应用时需要停止整个服务，重新打包部署。</p>
-<h3 id="微服务架构"><a class="markdownIt-Anchor" href="#微服务架构"></a> 微服务架构</h3>
-<p>把每个功能独立出来，将需要的功能元素进行整合。所以微服务是对功能元素进行复制，而不是对整个应用进行复制。<br />
-优点：每一个功能元素的服务都是可以替换，可以福独立升级的程序代码，保证了低耦合。<br />
-缺点：给部署和运维带来了很大的难度。</p>
-<h2 id="文件结构"><a class="markdownIt-Anchor" href="#文件结构"></a> 文件结构</h2>
-<ul>
-<li><code>@SpringBootApplication</code>：程序的主入口</li>
-<li><code>application.properties</code>：程序核心配置文件</li>
-<li><code>pom.xml</code>文件中的父项目设置，帮助我们进行包管理，之后的<code>dependency</code>我们无需设置版本号。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;parent&gt;</span><br><span class="line">    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;2.4.4&lt;/version&gt;</span><br><span class="line">    &lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;</span><br><span class="line">&lt;/parent&gt;</span><br></pre></td></tr></table></figure>
-<h2 id="自动配置"><a class="markdownIt-Anchor" href="#自动配置"></a> 自动配置</h2>
-<ul>
-<li>配置Tomcat
-<ol>
-<li>引入Tomcat依赖，已经引入的<code>spring-boot-starter-web</code>依赖依赖了Tomcat，所以无需手动配置。</li>
-<li>配置Tomcat</li>
-</ol>
-</li>
-<li>配置MVC
-<ol>
-<li>已经自动引入了Spring Mvc的全套组件</li>
-<li>自动配置好了SpringMVC的常用功能</li>
-</ol>
-</li>
-<li>自动设置默认值并且配置好了web的相关配置<br />
-默认配置最后都是映射到一个类上去的，这个类会在容器中被创建</li>
-<li>默认扫描机制：主程序所在的包已经其下面的所有子包都已经默认扫描</li>
-<li>引入哪些场景，哪些场景就会被开启</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1450,7 +1528,7 @@ Thumb： $k \lt \sqrt n $<br />
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">231</span>
+          <span class="site-state-item-count">232</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
