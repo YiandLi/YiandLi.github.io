@@ -177,6 +177,196 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/05/14/NLP/prompt/Ptunningv2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/05/14/NLP/prompt/Ptunningv2/" class="post-title-link" itemprop="url">P-tunning v2</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-14 19:21:45" itemprop="dateCreated datePublished" datetime="2022-05-14T19:21:45+08:00">2022-05-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-05-22 21:32:59" itemprop="dateModified" datetime="2022-05-22T21:32:59+08:00">2022-05-22</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>论文：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2110.07602.pdf">P-Tuning v2: Prompt Tuning Can Be Comparable to Fine-tuning Universally Across Scales and Tasks</a><br />
+代码：<a target="_blank" rel="noopener" href="https://github.com/THUDM/P-tuning-v2">P-tuning v2</a></p>
+<h1 id="abstract-and-introduction"><a class="markdownIt-Anchor" href="#abstract-and-introduction"></a> Abstract and Introduction</h1>
+<p>将 NLU 任务分为两类</p>
+<ul>
+<li>simple classification tasks</li>
+<li>hard sequence labeling tasks：NER，抽取式问答…</li>
+</ul>
+<p>微调的弊端：</p>
+<ul>
+<li>在训练过程中：很耗费内存，因为必须存储所有参数的梯度和优化器状态。</li>
+<li>在推理过程中：要为每个任务保留一份模型参数</li>
+</ul>
+<p>P-tunning v1</p>
+<ul>
+<li>冻结模型参数，只训练「continuous prompt」；减少了内存（存储参数的梯度和优化器状态）。</li>
+<li>缺点：Lack of Universality
+<ul>
+<li>Lack of universality across scales.<br />
+使用正常大小的预训练模型时（&lt;10 billion），效果不如 fine-tuning。只有使用 10-billion 量级的模型时，在 simple tasks 上的表现才能和 fine-tuning 碰一碰。</li>
+<li>Lack of universality across tasks.<br />
+不适用于 hard sequence labeling tasks。（个人觉得是因为使用的先验知识过于 general，但是 hard task 需要一些 specific 的表征。</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://s2.loli.net/2022/05/15/Hx83SyDqaZM2QmL.png" alt="" /></p>
+<p>基于此，作者提出 P-Tuning v2，作为 P-Tuning v1 的增强版，同时也是「Deep Prompt Tunning」（Li and Liang, 2021）的一个优化版本。<br />
+这种方法最主要的不同点在于：在预训练模型的每一层上使用「continuous prompt」，而不仅仅是只在输入层加入「continuous prompt」。<br />
+该方法适用于多数 NLU 任务，并且取得了和 fine-tuning 效果相当的表现，但是需要训练的参数量要小得多（0.1%-3%）。</p>
+<h1 id="deep-prompt-tuning"><a class="markdownIt-Anchor" href="#deep-prompt-tuning"></a> Deep Prompt Tuning</h1>
+<p>P-Tuning v1 中，「continuous prompt」是直接被插入到「embedding层」中的，这带来了两个弊端：</p>
+<ul>
+<li>因为长度限制（拼接后最大长度 512），导致训练参数较少。</li>
+<li>输入层 embedding 不能直接作用于模型预测：从第一层到最后一层输出，中间有很多非线性激活函数。<br />
+<img src="https://pic3.zhimg.com/80/v2-c6ab1a51b6536c7f2c558482bd52d8b6_1440w.jpg" alt="" /><br />
+基于此，作者借鉴了「Deep Prompt Tunning」的思路，在每一层中都加入了「prefix tokens」。<br />
+同时不同层的「continuous token」虽然位置相同，但是相互独立（而不是由之前的transformer层计算）。<br />
+这样一来，引入了更多可训练参数，并且让 prompt 能更加直接地影响输出。</li>
+</ul>
+<h1 id="optimization-and-implementation"><a class="markdownIt-Anchor" href="#optimization-and-implementation"></a> Optimization and Implementation</h1>
+<h2 id="reparameterization"><a class="markdownIt-Anchor" href="#reparameterization"></a> Reparameterization</h2>
+<p>先前的工作中，使用了一个重参数化的 encoder，来转换可训练的 embedding。<br />
+作者指出：对于一些数据集（如RTE和CoNLL04），MLP的重新参数化带来了比嵌入更稳定的改善；对于其他的数据集，重新参数化可能没有显示出任何效果（如BoolQ），有时甚至更糟（如CoNLL12）。所以本文中，该方法被移除，直接对「continuous token」进行训练。</p>
+<h2 id="prompt-length"><a class="markdownIt-Anchor" href="#prompt-length"></a> Prompt Length</h2>
+<p>实验表明，简单分类任务的prompt一般小于 20，而难序列标注任务的长度一般为 100 左右。</p>
+<h2 id="multi-task-learning"><a class="markdownIt-Anchor" href="#multi-task-learning"></a> Multi-task Learning</h2>
+<p>实验表明，在一些困难的序列任务中，多任务学习可以给 P-tuning v2 带来增益效果。</p>
+<h2 id="classification-head"><a class="markdownIt-Anchor" href="#classification-head"></a> Classification Head</h2>
+<p>先前的工作都是使用「language modeling head」，即 Verbalizer，来预测 token。<br />
+但是作者认为在<strong>全量数据有监督场景下</strong>，没有必要使用这种 MLM 的方式进行预测。同时这种预测也不适用于序列标注问题或者其他 no-actual-meaning labels 的任务。<br />
+本文中作者直接使用了 [cls]/「token representation」+MLP 进行预测。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/05/03/NLP/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB/HFCN/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Yili">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/05/03/NLP/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB/HFCN/" class="post-title-link" itemprop="url">HFCN</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-03 23:50:29" itemprop="dateCreated datePublished" datetime="2022-05-03T23:50:29+08:00">2022-05-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-05-22 21:07:47" itemprop="dateModified" datetime="2022-05-22T21:07:47+08:00">2022-05-22</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>论文：<a target="_blank" rel="noopener" href="http://proceedings.mlr.press/v80/wehrmann18a/wehrmann18a.pdf">Hierarchical Multi-Label Classification Networks</a><br />
+代码：<br />
+- <a target="_blank" rel="noopener" href="https://github.com/RAvontuur/hierarchical-multilabel-classification">貌似只有 HMCN-F</a><br />
+- <a target="_blank" rel="noopener" href="https://github.com/Tencent/NeuralNLP-NeuralClassifier/blob/master/model/classification/hmcn.py">HMCN-R from Tencent: An Open-source Neural Hierarchical Multi-label Text Classification Toolkit</a></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/05/03/NLP/%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB/HFCN/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/04/28/Python%E5%BA%93/Linux%20%E5%91%BD%E4%BB%A4/shell%20%E8%84%9A%E6%9C%AC/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -798,156 +988,6 @@ Code: <a target="_blank" rel="noopener" href="https://github.com/timoschick/pet"
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Python%E5%BA%93/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/23/Python%E5%BA%93/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/" class="post-title-link" itemprop="url">8. CUDA</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-23 18:53:24" itemprop="dateCreated datePublished" datetime="2022-03-23T18:53:24+08:00">2022-03-23</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-05-26 23:40:38" itemprop="dateModified" datetime="2022-05-26T23:40:38+08:00">2022-05-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>原文：<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/notes/cuda.html#cuda-nn-ddp-instead">pytorch.org/docs/stable/notes/cuda.html</a></p>
-<h1 id="cuda-semantics"><a class="markdownIt-Anchor" href="#cuda-semantics"></a> CUDA SEMANTICS</h1>
-<p><code>torch.cuda</code> 用来设置所选 GPU，所有的 CUDA Tensor 都会默认在该 GPU 上创建，同时对其后续操作不会更改其所属 GPU。<br />
-选定的 GPU 设备可以通过 <code>torch.cuda.device</code> 命令转换。<br />
-可以通过 <code>copy_()</code>，<code>to()</code>，<code>cuda()</code>命令将 tensor 拷贝到其他GPU上。除非设置 peer-to-peer memory access，否则将 tensor 转移到其他 GPU 会报错。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/03/23/Python%E5%BA%93/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Python%E5%BA%93/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Yili">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/23/Python%E5%BA%93/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/" class="post-title-link" itemprop="url">7. 分布式训练</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-23 17:53:24" itemprop="dateCreated datePublished" datetime="2022-03-23T17:53:24+08:00">2022-03-23</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-05-30 12:18:56" itemprop="dateModified" datetime="2022-05-30T12:18:56+08:00">2022-05-30</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>有两个类可以实现并行计算：<code>DataParallel(DP)</code>和<code>DistributedDataParallel(DDP)</code><br />
-原理都是通过提高 batch size 来增加并行度。<br />
-前者简单，后者代码量更大，但是更快。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/03/23/Python%E5%BA%93/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1016,7 +1056,7 @@ Code: <a target="_blank" rel="noopener" href="https://github.com/timoschick/pet"
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">232</span>
+          <span class="site-state-item-count">234</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
