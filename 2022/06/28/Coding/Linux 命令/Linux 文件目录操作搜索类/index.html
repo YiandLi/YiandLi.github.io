@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="查看  cd cd -：返回上次路径 以 &#x2F; 开始是绝对路径，否则是相对路径。  pwd (present working dictionary) 查看当前位置  ls (list) ls [-alrtAFR] [name...]：列出目前工作目录所含的文件及子目录  -a：显示所有文件及目录，用于显示隐藏文件 Command+Shift+.：在finder中显示隐藏文件 -l：除文件名称外，同">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 文件目录操作搜索类">
+<meta property="og:url" content="http://example.com/2022/06/28/Coding/Linux%20%E5%91%BD%E4%BB%A4/Linux%20%E6%96%87%E4%BB%B6%E7%9B%AE%E5%BD%95%E6%93%8D%E4%BD%9C%E6%90%9C%E7%B4%A2%E7%B1%BB/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="查看  cd cd -：返回上次路径 以 &#x2F; 开始是绝对路径，否则是相对路径。  pwd (present working dictionary) 查看当前位置  ls (list) ls [-alrtAFR] [name...]：列出目前工作目录所含的文件及子目录  -a：显示所有文件及目录，用于显示隐藏文件 Command+Shift+.：在finder中显示隐藏文件 -l：除文件名称外，同">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-06-29T03:08:26.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:15.545Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2022/06/28/Coding/Linux%20%E5%91%BD%E4%BB%A4/Linux%20%E6%96%87%E4%BB%B6%E7%9B%AE%E5%BD%95%E6%93%8D%E4%BD%9C%E6%90%9C%E7%B4%A2%E7%B1%BB/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>Linux 文件目录操作搜索类 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/28/Coding/Linux%20%E5%91%BD%E4%BB%A4/Linux%20%E6%96%87%E4%BB%B6%E7%9B%AE%E5%BD%95%E6%93%8D%E4%BD%9C%E6%90%9C%E7%B4%A2%E7%B1%BB/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux 文件目录操作搜索类
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-06-28 20:08:26" itemprop="dateCreated datePublished" datetime="2022-06-28T20:08:26-07:00">2022-06-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.5k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>17 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="查看"><a class="markdownIt-Anchor" href="#查看"></a> 查看</h1>
+<h2 id="cd"><a class="markdownIt-Anchor" href="#cd"></a> cd</h2>
+<p><code>cd -</code>：返回上次路径<br />
+以 <code>/</code> 开始是绝对路径，否则是相对路径。</p>
+<h2 id="pwd-present-working-dictionary"><a class="markdownIt-Anchor" href="#pwd-present-working-dictionary"></a> pwd (present working dictionary)</h2>
+<p>查看当前位置</p>
+<h2 id="ls-list"><a class="markdownIt-Anchor" href="#ls-list"></a> ls (list)</h2>
+<p><code>ls [-alrtAFR] [name...]</code>：列出目前工作目录所含的文件及子目录</p>
+<ul>
+<li><code>-a</code>：显示所有文件及目录，用于<strong>显示隐藏文件</strong><br />
+<code>Command+Shift+.</code>：在finder中显示隐藏文件</li>
+<li><code>-l</code>：除文件名称外，同时输出文件形态、权限、拥有者、文件大小等。
+<ul>
+<li>指定文件的权限一般就用 <code>ls -l 文件名称</code></li>
+<li><code>-lh</code>，<code>-ll</code></li>
+</ul>
+</li>
+<li><code>-S</code> -&gt; <code>-lhS</code>：希望以文件大小排序。</li>
+<li><code>-p</code>：增加/ (斜线) 标记目录</li>
+<li><code>-R</code>：递归列出子目录</li>
+</ul>
+<h3 id="ls-命令显示结果图解"><a class="markdownIt-Anchor" href="#ls-命令显示结果图解"></a> ls 命令显示结果图解</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; ls -l</span><br><span class="line">total 73800</span><br><span class="line">-rw-r--r--    1 liuyilin  staff         0 Dec  7 18:18 -a</span><br><span class="line">-rw-r--r--    1 liuyilin  staff         0 Dec  7 18:18 202211082225</span><br><span class="line">drwxr-xr-x    5 liuyilin  staff       160 May 21  2022 scaffolds</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p><a target="_blank" rel="noopener" href="https://www.runoob.com/linux/linux-file-attr-permission.html">ls命令显示结果图解</a></p>
+<ul>
+<li>
+<p>每个文件的属性由左边第一部分的 10 个字符来确定.</p>
+<ul>
+<li>0位字符：表示这个文件是<strong>目录、文件或链接文件</strong>等等。<br />
+<code>d</code>为目录；<code>-</code>为文件；<code>l</code>为链接文档(link file) …</li>
+<li>123位字符：表示「属主权限」（该文件的所有者），以三个为一组，且均为 <code>rwx</code> 的三个参数的组合，分别表示：读，写，可执行，无权限。</li>
+<li>456位字符：表示「属组权限」（所有者的同组用户），以三个为一组，同理…</li>
+<li>789位字符：表示「其他用户权限」</li>
+</ul>
+</li>
+<li>
+<p>第三列为 owner；</p>
+</li>
+<li>
+<p>第四列为 group name；</p>
+</li>
+<li>
+<p>第五列为 apparent sizes(文件长度,file数据结构中定义的文件长度字段)。</p>
+<ul>
+<li>当使用<code>ls -ll</code>，会显示成字节大小；</li>
+<li>而<code>ls -lh</code>会以KB、MB等为单位进行显示，这样比较直观一些。</li>
+</ul>
+</li>
+<li>
+<p>倒数第二列为 last modification time</p>
+</li>
+<li>
+<p>最后一列为 file name</p>
+</li>
+</ul>
+<h1 id="移动设置"><a class="markdownIt-Anchor" href="#移动设置"></a> 移动设置</h1>
+<h2 id="mv-move-file"><a class="markdownIt-Anchor" href="#mv-move-file"></a> mv ( move file )</h2>
+<p>用来为文件或者目录改名，或者将文件或者目录移到其他位置。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mv [options] source dest</span><br><span class="line">mv [options] source... directory</span><br></pre></td></tr></table></figure>
+<p>[options] 参数说明:</p>
+<ul>
+<li><code>-b</code>: 当目标文件或目录存在时，在执行覆盖前，会为其创建一个备份。</li>
+<li><code>-i</code>: 如果指定移动的源目录或文件与目标的目录或文件同名，则会先询问是否覆盖旧文件，输入 y 表示直接覆盖，输入 n 表示取消该操作。</li>
+<li><code>-f</code>: 如果指定移动的源目录或文件与目标的目录或文件同名，不会询问，直接覆盖旧文件。</li>
+<li><code>-n</code>: 不要覆盖任何已存在的文件或目录。</li>
+<li><code>-u</code>：当源文件比目标文件新或者目标文件不存在时，才执行移动操作。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>source</th>
+<th>dest</th>
+<th>运行结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>file</td>
+<td>file</td>
+<td>给文件改名</td>
+</tr>
+<tr>
+<td>file</td>
+<td>directory</td>
+<td>将文件移动到指定目录下</td>
+</tr>
+<tr>
+<td>directory</td>
+<td>directory</td>
+<td>dest_directory 存在：把 source_directory 移动到 dest_directory 下面<br> dest_directory 不存在：将 source_directory 改名为 dest_directory</td>
+</tr>
+</tbody>
+</table>
+<p>同样支持「移动」+「改名」：<code>mv   /home/ffxhd/a.txt   /home/ffxhd/test/c.txt</code>。<br />
+同样支持批量移动文件：<code>mv   /home/ffxhd/testThinkPHP5/tp5/*    /home/ffxhd/testThinkPHP5</code></p>
+<h2 id="cp-copy"><a class="markdownIt-Anchor" href="#cp-copy"></a> cp ( copy )</h2>
+<p>复制文件或目录</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cp [options] source dest</span><br><span class="line">cp -r[options] source_directory dest_directory</span><br></pre></td></tr></table></figure>
+<p><code>-r</code>：若给出的源文件是一个<strong>目录文件</strong>，此时将复制该目录下所有的子目录和文件。<br />
+<code>-a</code>：此选项通常在<strong>复制目录</strong>时使用，它保留链接、文件属性，并复制目录下的所有内容。其作用等于dpR参数组合。<br />
+<code>-f</code>：覆盖已经存在的目标文件而不给出提示。相当于在命令前加一个反斜杠  <code>\cp</code> 。反斜杠表示直接使用原生命令。</p>
+<p><code>-d</code>：复制时保留链接。这里所说的链接相当于 Windows 系统中的快捷方式。<br />
+<code>-i</code>：默认操作，与 <code>-f</code> 选项相反，在覆盖目标文件之前给出提示，要求用户确认是否覆盖，回答 y 时目标文件将被覆盖。<br />
+<code>-p</code>：除复制文件的内容外，还把<strong>修改时间和访问权限</strong>也复制到新文件中。<br />
+<code>-l</code>：不复制文件，只是<strong>生成链接文件</strong>。</p>
+<h2 id="rm-remove"><a class="markdownIt-Anchor" href="#rm-remove"></a> rm ( remove )</h2>
+<p>删除一个文件或者目录</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rm [选项] deleteFile</span><br></pre></td></tr></table></figure>
+<p><code>-i</code> 删除前逐一询问确认。<br />
+<code>-f</code> 不逐一确认，强行删除。即使原档案属性设为只读，也会被直接删除，<br />
+<code>-r</code> 删除的对象是目录，递归删除目录中所有内容。</p>
+<h2 id="mkdir"><a class="markdownIt-Anchor" href="#mkdir"></a> mkdir</h2>
+<p><code>mkdir [-p] dirName</code></p>
+<p><code>-p</code>： 确保目录名称存在，不存在的就建一个，用于<strong>创建多层目录</strong>。</p>
+<p>比如<code>mkdir -p runoob2/test</code>，如果当前路径下没有父文件夹<code>runoob2</code>，则创建父文件夹。<br />
+本例若不加 <code>-p</code> 参数，且原本 <code>runoob2</code> 目录不存在，则产生错误。</p>
+<h2 id="rmdir"><a class="markdownIt-Anchor" href="#rmdir"></a> rmdir</h2>
+<p><code>rmdir [-p] dirName</code></p>
+<p>命令删除<strong>空</strong>的目录，只能删除空的，删除非空的话需要使用 <code>rm -r dir_name</code></p>
+<p><code>rmdir -p BBB/Test</code>：<code>-p</code> 表示在工作目录下的 BBB 目录中，删除名为 Test 的子目录。若 Test 删除后，BBB 目录成为空目录，则 BBB 亦予删除。</p>
+<h1 id="新建"><a class="markdownIt-Anchor" href="#新建"></a> 新建</h1>
+<h2 id="touch"><a class="markdownIt-Anchor" href="#touch"></a> touch</h2>
+<p><code>touch 文件名称</code>：创建空文件</p>
+<h2 id="echo"><a class="markdownIt-Anchor" href="#echo"></a> echo</h2>
+<p><code>echo [选项] [输出内容]</code></p>
+<p><code>-e</code>： 支持反斜线控制的字符转换</p>
+<p>注意空格需要使用字符串格式：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Ylin:~ liuyilin$ echo hello    word</span><br><span class="line">hello word</span><br><span class="line">Ylin:~ liuyilin$ echo &quot;hello    word&quot;</span><br><span class="line">hello    word</span><br></pre></td></tr></table></figure>
+<h2 id="cat-concatenate"><a class="markdownIt-Anchor" href="#cat-concatenate"></a> cat ( concatenate )</h2>
+<p>读取和合并文件，并将其内容写入到标准输出。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat [-AbeEnstTuv] fileName</span><br></pre></td></tr></table></figure>
+<p>最常用于：</p>
+<ul>
+<li>打印 / 查看一个或多个文本文件的内容</li>
+<li>将一个文件的内容追加到另一个文件的末尾来合并文件</li>
+<li>创建文件</li>
+</ul>
+<h3 id="查看文件内容"><a class="markdownIt-Anchor" href="#查看文件内容"></a> 查看文件内容</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat filename</span><br></pre></td></tr></table></figure>
+<p>读取文件内容，写入到标准输出中，这里标准输出的结果就是打印在命令行中。</p>
+<h3 id="重定向文件的内容"><a class="markdownIt-Anchor" href="#重定向文件的内容"></a> 重定向文件的内容</h3>
+<p>默认情况下，cat 命令将内容写入标准输出。<br />
+但可以使用标准输出的<strong>重定向操作符 <code>&gt;</code> 或者 <code>&gt;&gt;</code></strong> 将标准输出重定向到文件，而不是终端的屏幕。</p>
+<p><code>&gt;</code>：类似 <code>w</code>，不存在则创建 ，存在则覆盖<br />
+<code>&gt;&gt;</code>：类似 <code>a</code>，不存在则创建 ，存在则追加</p>
+<p>当使用重定向操作符时，可以实现 <code>cp</code> 的功能：<code>cat file1.txt &gt; file2.txt</code> 。</p>
+<h3 id="打印参数"><a class="markdownIt-Anchor" href="#打印参数"></a> 打印参数</h3>
+<p><code>-n</code> 或 --number：显示行号，由 1 开始对所有输出的行数编号。</p>
+<p><code>-b</code> 或 --number-nonblank：和 <code>-n</code> 相似，只不过对于空白行不编号。<br />
+<code>-s</code> 或 --squeeze-blank：当遇到有连续两行以上的空白行，就代换为一行的空白行。<br />
+<code>-v</code> 或 --show-nonprinting：使用 <code>^</code> 和 <code>M- </code>符号，除了 LFD 和 TAB 之外。<br />
+<code>-E</code> 或 --show-ends : 在每行结束处显示 <code>$</code>。<br />
+<code>-T</code> 或 --show-tabs: 将 TAB 字符显示为 <code>^I</code>。<br />
+<code>-A</code>, --show-all：等价于 <code>-vET</code>。<br />
+<code>-e</code>：等价于&quot;-vE&quot;选项；<br />
+<code>-t</code>：等价于&quot;-vT&quot;选项；</p>
+<h3 id="合并文件用法"><a class="markdownIt-Anchor" href="#合并文件用法"></a> 合并文件用法</h3>
+<p>将两个或多个文件名作为参数传递给 <code>cat</code> 命令时，这会合并文件的内容。<br />
+<code>cat</code> 命令将按其参数给出的顺序读取文件，并以相同的顺序合并打印文件内容。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; echo &quot;file1 content&quot; &gt; file1.txt</span><br><span class="line">&gt;&gt;&gt; echo  &quot;file2 content&quot; &gt; file2.txt</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; cat file1.txt file2.txt</span><br><span class="line">file1 content</span><br><span class="line">file2 content</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; cat file2.txt</span><br><span class="line">file2 content</span><br></pre></td></tr></table></figure>
+<p>这也就可以进行文件操作了</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 复制追加</span><br><span class="line">&gt;&gt;&gt; cat file1.txt &gt;&gt; file2.txt</span><br><span class="line"></span><br><span class="line"># 合并到新文件</span><br><span class="line">&gt;&gt;&gt; cat file1.txt file2.txt &gt; file3.txt</span><br></pre></td></tr></table></figure>
+<h3 id="创建文件"><a class="markdownIt-Anchor" href="#创建文件"></a> 创建文件</h3>
+<p>在编写脚本时你可能会想让用户输入非常的长的内容或者让用户可以输入任何字符然后保存到文件。</p>
+<p>最简单的解决方式就是使用 cat 命令作为编辑器，让用户输入任何内容。要做到这一点请在运行命令 cat &gt; file1.txt。</p>
+<p>当用户的完成内容的出入后，可按快捷键 CRTL+D 保存文件。如果用户不知道如何保存内容时，可在运行 cat 之前告诉用户保存的快捷键是 CRTL+D。</p>
+<h1 id="查看-2"><a class="markdownIt-Anchor" href="#查看-2"></a> 查看</h1>
+<h2 id="more"><a class="markdownIt-Anchor" href="#more"></a> more</h2>
+<p>文件内容分屏查看器</p>
+<p>进入后的操作说明：</p>
+<ul>
+<li>空格：向下翻一页</li>
+<li>Enter：向下一行</li>
+<li><code>q</code>：离开</li>
+<li><code>f</code>：向下滚动一屏</li>
+<li><code>b</code>：返回上一屏</li>
+<li><code>=</code>：底部输出当前行的行</li>
+<li><code>:f</code>：底部输出文件名和当前行的行号</li>
+</ul>
+<h2 id="less"><a class="markdownIt-Anchor" href="#less"></a> less</h2>
+<p><code>less 要查看的文件</code><br />
+分屏显示文件内容，和more类似，但是更强大。<br />
+在显示文件内容时，并<strong>不是一次将整个文件加载之后 才显示，而是根据显示需要加载内容</strong>，对于显示大型文件具有较高的效率。</p>
+<p>操作说明和 <code>more</code> / <code>vim</code> 一样，增加：<br />
+<code>/字串</code> 向下搜寻『字串』的功能；<code>n</code>：向下查找；<code>N</code>：向上查找；</p>
+<h2 id="head"><a class="markdownIt-Anchor" href="#head"></a> head</h2>
+<p>显示文件头部内容，默认情况下 <code>head</code> 指令显示文件的头 10 行内容。</p>
+<p><code>head -n 5 文件</code><br />
+<code>-n &lt;行数&gt;</code> 指定显示头部内容的行数</p>
+<p>如果需要显示行号，则可以使用：<code>cat -n $file | head -n $n</code></p>
+<h2 id="tail"><a class="markdownIt-Anchor" href="#tail"></a> tail</h2>
+<p>输出文件尾部内容，默认情况下 <code>tail</code> 指令显示文件的后 10 行内容。<br />
+<code>-n &lt;行数&gt;</code>：输出文件尾部 n 行内容<br />
+<code>-f</code>：显示文件最新追加的内容，<strong>用于监视文件变化</strong>，适合只是被追加的文档，比如日志。</p>
+<h1 id="链接"><a class="markdownIt-Anchor" href="#链接"></a> 链接</h1>
+<h2 id="ln-link-files"><a class="markdownIt-Anchor" href="#ln-link-files"></a> ln (link files)</h2>
+<p>为某一个文件在另外一个位置建立一个同步的链接。</p>
+<p>需要在不同的目录，用到相同的文件时，我们不需要在每一个需要的目录下都放一个必须相同的文件，我们只要在某个固定的目录，放上该文件，然后在 其它的目录下用ln命令链接（link）它就可以，不必重复的占用磁盘空间。</p>
+<p>链接又可分为两种 : <strong>硬链接(hard link)与软链接(symbolic link)</strong></p>
+<ol>
+<li>
+<p>软链接：链接文件指向原始文件</p>
+<ol>
+<li>以路径的形式存在。类似于Windows操作系统中的快捷方式</li>
+<li>软链接可以 跨文件系统 ，硬链接不可以</li>
+<li>软链接可以对一个不存在的文件名进行链接<br />
+如果原始文件丢失，则链接文件将失效：</li>
+<li>软链接可以对目录进行链接</li>
+<li>删除/移动原始文件/原始文件改名 后，软连接失效。copy 不影响。<br />
+can be seen as a static link to the last known location of the original file.<br />
+work even if you replace the original file with a different file with the same name.</li>
+</ol>
+</li>
+<li>
+<p>硬链接：链接文件和原始文件一同指向原始文件的 inode</p>
+<ol>
+<li>硬链接，以文件副本的形式存在。但不占用实际空间。</li>
+<li>不允许给目录创建硬链接</li>
+<li>硬链接只有在同一个文件系统中才能创建</li>
+<li>原始文件被删除/移动后，硬链接文件依然可以访问</li>
+</ol>
+</li>
+</ol>
+<p>修改软硬链接文件内容均会修改原始文件。</p>
+<p>inode 存储了文件的 metadata 和 物理文件地址，系统根据 inode 获取文件基本信息和磁盘上的地址，来读取文件。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ln [参数][源文件或目录][目标文件或目录]</span><br></pre></td></tr></table></figure>
+<p>参数的格式为:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[-bdfinsvF] [-S backup-suffix] [-V &#123;numbered,existing,simple&#125;]</span><br></pre></td></tr></table></figure>
+<p><code>-s</code> 表示使用软链接</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lrwxr-xr-x   1 liuyilin  staff        5 Feb  3 03:04 2 -&gt; 1.txt</span><br></pre></td></tr></table></figure>
+<p>软连接文件头为 <code>l</code> ，并且有指针表示。硬链接则没有。<br />
+注意：如果使用 <code>rm -rf 软链接名/</code> 删除，会把软链接对应的真实目录下内容删掉，所以不要加<code>/</code>。</p>
+<h1 id="搜素"><a class="markdownIt-Anchor" href="#搜素"></a> 搜素</h1>
+<h2 id="find"><a class="markdownIt-Anchor" href="#find"></a> find</h2>
+<p>从指定目录向下<strong>递归</strong>地遍历其各个子目录，将满足条件的文件显示在终端。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find [搜索范围] [选项]</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>[搜索范围]</code>：为指定目录，默认当前目录。</li>
+<li><code> [选项]</code>：
+<ul>
+<li><code>-name</code>：&lt;查询方式&gt;，按照指定的文件名查找模式查找文件<br />
+支持通配符的 方法：<code>&quot;*.txt&quot;</code>，显示所有以<code>.txt</code>结尾的文件。</li>
+<li><code>-user</code>：&lt;用户名&gt; 查找属于指定用户名所有文件</li>
+<li><code>-size</code>：&lt;文件大小&gt; 按照指定的文件大小查找文件
+<ul>
+<li><code>+10M</code>：大于等于10M的文件<br />
+单位为: b 块（512 字节），c 字， w 字（2 字节），k 千字， M 兆字节，G 吉字节</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="locate"><a class="markdownIt-Anchor" href="#locate"></a> locate</h2>
+<p>利用事先建立的系统中所有文件名称及路径的 locate 数据库实现快速定位给 定的文件。<br />
+Locate 指令无需遍历整个文件系统，查询速度较快。<br />
+该数据库默认每天更新一次。为了保证查询结果的准确 度，管理员必须定期更新 locate 。</p>
+<ul>
+<li>更新数据库：<code>updatedb</code></li>
+<li>查询： <code>locate tmp</code>，模式查找</li>
+</ul>
+<h2 id="grep"><a class="markdownIt-Anchor" href="#grep"></a> | grep</h2>
+<ol>
+<li>管道符 <code>|</code> ，表示将前一个命令的处理结果输出传递给后面的命令处理</li>
+<li><code>grep</code> 过滤查找</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grep 选项 查找内容 源文件名称</span><br></pre></td></tr></table></figure>
+<p><code>-n</code> 显示匹配行及行号</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; find public -name index.html  | grep tree/index.html</span><br><span class="line">public/2021/12/13/Coding/Sklearn/sklearn tree/index.html</span><br></pre></td></tr></table></figure>
+<h1 id="压缩"><a class="markdownIt-Anchor" href="#压缩"></a> 压缩</h1>
+<h2 id="zip"><a class="markdownIt-Anchor" href="#zip"></a> zip</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">zip [选项] XXX.zip 将要压缩的内容</span><br><span class="line"></span><br><span class="line">zip [-AcdDfFghjJKlLmoqrSTuvVwXyz$][-b &lt;工作目录&gt;][-ll][-n &lt;字尾字符串&gt;][-t &lt;日期时间&gt;][-&lt;压缩效率&gt;][压缩文件名称][文件...][-i &lt;范本样式&gt;][-x &lt;范本样式&gt;]</span><br></pre></td></tr></table></figure>
+<p>用于压缩文件和目录，压缩后的文件后缀名为 <code>.zip</code>。</p>
+<p><code>将要压缩的内容</code>：可以同时指定多个离散文件<br />
+<code>-r</code> 递归处理，压缩目录。<br />
+<code>-q</code> 不显示指令执行过程。<br />
+<code>-S</code> 包含系统和隐藏文件。<br />
+<code>-d</code> 从压缩文件内删除指定的文件。<br />
+<code>-m</code> 将文件压缩并加入压缩文件后，删除原始文件，即把文件移到压缩文件中。</p>
+<h2 id="unzip"><a class="markdownIt-Anchor" href="#unzip"></a> unzip</h2>
+<p>用于解压缩<code>zip</code>文件，<code>unzip</code>为<code>.zip</code>压缩文件的解压缩程序。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">unzip [选项] XXX.zip</span><br><span class="line"></span><br><span class="line">unzip [-cflptuvz][-agCjLMnoqsVX][-P &lt;密码&gt;][.zip文件][文件][-d &lt;目录&gt;][-x &lt;文件&gt;] 或 unzip [-Z]</span><br></pre></td></tr></table></figure>
+<p><code>[.zip文件]</code> 指定.zip压缩文件。<br />
+<code>-d &lt;目录&gt;</code> 指定解压后文件的存放目录</p>
+<h2 id="tar-tape-archive"><a class="markdownIt-Anchor" href="#tar-tape-archive"></a> tar (tape archive)</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar [选项] XXX.tar.gz 将要打包进去的内容</span><br></pre></td></tr></table></figure>
+<p>只进行打包归档的工作，不进行压缩。</p>
+<p>-v 显示详细信息<br />
+-z 打包同时压缩<br />
+-f 指定压缩后的文件名<br />
+-c 产生.tar 打包文件，结合使用 gz 压缩工具，生成<code>.tar.gz</code>压缩文件<br />
+-x 解包.tar 文件<br />
+-C 解压到指定目录，<code>tar -zxvf xiyou.tar.gz -C /opt</code></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/06/28/Coding/Linux%20%E5%91%BD%E4%BB%A4/Linux%20%E7%94%A8%E6%88%B7%E7%AE%A1%E7%90%86/" rel="prev" title="Linux 用户管理">
+      <i class="fa fa-chevron-left"></i> Linux 用户管理
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/06/28/Coding/Linux%20%E5%91%BD%E4%BB%A4/Linux%20%E6%96%87%E4%BB%B6%E6%9D%83%E9%99%90%E7%B1%BB/" rel="next" title="Linux 文件权限类">
+      Linux 文件权限类 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B"><span class="nav-number">1.</span> <span class="nav-text"> 查看</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#cd"><span class="nav-number">1.1.</span> <span class="nav-text"> cd</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pwd-present-working-dictionary"><span class="nav-number">1.2.</span> <span class="nav-text"> pwd (present working dictionary)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ls-list"><span class="nav-number">1.3.</span> <span class="nav-text"> ls (list)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ls-%E5%91%BD%E4%BB%A4%E6%98%BE%E7%A4%BA%E7%BB%93%E6%9E%9C%E5%9B%BE%E8%A7%A3"><span class="nav-number">1.3.1.</span> <span class="nav-text"> ls 命令显示结果图解</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%A7%BB%E5%8A%A8%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text"> 移动设置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#mv-move-file"><span class="nav-number">2.1.</span> <span class="nav-text"> mv ( move file )</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cp-copy"><span class="nav-number">2.2.</span> <span class="nav-text"> cp ( copy )</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rm-remove"><span class="nav-number">2.3.</span> <span class="nav-text"> rm ( remove )</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mkdir"><span class="nav-number">2.4.</span> <span class="nav-text"> mkdir</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rmdir"><span class="nav-number">2.5.</span> <span class="nav-text"> rmdir</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%96%B0%E5%BB%BA"><span class="nav-number">3.</span> <span class="nav-text"> 新建</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#touch"><span class="nav-number">3.1.</span> <span class="nav-text"> touch</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#echo"><span class="nav-number">3.2.</span> <span class="nav-text"> echo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cat-concatenate"><span class="nav-number">3.3.</span> <span class="nav-text"> cat ( concatenate )</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%96%87%E4%BB%B6%E5%86%85%E5%AE%B9"><span class="nav-number">3.3.1.</span> <span class="nav-text"> 查看文件内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E5%AE%9A%E5%90%91%E6%96%87%E4%BB%B6%E7%9A%84%E5%86%85%E5%AE%B9"><span class="nav-number">3.3.2.</span> <span class="nav-text"> 重定向文件的内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%93%E5%8D%B0%E5%8F%82%E6%95%B0"><span class="nav-number">3.3.3.</span> <span class="nav-text"> 打印参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%88%E5%B9%B6%E6%96%87%E4%BB%B6%E7%94%A8%E6%B3%95"><span class="nav-number">3.3.4.</span> <span class="nav-text"> 合并文件用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6"><span class="nav-number">3.3.5.</span> <span class="nav-text"> 创建文件</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B-2"><span class="nav-number">4.</span> <span class="nav-text"> 查看</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#more"><span class="nav-number">4.1.</span> <span class="nav-text"> more</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#less"><span class="nav-number">4.2.</span> <span class="nav-text"> less</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#head"><span class="nav-number">4.3.</span> <span class="nav-text"> head</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tail"><span class="nav-number">4.4.</span> <span class="nav-text"> tail</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5"><span class="nav-number">5.</span> <span class="nav-text"> 链接</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ln-link-files"><span class="nav-number">5.1.</span> <span class="nav-text"> ln (link files)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%90%9C%E7%B4%A0"><span class="nav-number">6.</span> <span class="nav-text"> 搜素</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#find"><span class="nav-number">6.1.</span> <span class="nav-text"> find</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#locate"><span class="nav-number">6.2.</span> <span class="nav-text"> locate</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#grep"><span class="nav-number">6.3.</span> <span class="nav-text"> | grep</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9"><span class="nav-number">7.</span> <span class="nav-text"> 压缩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#zip"><span class="nav-number">7.1.</span> <span class="nav-text"> zip</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unzip"><span class="nav-number">7.2.</span> <span class="nav-text"> unzip</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tar-tape-archive"><span class="nav-number">7.3.</span> <span class="nav-text"> tar (tape archive)</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

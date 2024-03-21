@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="当使用一些大规模集成的算法时，参数的问题就出来了，比如说 XGBoost的参数大概在20个左右，GBDT的参数个数也在同一个级别，这种时候，会调参和不会调参在同样的数据集上效果可能就是两码事了。  GridSearchCV GridSearch和CV，即网格搜索和交叉验证。 缺点：在面对大数据集和多参数的情况下，非常耗时 交叉验证：  将训练数据集划分为K份，K一般为10。 依次取其中一份为验证集">
+<meta property="og:type" content="article">
+<meta property="og:title" content="sklearn GridSearchCV 与 RandomizedSearchCV 调参">
+<meta property="og:url" content="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20CV/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="当使用一些大规模集成的算法时，参数的问题就出来了，比如说 XGBoost的参数大概在20个左右，GBDT的参数个数也在同一个级别，这种时候，会调参和不会调参在同样的数据集上效果可能就是两码事了。  GridSearchCV GridSearch和CV，即网格搜索和交叉验证。 缺点：在面对大数据集和多参数的情况下，非常耗时 交叉验证：  将训练数据集划分为K份，K一般为10。 依次取其中一份为验证集">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-12-13T23:23:02.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:15.851Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20CV/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>sklearn GridSearchCV 与 RandomizedSearchCV 调参 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20CV/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          sklearn GridSearchCV 与 RandomizedSearchCV 调参
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-12-13 15:23:02" itemprop="dateCreated datePublished" datetime="2021-12-13T15:23:02-08:00">2021-12-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Sklearn/" itemprop="url" rel="index"><span itemprop="name">Sklearn</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>799</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>当使用一些大规模集成的算法时，参数的问题就出来了，比如说 XGBoost的参数大概在20个左右，GBDT的参数个数也在同一个级别，这种时候，会调参和不会调参在同样的数据集上效果可能就是两码事了。</p>
+<h1 id="gridsearchcv"><a class="markdownIt-Anchor" href="#gridsearchcv"></a> GridSearchCV</h1>
+<p>GridSearch和CV，即网格搜索和交叉验证。</p>
+<p>缺点：在面对大数据集和多参数的情况下，非常耗时</p>
+<p>交叉验证：</p>
+<ul>
+<li>将训练数据集划分为K份，K一般为10。</li>
+<li>依次取其中一份为验证集，其余为训练集训练分类器，测试分类器在验证集上的精度。</li>
+<li>取K次实验的平均精度为该分类器的平均精度。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">#分类器使用 xgboost</span><br><span class="line">clf1 = xgb.XGBClassifier()</span><br><span class="line"></span><br><span class="line">#设定网格搜索的xgboost参数搜索范围，值搜索XGBoost的主要6个参数</span><br><span class="line">param_dist = &#123;</span><br><span class="line">        &#x27;n_estimators&#x27;:range(80,200,4),</span><br><span class="line">        &#x27;max_depth&#x27;:range(2,15,1),</span><br><span class="line">        &#x27;learning_rate&#x27;:np.linspace(0.01,2,20),</span><br><span class="line">        &#x27;subsample&#x27;:np.linspace(0.7,0.9,20),</span><br><span class="line">        &#x27;colsample_bytree&#x27;:np.linspace(0.5,0.98,10),</span><br><span class="line">        &#x27;min_child_weight&#x27;:range(1,9,1)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">grid = GridSearchCV(clf1, # 训练的模型</span><br><span class="line">                    param_dist, # param_dist字典类型，放入参数搜索范围</span><br><span class="line">                    cv = 3,</span><br><span class="line">                    scoring = &#x27;neg_log_loss&#x27;, # 精度评价方式设定为“neg_log_loss“</span><br><span class="line">                    n_iter=300, # 训练300次，数值越大，获得的参数精度越大，但是搜索时间越长</span><br><span class="line">                    n_jobs = -1 # 使用所有的CPU进行训练，默认为1，使用1个CPU</span><br><span class="line">                    )</span><br><span class="line"></span><br><span class="line">#在训练集上训练 (x, y)</span><br><span class="line">grid.fit(traindata.values, np.ravel(trainlabel.values))</span><br><span class="line"></span><br><span class="line">best_estimator = grid.best_estimator_  # 返回最优的训练器</span><br><span class="line">print(best_estimator)  # 输出最优训练器的精度</span><br></pre></td></tr></table></figure>
+<p>评分参数 <code>scoring</code> ，可以需要根据实际的评价标准设定：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">import numpy as np</span><br><span class="line">from sklearn.metrics import make_scorer</span><br><span class="line"></span><br><span class="line">def logloss(act, pred):</span><br><span class="line">    epsilon = 1e-15</span><br><span class="line">    pred = sp.maximum(epsilon, pred)</span><br><span class="line">    pred = sp.minimum(1-epsilon, pred)</span><br><span class="line">    ll = sum(act*sp.log(pred) + sp.subtract(1, act)*sp.log(sp.subtract(1, pred)))</span><br><span class="line">    ll = ll * -1.0/len(act)</span><br><span class="line">    return ll</span><br><span class="line"></span><br><span class="line">#这里的greater_is_better参数决定了自定义的评价指标是越大越好还是越小越好</span><br><span class="line">loss  = make_scorer(logloss, greater_is_better=False)</span><br><span class="line">score = make_scorer(logloss, greater_is_better=True)</span><br></pre></td></tr></table></figure>
+<h1 id="randomizedsearchcv"><a class="markdownIt-Anchor" href="#randomizedsearchcv"></a> RandomizedSearchCV</h1>
+<p>以随机在参数空间中采样的方式代替了 <code>GridSearchCV</code><br />
+对于参数的网格搜索，在对于有连续变量的参数时，<code>RandomizedSearchCV</code> 会将其当作一个分布进行采样，这是网格搜索做不到的。<br />
+它的搜索能力取决于设定的<code>n_iter</code>参数，即随机搜索几次</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"># 分类器使用 xgboost</span><br><span class="line">clf1 = xgb.XGBClassifier()</span><br><span class="line"></span><br><span class="line"># 设定搜索的xgboost参数搜索范围，值搜索XGBoost的主要6个参数</span><br><span class="line">param_dist = &#123;</span><br><span class="line">        &#x27;n_estimators&#x27;:range(80,200,4),</span><br><span class="line">        &#x27;max_depth&#x27;:range(2,15,1),</span><br><span class="line">        &#x27;learning_rate&#x27;:np.linspace(0.01,2,20),</span><br><span class="line">        &#x27;subsample&#x27;:np.linspace(0.7,0.9,20),</span><br><span class="line">        &#x27;colsample_bytree&#x27;:np.linspace(0.5,0.98,10),</span><br><span class="line">        &#x27;min_child_weight&#x27;:range(1,9,1)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">grid = RandomizedSearchCV(  clf1,</span><br><span class="line">                            param_dist,</span><br><span class="line">                            cv = 3,</span><br><span class="line">                            scoring = &#x27;neg_log_loss&#x27;,</span><br><span class="line">                            n_iter=300,  # 训练300次，数值越大，获得的参数精度越大，但是搜索时间越长</span><br><span class="line">                            n_jobs = -1)</span><br><span class="line"></span><br><span class="line"># 在训练集上训练</span><br><span class="line">grid.fit(traindata.values,np.ravel(trainlabel.values))</span><br><span class="line"></span><br><span class="line"># 返回最优的训练器</span><br><span class="line">best_estimator = grid.best_estimator_</span><br><span class="line">print(best_estimator)</span><br><span class="line"># 输出最优训练器的精度</span><br><span class="line">print(grid.best_score_)</span><br></pre></td></tr></table></figure>
+<h1 id="ridgecv"><a class="markdownIt-Anchor" href="#ridgecv"></a> RidgeCV</h1>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">from sklearn.linear_model import RidgeCV</span><br><span class="line"># Split the data into training and testing sets</span><br><span class="line">X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)</span><br><span class="line"></span><br><span class="line"># Fit a ridge regression model using cross-validation</span><br><span class="line">model = RidgeCV(alphas=[0.1, 1.0, 10.0],</span><br><span class="line">                cv = KFold(n_splits=5, random_state=1, shuffle=True))</span><br><span class="line">model.fit(X_train, Y_train)</span><br><span class="line"></span><br><span class="line"># Make predictions on the test set</span><br><span class="line">Y_pred = model.predict(X_test)</span><br><span class="line"></span><br><span class="line"># Calculate the mean squared error</span><br><span class="line">test_error = mean_squared_error(Y_test, Y_pred)</span><br><span class="line"></span><br><span class="line"># Report the test error</span><br><span class="line">print(f&quot;Test error: &#123;test_error&#125;&quot;)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h1 id="lassocv"><a class="markdownIt-Anchor" href="#lassocv"></a> LassoCV</h1>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">model = LassoCV(alphas=np.arange(0.1, 2.0, 0.1), cv=KFold(n_splits=5, random_state=1, shuffle=True), max_iter = 1000)</span><br><span class="line">model.fit(train_X, train_Y)</span><br><span class="line">print(&quot;Model info:&quot;, model)</span><br><span class="line">print(&quot;Finally penalty alpha is&quot;, model.alpha_)</span><br><span class="line">print(&quot;Finally test MSE loss is&quot;, mean_squared_error(test_Y, model.predict(test_X)))</span><br><span class="line"></span><br><span class="line">selected_variables = cols[model.coef_ != 0]</span><br><span class="line">print(f&quot;Selected variables w/o standardization: &#123;selected_variables&#125;&quot;)</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/12/13/Coding/Sklearn/sklearn%20ensemble/" rel="prev" title="sklearn ensemble">
+      <i class="fa fa-chevron-left"></i> sklearn ensemble
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/12/13/machine_learninng/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/Boosting/" rel="next" title="boosting">
+      boosting <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#gridsearchcv"><span class="nav-number">1.</span> <span class="nav-text"> GridSearchCV</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#randomizedsearchcv"><span class="nav-number">2.</span> <span class="nav-text"> RandomizedSearchCV</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ridgecv"><span class="nav-number">3.</span> <span class="nav-text"> RidgeCV</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#lassocv"><span class="nav-number">4.</span> <span class="nav-text"> LassoCV</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

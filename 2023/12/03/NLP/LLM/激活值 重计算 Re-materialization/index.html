@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Training Deep Nets with Sublinear Memory Cost">
+<meta property="og:type" content="article">
+<meta property="og:title" content="激活值 重计算 Re-materialization">
+<meta property="og:url" content="http://example.com/2023/12/03/NLP/LLM/%E6%BF%80%E6%B4%BB%E5%80%BC%20%E9%87%8D%E8%AE%A1%E7%AE%97%20Re-materialization/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Training Deep Nets with Sublinear Memory Cost">
+<meta property="og:locale">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/Untitled.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/Untitled1.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/Untitled2.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/0NARheCDvdoPc4A8z.webp">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/0udMSiPD0kZHum-sZ.webp">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Re_materialization/0s7U1QDfSXuVd1LrF.webp">
+<meta property="article:published_time" content="2023-12-04T07:02:07.000Z">
+<meta property="article:modified_time" content="2024-03-11T01:55:31.312Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/NLP/LLM/Re_materialization/Untitled.png">
+
+<link rel="canonical" href="http://example.com/2023/12/03/NLP/LLM/%E6%BF%80%E6%B4%BB%E5%80%BC%20%E9%87%8D%E8%AE%A1%E7%AE%97%20Re-materialization/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>激活值 重计算 Re-materialization | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/12/03/NLP/LLM/%E6%BF%80%E6%B4%BB%E5%80%BC%20%E9%87%8D%E8%AE%A1%E7%AE%97%20Re-materialization/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          激活值 重计算 Re-materialization
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-12-03 23:02:07" itemprop="dateCreated datePublished" datetime="2023-12-03T23:02:07-08:00">2023-12-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Training/" itemprop="url" rel="index"><span itemprop="name">LLM Training</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>6 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1604.06174.pdf"><em><strong>Training Deep Nets with Sublinear Memory Cost</strong></em></a></p>
+<p><img src="/images/NLP/LLM/Re_materialization/Untitled.png" alt="Untitled" /></p>
+<span id="more"></span>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/621062374">Oneflow 基于重计算的动态图显存优化实践</a></p>
+<p><img src="/images/NLP/LLM/Re_materialization/Untitled1.png" alt="Untitled" /></p>
+<p>普通方法</p>
+<p>在反向计算的时候，首先重新计算一遍前向算子，以获得需要的中间结果，再正常地运行反向算子。</p>
+<p>因此，重计算技术多计算了一遍前向计算，是典型的以计算换空间的“妥协”技术。</p>
+<p><strong>前向计算，反向计算和重计算的图示，其中重计算会将除了checkpoints之外的非必要中间变量删除，在进行反向梯度计算时候再重新进行前向计算得到。</strong></p>
+<p>通常会把切分网络的变量称之为 checkpoints ，有大量学者在研究如何选择合适的 checkpoints 才能更好地均衡计算性能和内存，<br />
+通常以 ERNIE，BERT 等为例子，在其每个 Transformer 模块的中间变量作为切分就比较合适。</p>
+<p>无论在动态图还是在静态图中，都需要对checkpoints进行定义。</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/134008239?utm_source=wechat_session&amp;utm_medium=social&amp;utm_oi=1133702791620067328">在K40小破卡训练50层BERT Large的宝藏trick</a></p>
+<p><img src="/images/NLP/LLM/Re_materialization/Untitled2.png" alt="Untitled" /></p>
+<p>核心思想是将前向计算分割成多个段，将每个段的起始 Tensor 作为这个段的检查点（checkpoints）。<br />
+前向计算时，除了检查点以外的其他隐层 Tensor 占有的显存可以及时释放。<br />
+反向计算用到这些没保存的隐层 Tensor 时，从最近的前一个检查点开始，重新进行前向计算，就可以重新获得隐层激活值。</p>
+<p>虽然时间也是宝贵的，但重计算方法的性价比很高。<br />
+在论文的实验中，作者用<strong>30%的计算时间换取了4倍的内存空间</strong>。<br />
+并且重计算只是重复了一次前向的过程，理论上<strong>精度没有任何损失</strong>。</p>
+<p>**Default：**上层为前向传播输入，下层为反向传播求梯度；峰值显存占用了 7 个node</p>
+<p><img src="/images/NLP/LLM/Re_materialization/0NARheCDvdoPc4A8z.webp" alt="0*NARheCDvdoPc4A8z.webp" /></p>
+<p><strong>Memory-poor</strong> 重计算：每一个参数需要计算梯度时，都需要重新计算一次前向激活值，峰值显存为4个node</p>
+<p><img src="/images/NLP/LLM/Re_materialization/0udMSiPD0kZHum-sZ.webp" alt="0*udMSiPD0kZHum-sZ.webp" /></p>
+<p>这种方法需要 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord">1</span><span class="mclose">)</span></span></span></span> 内存，和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n^2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> 时间复杂度。</p>
+<p>**sqrt(n) 重计算：**还可以在中间层设置 checkpoint 点（graph separators ），用于减少时间复杂度：</p>
+<p><img src="/images/NLP/LLM/Re_materialization/0s7U1QDfSXuVd1LrF.webp" alt="0*s7U1QDfSXuVd1LrF.webp" /></p>
+<p>place checkpoints every <code>sqrt(n)</code> steps ; the most memory efficient strategy</p>
+<p>时间复杂度变为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mn>2</mn><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(2n)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord">2</span><span class="mord mathnormal">n</span><span class="mclose">)</span></span></span></span> ，空间复杂度为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><msqrt><mi>n</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(\sqrt n)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.05028em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8002800000000001em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="padding-left:0.833em;">n</span></span><span style="top:-2.76028em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg width='400em' height='1.08em' viewBox='0 0 400000 1080' preserveAspectRatio='xMinYMin slice'><path d='M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.23972em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span></p>
+<h3 id="py-torchtorchutilscheckpointhttpspytorchorgdocsstablecheckpointhtml"><a class="markdownIt-Anchor" href="#py-torchtorchutilscheckpointhttpspytorchorgdocsstablecheckpointhtml"></a> Py-torch：<code>[torch.utils.checkpoint](https://pytorch.org/docs/stable/checkpoint.html)</code></h3>
+<p>在前向传播阶段使用 <code>torch.no_grad()</code> 包裹不需要保存激活值的部分。</p>
+<p>在反向传播时先检索保存的输入和后续算子函数，跟踪中间激活值，然后使用这些激活值计算梯度。</p>
+<p>注意：</p>
+<ul>
+<li>
+<p>Tensors in nested structures（e.g. lists, dicts ）, will not be considered as part of auto-grad.</p>
+</li>
+<li>
+<p>被 checkpoint 包裹的层反向传播时仍然会在第一次反向传播的时候开辟存储梯度的空间，然后梯度激活值占用空间被保持。</p>
+<p>因为 checkpoint 是在 <code>torch.no_grad()</code> 模式下计算的目标操作的前向函数，这并不会修改原本的叶子结点的状态，有梯度的还会保持。只是关联这些叶子结点的临时生成的中间变量会被设置为不需要计算图支持。</p>
+</li>
+<li>
+<p>随机状态也需要保存：由于前向传播的部分在反向过程中仍会计算一次，所以如果不使用原始的随机状态的话，会导致重新计算和原本正常计算过程中的随机状态不同，而影响模型的行为。</p>
+</li>
+</ul>
+<p>使用：</p>
+<p>将需要应用检查点技术的 <strong>forward算子</strong> 封装在 <code>torch.utils.checkpoint.checkpoint()</code> 函数中</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> torch.utils.checkpoint <span class="keyword">as</span> cp</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">    <span class="comment"># apply the first 2 layers</span></span><br><span class="line">    x = nn.functional.relu(self.fc1(x))</span><br><span class="line">    x = nn.functional.relu(self.fc2(x))</span><br><span class="line">    <span class="comment"># apply the checkpointed layers</span></span><br><span class="line">    x = cp.checkpoint(self._checkpointed_forward, x)</span><br><span class="line">    <span class="comment"># apply the last 1 layers</span></span><br><span class="line">    x = self.fc4(x)</span><br><span class="line">    <span class="keyword">return</span> x</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">_checkpointed_forward</span>(<span class="params">self, x</span>):</span><br><span class="line">		<span class="comment"># 将网络中的其中一层线性层来应用检查点技术</span></span><br><span class="line">    x = nn.functional.relu(self.fc3(x))</span><br><span class="line">    <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+<p>Warning: <code>None of the inputs have requires_grad=True. Gradients will be None</code><br />
+是不是模型的第一层就用<code>checkpoint</code>包装了?第一层一般接收的输入是来自数据集的向量，这些向量一般都不会求梯度，所以<code>requires_grad</code>默认是<code>False</code> 这也导致<code>checkpoint</code>误认为你这个模块不需要计算梯度，使得你模型直接废了，正确做法是，输入层（接收数据集的那一层）不要用<code>checkpoint</code>包装 。</p>
+<p>关于segments怎么划分其实还是比较tricky的，这个需要完全个人根据经验去做选择。比如对于包括BERT在内的pretrained transformers，个人觉得比较好的方式是只对每一层transformer做checkpoint，剩余的所有部分都正常计算保存中间结果。这样对于bert base来说其实是做了12个checkpoint，因为有12层transformer layer。这样做个人经验在速度几乎没有牺牲的情况下，我的一个模型内存开销从20+G锐减到了4G出头。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/11/18/%E5%A4%9A%E6%A8%A1%E6%80%81/retrieval/%E5%A4%9A%E6%A8%A1%E6%80%81%E6%A3%80%E7%B4%A2/" rel="prev" title="多模态检索：TGDT">
+      <i class="fa fa-chevron-left"></i> 多模态检索：TGDT
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/12/15/NLP/DeepSpeed%20Inference/" rel="next" title="DeepSpeed Inference">
+      DeepSpeed Inference <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#py-torchtorchutilscheckpointhttpspytorchorgdocsstablecheckpointhtml"><span class="nav-number">1.</span> <span class="nav-text"> Py-torch：[torch.utils.checkpoint](https:&#x2F;&#x2F;pytorch.org&#x2F;docs&#x2F;stable&#x2F;checkpoint.html)</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

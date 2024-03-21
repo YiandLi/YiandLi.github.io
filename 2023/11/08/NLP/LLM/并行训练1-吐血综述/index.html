@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="训练并行策略   参数服务器  Parameter Server： 13.7. Parameter Servers — Dive into Deep Learning 1.0.3 documentation 节点被划分为 server node 和 worker node； Server Node 负责参数的存储和全局的聚合操作 Worker Node 负责计算 根据该server node的求">
+<meta property="og:type" content="article">
+<meta property="og:title" content="并行训练1-吐血综述">
+<meta property="og:url" content="http://example.com/2023/11/08/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%831-%E5%90%90%E8%A1%80%E7%BB%BC%E8%BF%B0/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="训练并行策略   参数服务器  Parameter Server： 13.7. Parameter Servers — Dive into Deep Learning 1.0.3 documentation 节点被划分为 server node 和 worker node； Server Node 负责参数的存储和全局的聚合操作 Worker Node 负责计算 根据该server node的求">
+<meta property="og:locale">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled1.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled2.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled3.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled4.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled5.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled6.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled7.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled8.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled9.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled10.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled11.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled12.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled13.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled14.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled15.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled16.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled17.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled18.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled19.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled20.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled21.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled22.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled23.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled24.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled25.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled26.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled27.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled28.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled24.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled29.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled30.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled31.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled32.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled33.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled34.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled35.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled36.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled37.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled38.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled39.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled40.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled41.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled42.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled43.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled44.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled45.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled46.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled47.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled48.png">
+<meta property="article:published_time" content="2023-11-08T18:12:00.000Z">
+<meta property="article:modified_time" content="2024-03-15T01:54:16.567Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled.png">
+
+<link rel="canonical" href="http://example.com/2023/11/08/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%831-%E5%90%90%E8%A1%80%E7%BB%BC%E8%BF%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>并行训练1-吐血综述 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/11/08/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%831-%E5%90%90%E8%A1%80%E7%BB%BC%E8%BF%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          并行训练1-吐血综述
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-08 10:12:00" itemprop="dateCreated datePublished" datetime="2023-11-08T10:12:00-08:00">2023-11-08</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Training/" itemprop="url" rel="index"><span itemprop="name">LLM Training</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>9.9k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>49 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="训练并行策略"><a class="markdownIt-Anchor" href="#训练并行策略"></a> 训练并行策略</h1>
+<ul>
+<li>
+<p>参数服务器  Parameter Server：</p>
+<p><a target="_blank" rel="noopener" href="https://d2l.ai/chapter_computational-performance/parameterserver.html">13.7. Parameter Servers — Dive into Deep Learning 1.0.3 documentation</a></p>
+<p>节点被划分为 server node 和 worker node；</p>
+<p>Server Node 负责参数的存储和全局的聚合操作</p>
+<p>Worker Node 负责计算</p>
+<p>根据该server node的求和是否 <strong>阻塞下一步的迭代</strong> ，我们可以将Parameter Server分为同步更新和异步更新。</p>
+</li>
+</ul>
+<span id="more"></span>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/647389318">《从零实现BERT、GPT及Diffusion类算法》- 7：分布式训练原理及混合精度、DDP、DeepSpeed、Megatron-LM使用</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/495126453">自动并行策略搜索算法</a></p>
+<h1 id="数据并行-data-parallelism"><a class="markdownIt-Anchor" href="#数据并行-data-parallelism"></a> 数据并行 Data Parallelism</h1>
+<ol>
+<li>Data parallelism, DP</li>
+<li>Distribution Data Parallel, DDP</li>
+<li>Fully Shared Data Parallel, FSDP 全切片数据并行</li>
+</ol>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled.png" alt="Untitled" /></p>
+<p>数据并行；模型并行；梯度并行；优化器并行</p>
+<h2 id="dp"><a class="markdownIt-Anchor" href="#dp"></a> DP</h2>
+<p>DP过程中关键的Function对不止有Scatter和Gather，还有Broadcast和ReduceAddCoalesced，<br />
+应该着重讲讲这两对Function在backward过程中的对偶性，否则根本不知道梯度是怎么在反传的时候被shard以及被规约的。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled1.png" alt="Untitled" /></p>
+<p>采用 Parameter Server 架构</p>
+<ol>
+<li>每张卡上存一个模型的copy版本</li>
+<li>然后将 data 进行切分，送到不同卡上，然后计算各自的梯度</li>
+<li><strong>All-Reduce</strong> ：在参数服务器上汇总梯度，得到更新后的参数 （ Server可以只做梯度聚合，也可以梯度聚合+全量参数更新 ）</li>
+<li>将参数分发给不同的gpu</li>
+</ol>
+<p>（ 也可以仅仅汇总梯度，将梯度分发到不同的节点，让不同节点负责参数更新。</p>
+<p>torch直接使用 <code>nn.DataParallel(model, device_ids=[1,3])</code>，使用<strong>单进程多线程</strong>实现，但是会被 <strong>python</strong> <strong>GIL</strong> 约束。</p>
+<p>每张卡都需要维护自己的梯度，并且全局需要进行梯度累加。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled2.png" alt="Untitled" /></p>
+<p><strong>梯度累计的方式</strong></p>
+<ol>
+<li>
+<p>同步梯度累计 Synchronized Gradient Acceleration</p>
+<p>将所有梯度全部送到参数服务器中，然后参数服务器更新后，将新模型参数分发</p>
+<p>优点：</p>
+<p>计算和交流过程是根据pipeline模型严格同步的，保证了操作准确性</p>
+<p>缺点：</p>
+<p>必须等待所有节点计算完梯度才能计算新的参数；也就是说快的计算单元需要等待慢的计算单元；产生空闲时间（bubble），浪费计算资源，也浪费大量的通讯时间。</p>
+<p><strong>存储开销大:</strong></p>
+<p>每块GPU上都存了一份完整的模型，造成冗余。 → <strong>ZeRO</strong></p>
+<p>主卡和其他卡之间，<strong>GPU利用率严重不均衡</strong>（比如：主卡使用了10G显存，而其他卡只使用了2G显存，batch size稍微设置大一点主卡的显存就OOM了）</p>
+<p><strong>通讯开销大:</strong> Server需要和每一个Worker进行梯度传输。通信成本<strong>随着设备数的增加，而线性增长。</strong></p>
+<p><em><em>因为输出端随便是并行输出的，但是接受端的速度还是单卡的速度，总时间为：（机器数量 -1）</em> 单个模型通信时间。</em>*</p>
+<p>world_size=5; 假设每张GPU需要发送给GPU 0的通信数据大小是1GB，我们的network bandwidth是1GB每秒（GPU 0最多每秒接受1GB的数据），那么我们需要4秒才可以将数据全部发送到GPU 0上，然后计算出全局的平均梯度。由于受GPU 0的network bandwidth的影响，<strong>通信成本随着设备数的增加，而线性增长。</strong></p>
+<p>当Server和Worker不在一台机器上时，Server的带宽将会成为整个系统的计算效率瓶颈。</p>
+<p>→ 受通讯负载不均的影响，<strong>DP一般用于单机多卡场景</strong>。因此，<strong>DDP作为一种更通用的解决方案出现了，既能多机，也能单机</strong>。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled3.png" alt="Untitled" /></p>
+</li>
+<li>
+<p>异步梯度累计 Asynchronous Gradient Acceleration</p>
+</li>
+</ol>
+<h2 id="ring-all-reduce"><a class="markdownIt-Anchor" href="#ring-all-reduce"></a> <strong>Ring All reduce</strong></h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled4.png" alt="Untitled" /></p>
+<p>过程：</p>
+<p>假设我们5个设备（GPU），每个设备上有一个数组，我们的目标是计算所有数组中的元素之和，并且每个设备都要有该求和的结果。</p>
+<p>模拟的是：数据并行中，每个设备使用对应一部分数据进行forward pass和backward pass得到的 gradient ，如何将梯度进行汇总。</p>
+<p>首先，假设有N个设备，首先将原始数据划分为N份给到不同设备，将一个设备上的数据分为N份，即每个格子为原始数据的1/N^2。</p>
+<p>过程：</p>
+<ul>
+<li>
+<p><strong>Scatter-Reduce</strong></p>
+<p>每个时间步骤，每一个节点向下传输 划分好的数据对应的梯度</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled5.png" alt="Untitled" /></p>
+<p>N-1 轮后，某一个节点可以得到全部的数据</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled6.png" alt="Untitled" /></p>
+</li>
+<li>
+<p>All-Gather</p>
+<p>进行的是和Scatter-Reduce类似的操作，只是从加法变成了重写。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled7.png" alt="Untitled" /></p>
+</li>
+</ul>
+<p>通讯成本：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> 个设备，模型参数/梯度总量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span> ，则每个设备的每一个小block的参数梯度量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mi mathvariant="normal">/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">K/N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span></p>
+<p>每张卡需要进行 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 次 Scatter-Reduce 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 次 Allgather ，每次通信量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mi mathvariant="normal">/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">K / N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span></p>
+<p>可以计算出，<strong>单卡总通讯量</strong>为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>K</mi><mi>N</mi></mfrac></mstyle></mrow><annotation encoding="application/x-tex">2(N-1)\dfrac K N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:2.04633em;vertical-align:-0.686em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.36033em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> 个梯度值 ，大小与设备数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> 无关，仅仅和模型参数量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span> 有关系，可以近似为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>K</mi></mrow><annotation encoding="application/x-tex">2K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span>；<strong>全卡总通讯量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>N</mi><mi>K</mi></mrow><annotation encoding="application/x-tex">2NK</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span>  。</strong></p>
+<p>通讯时间：因为卡是并行通讯的，所以通信时间为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>K</mi><mi>N</mi></mfrac></mstyle><mstyle displaystyle="true" scriptlevel="0"><mfrac><mn>1</mn><mi>S</mi></mfrac></mstyle></mrow><annotation encoding="application/x-tex">2(N-1)\dfrac K N \dfrac 1 S</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:2.04633em;vertical-align:-0.686em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.36033em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord">1</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> ，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi></mrow><annotation encoding="application/x-tex">S</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span></span></span> 为点对点通讯速度（每单位时间传递多少元素，注意不是 MB，如果是 MB 则需要再乘以2/4，对应fp16或者fp32）。</p>
+<p><strong>优点</strong> ：整个过程的通信速度只受限于 <strong>逻辑环中最慢的两个GPU的连接，每次通信量</strong> 小于等于  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mi mathvariant="normal">/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">K/N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> ，随着N增大，通信量减少，小于DP中的network bandwidth。</p>
+<p><strong>Horovod 中的 Allreduce：</strong></p>
+<p>在深度神经网络中，一个网络由多个layer组成，在backpropagation的过程中，在前层的神经网络的gradient的计算中，后层的神经网络的梯度已经计算完成，我们可以先开始后层layer 梯度的allreduce操作，这样和前层梯度计算过程的overlap也可以减少通信时间。</p>
+<p>为了实现高效的gradient average，Pytorch设计了基于buckets的gradient average策略。具体来说，将模型的所有参数分进若干个buckets，每一个bucket里装一部分参数。在模型进行反向传播时，所有参数的梯度是一个接一个计算的，当所有gpu上某个相同bucket里面所有的参数梯度都计算完了，则可以进行当前bucket梯度的communication过程。与此同时，其他参数的梯度继续计算。理想情况下，上一bucket的communication结束后，刚好又有一个bucket的参数梯度都计算完了，则gpu通信无缝连接这一个bucket的通信工作，使得模型的反向传播和gpu之间梯度通信实现几乎百分百的并行，具体还有一些实现的细节。<br />
+在反向传播时，参数分配进若干个buckets的顺序是按照前向传播时参数调用的倒序排列的，这样可以几乎满足反向传播时梯度计算的先后顺序，使得先完成计算的参数梯度尽快进入某个bucket并进行gpu之间的通信。</p>
+<p>另外为了保证在个别情况下（两个参数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>p</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">p_2, p_3</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 在逻辑上同时进行前向和反向传播，但是实际反向传播执行时，某个gpu上 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">p_2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 的梯度先于 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">p_3</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 的梯度被计算，另外一个gpu上 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>3</mn></msub></mrow><annotation encoding="application/x-tex">p_3</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 的梯度先于 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">p_2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 的梯度被计算）各个gpu的参数能够一一对应，在每个bucket中各个参数的先后顺序也是保持固定顺序的。</p>
+<h2 id="ddp"><a class="markdownIt-Anchor" href="#ddp"></a> DDP</h2>
+<p><a target="_blank" rel="noopener" href="https://www.vldb.org/pvldb/vol13/p3005-li.pdf"></a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/343951042?utm_medium=social&amp;utm_oi=643096634247090176">PyTorch 源码解读之 DP &amp; DDP：模型并行和分布式训练解析</a></p>
+<p>使用<strong>多进程</strong>实现，没有 python GIL 锁。</p>
+<p>每个进程不是同步所有参数的，而是同步参数的变化量，减少了通讯的数据。数据分配更加均衡。</p>
+<p>支持多机多卡，混合精度训练。</p>
+<p>使用 <strong>Ring-AllReduce（Reduce-Scatter + All-Gather）</strong> 机制，提升通讯效率。</p>
+<p>过程：</p>
+<p>前向传播的输出和loss的计算都是在每个cuda独立计算的，然后计算每一个 cuda 的梯度</p>
+<p>梯度通过 ring all-reduce 到所有的CUDA(传输梯度) （唯一的一次数据传输）</p>
+<p>各个 cuda 参数更新</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled8.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled9.png" alt="Untitled" /></p>
+<p>通讯：</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled10.png" alt="Untitled" /></p>
+<p>整个通信过程中，每个GPU的<strong>通信量</strong>不再随着GPU增加而增加，通信的速度受到环中相邻GPU之间最慢的链接（最低的带宽）的限制（不考虑延迟）。虽然单次通信的通信量不会增加，<strong>通信时间</strong>和gpu数量呈线性相关。</p>
+<p>当在分布式多节点训练中，每个机器节点可能包含多个GPU卡，机器节点内部GPU卡之间连接可能是快速的NVLINK，而机器节点之间的连接可能是相对较慢的Infiniband，所以利用简单的RingAll-reduce速度将受限于infiniband的带宽。</p>
+<p>因此又有了Ring All-reduce的变种，Hierarchical rings（一种是2D-Ring including inter-node and intra-node)。</p>
+<p>此外 一些常用的概念：</p>
+<ol>
+<li>Group ：默认情况下只存在一个进程组</li>
+<li>World_Size ：全局进程的数量，多机多卡表示 node  数量，单机表示 GPU 数量</li>
+<li>Rank ：多机多卡表示 node  index，单机表示 GPU index</li>
+<li>local_rank :  GPU index</li>
+</ol>
+<h1 id="zero-dpzero-redundancy-optimizer-data-parallelism"><a class="markdownIt-Anchor" href="#zero-dpzero-redundancy-optimizer-data-parallelism"></a> ZeRO-DP(Zero Redundancy Optimizer-Data Parallelism)</h1>
+<p>动图：</p>
+<p><a target="_blank" rel="noopener" href="https://www.microsoft.com/en-us/research/blog/zero-deepspeed-new-system-optimizations-enable-training-models-with-over-100-billion-parameters/">ZeRO &amp; DeepSpeed: New system optimizations enable training models with over 100 billion parameters - Microsoft Research</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/610587671?utm_id=0">【深度学习】【分布式训练】DeepSpeed：AllReduce与ZeRO-DP</a></p>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1910.02054.pdf"></a></p>
+<p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7108974938299564039">【大规模训练】Optimizer state sharding (ZeRO) - 掘金</a></p>
+<p>精读论文</p>
+<p>一种数据并行的方法</p>
+<p>回顾下 Ring All-Reduce 数据并行：</p>
+<p>Ring all-reduce 是一种数据收集方法，通过环形拓扑，降低了通讯时间，本质还是在reduce+gather分散在各个机器上的数据。</p>
+<p>我们是通过 All-Reduce 的方法同步平均梯度的 ：</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled11.png" alt="Untitled" /></p>
+<h2 id="单卡显存占用分析"><a class="markdownIt-Anchor" href="#单卡显存占用分析"></a> 单卡显存占用分析</h2>
+<p>模型训练时显存主要分为两部分。<strong>第一部分</strong>是模型权重、梯度和优化器状态；<strong>第二部分</strong>是激活和临时缓存区。</p>
+<p>假设模型的参数量是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">Ψ</span></span></span></span> ，4-byte/32-bit ｜2-byte/16-bit</p>
+<p>使用Adam作为优化器进行混合精度训练。由于模型的参数和梯度使用float16，所以显存消耗分别为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">2Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">Ψ</span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">2Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">Ψ</span></span></span></span>。</p>
+<p>Adam会维护一个float32的模型副本，消耗 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">4Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Ψ</span></span></span></span> 显存。</p>
+<p>Adam优化器本身会为模型的每个参数维护两个float32的辅助变量，所以显存消耗占用为  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mn>4</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">4Ψ+4Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Ψ</span></span></span></span> 。</p>
+<p>同时优化器还需要 float32  的参数，消耗 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">4Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Ψ</span></span></span></span> 显存。</p>
+<p>总占用  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mi mathvariant="normal">Ψ</mi><mi mathvariant="normal">/</mi><mn>18</mn><mi mathvariant="normal">Ψ</mi><mi mathvariant="normal">/</mi><mn>20</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">16Ψ/ 18Ψ /  20Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mord">6</span><span class="mord">Ψ</span><span class="mord">/</span><span class="mord">1</span><span class="mord">8</span><span class="mord">Ψ</span><span class="mord">/</span><span class="mord">2</span><span class="mord">0</span><span class="mord">Ψ</span></span></span></span>    显存 。</p>
+<h2 id="zero-显存占用分析"><a class="markdownIt-Anchor" href="#zero-显存占用分析"></a> <strong>ZeRO 显存占用分析</strong></h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled12.png" alt="Untitled" /></p>
+<p>当进行混合精度运算时，其中模型状态参数(优化器状态 + 梯度+ 模型参数）占到了一大半以上。<br />
+因此，我们需要想办法去除模型训练过程中的冗余数据。</p>
+<p>在标准的数据并行中，每个显卡(rank)都会保存独立的 <strong>权重、梯度和优化器状态</strong> ，也就是每一张卡都需要占用  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>12</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">12Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mord">Ψ</span></span></span></span>  显存 。</p>
+<p>那么每个显卡是否有必要存储全部的这些信息呢？<strong>ZeRO-DP的答案是不需要</strong>。<br />
+ZeRO-DP 能够对模型状态(权重、梯度和优化器状态)进行划分(不像标准DP那样进行复制)，然后通过动态通信调度来最小化通信开销。<br />
+ZeRO 使用的方法是分片，即每张卡只存 1/N 的模型状态量，这样<strong>系统内只维护一份模型状态参数。</strong><br />
+ZeRO-DP 能够在保持整体通信开销接近标准DP的同时，线性地降低模型的<strong>单显卡</strong>显存占用。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled13.png" alt="Untitled" /></p>
+<p>三个阶段：</p>
+<ol>
+<li>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>P</mi><mrow><mi>o</mi><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">P_{os}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">o</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> ：优化器状态分片（ Optimizer States Sharding）</p>
+<p>根据机器数量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 将优化器状态（float32的模型副本，float32得的两个特殊变量）划分为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>  等份，即第 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> 个显卡仅仅更新优化器第  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> 个部分。<br />
+Optimizer state 使用贪心策略基于参数量进行分片，以此确保每个rank几乎拥有相同大小的优化器内存。<br />
+于是只需要存储和更新优化器状态的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mstyle displaystyle="true" scriptlevel="0"><mfrac><mn>1</mn><mi>N</mi></mfrac></mstyle><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">\dfrac 1 N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.05714em;vertical-align:-0.7357em;"></span><span class="mord"><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord">1</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:-0.2495920000000001em;"><span style="top:-1.9643000000000002em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.7357em;"><span></span></span></span></span></span></span></span></span></span>，对应更新 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mstyle displaystyle="true" scriptlevel="0"><mfrac><mn>1</mn><mi>N</mi></mfrac></mstyle><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">\dfrac 1 N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.05714em;vertical-align:-0.7357em;"></span><span class="mord"><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord">1</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:-0.2495920000000001em;"><span style="top:-1.9643000000000002em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.7357em;"><span></span></span></span></span></span></span></span></span></span>的参数 。</p>
+<p><strong>显存分析：</strong></p>
+<p>如上图所示，显存占用从 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mn>8</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">4Ψ+8Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">8</span><span class="mord">Ψ</span></span></span></span> 降低至 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mn>8</mn><mi mathvariant="normal">Ψ</mi><mi mathvariant="normal">/</mi><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">4Ψ+8Ψ/N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">8</span><span class="mord">Ψ</span><span class="mord">/</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 。</p>
+<p>若 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 很大时，则显存占用接近 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mn>4</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">≈4Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.48312em;vertical-align:0em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Ψ</span></span></span></span> ，<strong>能够带来4倍的节约</strong> 。</p>
+<p>ZeRO-1 <strong>过程：only do Optimizer States Sharding</strong></p>
+<ol>
+<li>forward过程由每个rank的GPU独自完整的完成，然后进行backward过程。在backward过程中，梯度通过 allReduce 进行同步 。 （ 对应了原始的通讯量</li>
+<li>每个rank只负责更新当前优化器分片的参数，由于每个rank只有分片的优化器state，所以当前rank忽略其余的state 。</li>
+<li>在更新过后，通过 allGather 的方式确保所有的 rank 都收到更新过后的<strong>模型参数</strong> 。 （ 额外引入通讯开销</li>
+</ol>
+<p>ZeRO-1 非常适合使用类似Adam进行优化的模型训练，因为Adam拥有额外的参数m（momentum）与v（variance），特别是FP16混合精度训练。ZeRO-1 不适合使用SGD类似的优化器进行模型训练，因为SGD只有较少的参数内存，并且由于需要更新模型参数，导致额外的通讯成本。ZeRO-1<strong>只是解决了Optimizer state的冗余。</strong></p>
+</li>
+<li>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>P</mi><mi>g</mi></msub></mrow><annotation encoding="application/x-tex">P_g</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> ：梯度分片（Gradients Sharding）</p>
+<p>和优化器同理，没必要去保存完整的梯度，显存占用从 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">2Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">Ψ</span></span></span></span> 降低到 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="true" scriptlevel="0"><mfrac><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><msub><mi>N</mi><mi>d</mi></msub></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\dfrac{2Ψ} {N_d}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.19633em;vertical-align:-0.8360000000000001em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.36033em;"><span style="top:-2.3139999999999996em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span><span class="mord">Ψ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8360000000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></p>
+<p>这个操作本质上是reduce-scatter，不同参数对应的梯度被 reduce 至相应的显卡上。</p>
+<p>为了在实现中更加的高效，这里会使用分桶 (bucketization) 策略。</p>
+<p>该策略将所有梯度分桶至对应的划分，并在整个桶上进行 reduce 。</p>
+<p><strong>显存分析：</strong></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mn>2</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mn>8</mn><mi mathvariant="normal">Ψ</mi><mi mathvariant="normal">/</mi><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">2Ψ+2Ψ+8Ψ/N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">8</span><span class="mord">Ψ</span><span class="mord">/</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 降低到 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi><mo>+</mo><mrow><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><mi mathvariant="normal">/</mi><msub><mi>N</mi><mi>d</mi></msub><mo>+</mo><mn>8</mn><mi mathvariant="normal">Ψ</mi><mi mathvariant="normal">/</mi><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">2Ψ+{2Ψ}/{N_d}+8Ψ/N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">Ψ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord">2</span><span class="mord">Ψ</span></span><span class="mord">/</span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">8</span><span class="mord">Ψ</span><span class="mord">/</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> ，若 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 很大时，则显存占用接近 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mn>2</mn><mi mathvariant="normal">Ψ</mi></mrow><annotation encoding="application/x-tex">≈2Ψ</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.48312em;vertical-align:0em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">Ψ</span></span></span></span> 。</p>
+<p>ZeRO-2 <strong>过程：Optimizer States Sharding + Gradients Sharding</strong></p>
+<p>基本和 ZeRO-1 过程一样，区别仅仅在于每个 cuda 仅仅保存一部分梯度（和优化器对应的部分），也就是使用 Reduce 替换第一步中的 AllReduce 操作，减少了通讯开销。</p>
+<p>个人认为如果可以使用 ZeRO-1，那么一定可以换成 ZeRO-2，通讯和显存消耗更少。</p>
+</li>
+<li>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>P</mi><mi>p</mi></msub></mrow><annotation encoding="application/x-tex">P_p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> ：权重参数分片（Parameters Sharding）</p>
+<p>对模型参数进行划分。在前向传播和反向传播过程中，若需要其他的参数则通过broadcast从其他显卡中获取。从这个层面上来说，Zero相当于数据并行+模型并行。<br />
+乍一看，这会显著增加通信开销。但实际上，这种方法仅比标准的DP增加1.5倍的通信量，但使得显存占用减少程度与 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>N</mi><mi>d</mi></msub></mrow><annotation encoding="application/x-tex">N_d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.10903em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 成正比。</p>
+</li>
+</ol>
+<h2 id="zero-通信量分析"><a class="markdownIt-Anchor" href="#zero-通信量分析"></a> Zero 通信量分析</h2>
+<p>Zero-2 通信量基本不变，Zero-3 通信量增加 1.5 倍。</p>
+<h1 id="数据并行-fsdp"><a class="markdownIt-Anchor" href="#数据并行-fsdp"></a> 数据并行 FSDP</h1>
+<p>受 DeepSpeed ZeRO 启发而获得灵感</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/644133265">FSDP 深度解析：2023 年了，大模型训练还要不要用 PyTorch 的 FSDP ？</a></p>
+<p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7254001262646738981">大模型分布式训练并行技术（二）-数据并行 - 掘金</a></p>
+<p>Pytorch DDP用起来简单方便，但是要求整个模型加载到一个GPU上，这使得大模型的训练需要使用额外复杂的设置进行模型分片。</p>
+<h1 id="张量并行-tensor-parallelism"><a class="markdownIt-Anchor" href="#张量并行-tensor-parallelism"></a> 张量并行 Tensor Parallelism</h1>
+<ul>
+<li>
+<p>原理</p>
+<p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7121988437175402527">【大规模训练】transformer 中的张量模型并行  - 掘金</a></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled14.png" alt="Untitled" /></p>
+<p>如何切分网络的参数？如何保证切分后的正确性？</p>
+<p>按行切分；按列切分；复制</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled15.png" alt="Untitled" /></p>
+<p>原本：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mi>A</mi><mo>=</mo><mi>Y</mi></mrow><annotation encoding="application/x-tex">X A=Y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></p>
+<p>将权重 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span></span></span></span> 按列切分 ColumnLinear , all gather : <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>×</mo><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>A</mi><mn>1</mn></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>A</mi><mn>2</mn></msub></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo>=</mo><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>X</mi><msub><mi>A</mi><mn>1</mn></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>X</mi><msub><mi>A</mi><mn>2</mn></msub></mrow></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo>=</mo><mi>Y</mi></mrow><annotation encoding="application/x-tex">X \times\left[\begin{array}{ll}A_1 &amp; A_2\end{array}\right]=\left[\begin{array}{ll}X A_1 &amp; X A_2\end{array}\right]=Y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">[</span></span><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">]</span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">[</span></span><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">]</span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span><br />
+将权重 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span></span></span></span> 按行切分 RowLinear ，输入必须按照列进行切分 ，all reduce :  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>X</mi><mn>1</mn></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>X</mi><mn>2</mn></msub></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo>×</mo><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnalign="left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>A</mi><mn>1</mn></msub></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>A</mi><mn>2</mn></msub></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo>=</mo><mrow><mo fence="true">[</mo><msub><mi>X</mi><mn>1</mn></msub><msub><mi>A</mi><mn>1</mn></msub><mo>+</mo><msub><mi>X</mi><mn>2</mn></msub><msub><mi>A</mi><mn>2</mn></msub><mo fence="true">]</mo></mrow><mo>=</mo><mi>Y</mi></mrow><annotation encoding="application/x-tex">\left[\begin{array}{ll}
+  X_1 &amp; X_2
+  \end{array}\right] \times\left[\begin{array}{l}
+  A_1 \\
+  A_2
+  \end{array}\right]=\left[X_1 A_1+X_2 A_2\right]=Y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">[</span></span><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">]</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">[</span></span><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">]</span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">]</span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></p>
+<h2 id="普通点乘"><a class="markdownIt-Anchor" href="#普通点乘"></a> 普通点乘</h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled16.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled17.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled18.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled19.png" alt="Untitled" /></p>
+<p>→ <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/366906920">https://zhuanlan.zhihu.com/p/366906920</a></p>
+<h2 id="随机性控制"><a class="markdownIt-Anchor" href="#随机性控制"></a> 随机性控制</h2>
+<p>不同机器使用不同随机种子进行初始化</p>
+<p>Dropout，Standard Norm，Gamma</p>
+<h2 id="张量自动并行"><a class="markdownIt-Anchor" href="#张量自动并行"></a> 张量自动并行</h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled20.png" alt="Untitled" /></p>
+<p>不同的切分复制方法就涉及到不同的通信方法</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled21.png" alt="Untitled" /></p>
+<p><strong>张量重排 / Tensor Redistribution</strong>：「原始张量  A」的结果被切分到不同的机器上了，但是下一个操作又需要这个张量的整体去和不同机器的「切分后权重 B」进行计算，此时就需要 gather 下，将 A 汇总到不同的机器上 。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled22.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled23.png" alt="Untitled" /></p>
+<h2 id="megatron-lm-代码"><a class="markdownIt-Anchor" href="#megatron-lm-代码"></a> Megatron-LM 代码</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/388830967">[细读经典]Megatron论文和代码详细分析(2)</a></p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, hidden_states, attention_mask, layer_past=<span class="literal">None</span>, get_key_value=<span class="literal">False</span></span>):</span><br><span class="line">    <span class="comment"># hidden_states: [sq, b, h]</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># =====================</span></span><br><span class="line">    <span class="comment"># 1. Query, Key, and Value</span></span><br><span class="line">    <span class="comment"># =====================</span></span><br><span class="line">    <span class="comment"># Attention heads [sq, b, h] --&gt; [sq, b, (np * 3 * hn)],</span></span><br><span class="line">    <span class="comment"># np=每个gpu上head的数量, hn=每个head的隐层维度 -- np*3*hn=3h/p是一个gpu上的(is actually for one gpu&#x27;s hidden dimension!)</span></span><br><span class="line">    <span class="comment"># 纵刀流：三个linear layer都是纵刀流 # h -&gt; 3h/np</span></span><br><span class="line">    mixed_x_layer, _ = self.query_key_value(hidden_states)</span><br><span class="line">    <span class="comment"># [sq, b, np, 3 * hn] --&gt; 3 [sq, b, np, hn]， 按照最后一列维度，三等分得到 qkv 矩阵</span></span><br><span class="line">    (query_layer, key_layer, value_layer) = mpu.split_tensor_along_last_dim(mixed_x_layer, <span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># ==================================</span></span><br><span class="line">    <span class="comment"># 2. Raw attention scores.完成 Q*K^T的运算！</span></span><br><span class="line">    <span class="comment"># ==================================</span></span><br><span class="line">    <span class="comment"># [b, np, sq, sk]</span></span><br><span class="line">    output_size = (query_layer.size(<span class="number">1</span>),</span><br><span class="line">                   query_layer.size(<span class="number">2</span>),</span><br><span class="line">                   query_layer.size(<span class="number">0</span>), <span class="comment"># sq = sequench length of q</span></span><br><span class="line">                   key_layer.size(<span class="number">0</span>)) <span class="comment"># sk = sequence length of k</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># [sq, b, np, hn] -&gt; [sq, b*np, hn]</span></span><br><span class="line">    query_layer = query_layer.view(output_size[<span class="number">2</span>],</span><br><span class="line">                                   output_size[<span class="number">0</span>] * output_size[<span class="number">1</span>], -<span class="number">1</span>)</span><br><span class="line">    <span class="comment"># [sq, b*np, hn]</span></span><br><span class="line">    key_layer = key_layer.view(output_size[<span class="number">3</span>],</span><br><span class="line">                               output_size[<span class="number">0</span>] * output_size[<span class="number">1</span>], -<span class="number">1</span>)</span><br><span class="line">    <span class="comment"># preallocating result tensor: [b*np, sq, sk]</span></span><br><span class="line">    matmul_result = torch.empty(</span><br><span class="line">        output_size[<span class="number">0</span>]*output_size[<span class="number">1</span>],</span><br><span class="line">        output_size[<span class="number">2</span>],</span><br><span class="line">        output_size[<span class="number">3</span>],</span><br><span class="line">        dtype=query_layer.dtype,</span><br><span class="line">        device=torch.cuda.current_device())</span><br><span class="line">    <span class="comment"># Raw attention scores. matmul_result&#x27;s shape=[b*np, sq, sk]</span></span><br><span class="line">    matmul_result = torch.baddbmm(matmul_result,</span><br><span class="line">											            query_layer.transpose(<span class="number">0</span>, <span class="number">1</span>),  <span class="comment"># [sq, b*np, hn] -&gt; [b*np, sq, hn]</span></span><br><span class="line">											            key_layer.transpose(<span class="number">0</span>,<span class="number">1</span>).transpose(<span class="number">1</span>, <span class="number">2</span>), <span class="comment"># [sk, b*np, hn] -&gt; [b*np, hn, sk]</span></span><br><span class="line">											            beta=<span class="number">0.0</span>, alpha=(<span class="number">1.0</span>/self.norm_factor))</span><br><span class="line">    <span class="comment"># change view to [b, np, sq, sk]</span></span><br><span class="line">    attention_scores = matmul_result.view(*output_size)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># ===========================</span></span><br><span class="line">    <span class="comment"># 3. Attention probs and dropout</span></span><br><span class="line">    <span class="comment"># ===========================</span></span><br><span class="line">    <span class="comment"># attention scores and attention mask [b, np, sq, sk]</span></span><br><span class="line">    attention_probs = self.scale_mask_softmax(attention_scores, attention_mask)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># This is actually dropping out entire tokens to attend to, which might</span></span><br><span class="line">    <span class="comment"># seem a bit unusual, but is taken from the original Transformer paper.</span></span><br><span class="line">    <span class="comment"># TODO where? to confirm?</span></span><br><span class="line">    <span class="keyword">with</span> mpu.get_cuda_rng_tracker().fork():</span><br><span class="line">        attention_probs = self.attention_dropout(attention_probs)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># =========================</span></span><br><span class="line">    <span class="comment"># 4. Context layer.</span></span><br><span class="line">    <span class="comment"># =========================</span></span><br><span class="line">    <span class="comment"># context layer shape: [b, np, sq, hn]</span></span><br><span class="line">    output_size = (value_layer.size(<span class="number">1</span>),</span><br><span class="line">                   value_layer.size(<span class="number">2</span>),</span><br><span class="line">                   query_layer.size(<span class="number">0</span>),</span><br><span class="line">                   value_layer.size(<span class="number">3</span>))</span><br><span class="line">    <span class="comment"># change view [sk, b * np, hn]</span></span><br><span class="line">    value_layer = value_layer.view(value_layer.size(<span class="number">0</span>), output_size[<span class="number">0</span>] * output_size[<span class="number">1</span>], -<span class="number">1</span>)</span><br><span class="line">    <span class="comment"># change view [b * np, sq, sk]</span></span><br><span class="line">    attention_probs = attention_probs.view(output_size[<span class="number">0</span>] * output_size[<span class="number">1</span>], output_size[<span class="number">2</span>], -<span class="number">1</span>)</span><br><span class="line">    <span class="comment"># matmul: [b*np, sq, sk] * [b*np, sk, hn] -&gt; [b * np, sq, hn]</span></span><br><span class="line">    context_layer = torch.bmm(attention_probs, value_layer.transpose(<span class="number">0</span>,<span class="number">1</span>))</span><br><span class="line"></span><br><span class="line">    <span class="comment"># =================</span></span><br><span class="line">    <span class="comment"># 5. Output.</span></span><br><span class="line">    <span class="comment"># sq=sequence length of q;   b=batch size;   h=hidden size</span></span><br><span class="line">    <span class="comment"># =================</span></span><br><span class="line">		<span class="comment"># self.dense 是 RowParallelLinear</span></span><br><span class="line">    output, bias = self.dense(context_layer)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> get_key_value:</span><br><span class="line">        output = [output, present]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> output, bias</span><br></pre></td></tr></table></figure>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/629121480">图解大模型系列之：Megatron源码解读1，分布式环境初始化</a></p>
+</li>
+</ul>
+<h2 id="input-embedding"><a class="markdownIt-Anchor" href="#input-embedding"></a> Input Embedding</h2>
+<p>两个部分：</p>
+<p>• <strong>word embedding</strong>：维度 <code>(v, h)</code> ，需进行切分</p>
+<p>• <strong>positional embedding</strong>：维度为 <code>(max_s, h)</code>  ，<code>max_s</code> 不会太大，可以直接拷贝。</p>
+<p>可以直接参考上述矩阵乘法的方法</p>
+<ol>
+<li>在第一个维度上切分，按照 vocab size 进行切分 + all_reduce （ Megatron 做法 ）</li>
+<li>在第二个维度上切分，按照 hidden dimension 进行切分 + all-gather</li>
+</ol>
+<h2 id="output-embedding"><a class="markdownIt-Anchor" href="#output-embedding"></a> Output Embedding</h2>
+<p>一<strong>般来说，输入层和输出层共用一个word embeding</strong>。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled24.png" alt="Untitled" /></p>
+<p>因为<strong>输入层和输出层共用一套 word embedding</strong> ，在 backward 的过程中，我们在输出层时会对 word embedding 计算一次梯度，在输入层中还会对word embedding 再次计算一次梯度。在用梯度做word embedding权重更新时，我们必须保证用<strong>两次梯度的总和</strong>进行更新。</p>
+<p><strong>若模型输入层和输出层在不同的GPU上时，我们就要保证在权重更新前，两块GPU上的word embedding梯度做了一次 <code>AllReduce</code></strong>  。</p>
+<h2 id="transformer-mlp"><a class="markdownIt-Anchor" href="#transformer-mlp"></a> Transformer MLP</h2>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mtext>GeLU</mtext><mo stretchy="false">(</mo><mi>X</mi><mi>A</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">(\text{GeLU}(XA))B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord text"><span class="mord">GeLU</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord mathnormal">A</span><span class="mclose">)</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span></p>
+<p>如果将内部权重 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span></span></span></span> 按照<strong>行</strong>进切分，则需要在执行 GeLU 前执行一次 All Reduce  操作，这么做会产生额外的通讯量 。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled25.png" alt="Untitled" /></p>
+<p>按照列来切分则不需要这个操作，只需要 split 即可</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled26.png" alt="Untitled" /></p>
+<p>整体为，A 按照列切分，B 按照行切分。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled27.png" alt="Untitled" /></p>
+<p>Forward：</p>
+<p>• <code>f</code> ：把输入 X 拷贝到两块GPU上，每块GPU即可独立做forward计算（这里纯复制没有通讯操作）。</p>
+<p>• <code>g</code> ：每块GPU上的forward的计算完毕，取得 Z1 和 Z2 后，GPU间做一次 <strong>AllReduce</strong>，相加结果产生 Z。</p>
+<p>Backward：</p>
+<p>• <code>g</code> ：因为是直接相加，只需要把梯度直接拷贝到两块GPU上。</p>
+<p>• <code>f</code> ：当前被复制的 X 的梯度计算完毕后，使用 <code>AllReduce</code>  把 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi mathvariant="normal">Δ</mi><mi>L</mi></mrow><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi></mrow></mfrac><msub><mi mathvariant="normal">∣</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">\frac {\Delta L  } {\Delta X} | _1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.217331em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.872331em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">Δ</span><span class="mord mathnormal mtight" style="margin-right:0.07847em;">X</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">Δ</span><span class="mord mathnormal mtight">L</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>  和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi mathvariant="normal">Δ</mi><mi>L</mi></mrow><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi></mrow></mfrac><msub><mi mathvariant="normal">∣</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">\frac {\Delta L  } {\Delta X} | _2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.217331em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.872331em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">Δ</span><span class="mord mathnormal mtight" style="margin-right:0.07847em;">X</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">Δ</span><span class="mord mathnormal mtight">L</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 进行相加</p>
+<p>通讯量：</p>
+<p>g forward 需要一次 all - reduce ，f backward 也需要一次 all - reduce .</p>
+<p>对于单张卡而言：设一次 <strong>All Reduce产生</strong> 通讯量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Φ</mi></mrow><annotation encoding="application/x-tex">2\Phi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">Φ</span></span></span></span>  ；则单张卡一共需要 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Φ</mi><mo>=</mo><mn>4</mn><mi>b</mi><mo>∗</mo><mi>s</mi><mo>∗</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">4\Phi=4b*s*h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Φ</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.46528em;vertical-align:0em;"></span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">h</span></span></span></span>  。</p>
+<h2 id="self-attention"><a class="markdownIt-Anchor" href="#self-attention"></a> Self-Attention</h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled28.png" alt="Untitled" /></p>
+<p>每个gpu负责一个 head ，或者一个gpu上有若干head 。</p>
+<p>首先 head 本身就是按照列将输入进行切分的。然后对每个 head：</p>
+<p>输入直接 copy 分发 ，每一个 head 对应 <code>[ batch_size, seq_len, head_size ]</code></p>
+<p>权重按照列切分，为 <code>[ hidden_size, hidden_size//rank_num ]</code> ， <code>hidden_size//rank_num</code>  对应 <code>head_size</code> 。</p>
+<p>qkv计算后得到  <code>[ batch_size, seq_len, hidden_size//rank_num ]</code></p>
+<p>然后要过一个线形层，因为这里输入可以看成是按照列进行切分的，所以线型层按照行进行切分</p>
+<p>最后通过 All-Reduce 进行合并</p>
+<p>这里输入部分使用了广播，将 X 广播给不同的设备，所以 backward 时，仍然需要 all-reduce 合并 X 的梯度。</p>
+<h2 id="cross-entropy-loss"><a class="markdownIt-Anchor" href="#cross-entropy-loss"></a> Cross-Entropy Loss</h2>
+<p>首先回顾一下， output embedding 层的输出为列切分的状态，还没有进行 all-gather，即每一个设备上维度为 <code>( b,s,v/N )</code></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled24.png" alt="Untitled" /></p>
+<p>label 其实也可以在最后一个维度上进行切分，得到 <code>(b, s, v/N )</code></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled29.png" alt="Untitled" /></p>
+<p>第一步：求 max 部分：</p>
+<ol>
+<li>每设备按行求最大值，得到局部最大值，然后每个设备维度就是 <code>( b,s )</code></li>
+<li><code>AllReduce(Max)</code>   ，得到每行最终的 max ，此时的<strong>通讯量</strong>为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>×</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">b\times s</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">s</span></span></span></span> 。</li>
+<li>广播全局最大值回去</li>
+</ol>
+<p>第二步：求 soft max 分母部分：</p>
+<ol>
+<li>每个设备 -max ; element-wise exp 之后，按行求和，得到局部 sum ，然后每个设备维度就是 <code>( b,s )</code></li>
+<li><code>AllReduce(Sum)</code>  ，得到每行最终的 sum(e) ，也就是 soft max 中的分母。此时的<strong>通讯量</strong>为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>×</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">b\times s</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">s</span></span></span></span> 。</li>
+</ol>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled30.png" alt="Untitled.png" /></p>
+<p>第二步中，All Reduce 来得到每一行上的最大值，来避免溢出。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled31.png" alt="图写错了，是 Sum 。" /></p>
+<p>图写错了，是 Sum 。</p>
+<p>第三步：有了分母之后，在每个 GPU ，即可计算各自维护部分的 e/sum(e)，也就是 softmax 的值。</p>
+<p>第四步：与真值做 cross-entropy , 得到每设备的 loss。然后调用 <code>AllReduce(Sum)</code> 得到全局 Loss  ；通讯量为 <code>N</code> （设备数量） 。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled32.png" alt="Untitled" /></p>
+<h3 id="通讯量"><a class="markdownIt-Anchor" href="#通讯量"></a> 通讯量</h3>
+<p>同样的，输入输出都是一次 all-reduce ，一共是2次 all-reduce 对应 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">Φ</mi></mrow><annotation encoding="application/x-tex">4\Phi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord">Φ</span></span></span></span> 。</p>
+<h2 id="每层通讯量"><a class="markdownIt-Anchor" href="#每层通讯量"></a> 每层通讯量</h2>
+<p>写到这里，我们可以把self-attention层拼接起来看整体的计算逻辑和通讯量：</p>
+<p>每一个 layer 的前向传播都需要 2 次 all-reduce ，反向也是 2 次 all-reduce ：一共是 4 次 all-reduce</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled33.png" alt="Untitled" /></p>
+<p>关于 GPU 的分配：</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled34.png" alt="Untitled" /></p>
+<p>Two or more GPUs within the same server form <strong>model parallel groups</strong> <strong>在同一台 Node 的 GPU 间做张量模型并行 ; 在不同的 Node 上做数据并行</strong>。</p>
+<p>The total number of required GPUs is the product of the number of model and data parallel groups. e.g.  8 GPUs per model parallel group and 64-way data parallelism, for a total of 512 GPUs</p>
+<h1 id="流水线并行-pipeline-parallelism"><a class="markdownIt-Anchor" href="#流水线并行-pipeline-parallelism"></a> 流水线并行 Pipeline Parallelism</h1>
+<p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7262274383287484476">大模型分布式训练并行技术（三）-流水线并行 - 掘金</a></p>
+<h2 id="naive-pipeline"><a class="markdownIt-Anchor" href="#naive-pipeline"></a> Naive pipeline</h2>
+<p>最朴素的想法，也称为<strong>层间并行</strong>，按照模型的layer切分到不同的设备上。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled35.png" alt="Untitled" /></p>
+<p>缺点</p>
+<ol>
+<li>空载时间过长，bubble 太多</li>
+<li>每一张卡需要存储中间激活的输出，<br />
+假设 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span> 张卡均匀切分模型，每一层输出宽度为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">d</span></span></span></span> ，则每一张卡激活值占用 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>B</mi><mi>a</mi><mi>t</mi><mi>c</mi><mi>h</mi><mo>×</mo><mfrac><mi>L</mi><mi>K</mi></mfrac><mo>×</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(Batch\times \frac L K \times d)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">c</span><span class="mord mathnormal">h</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.217331em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.872331em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">L</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span></span> ，会比较大，加重了每块GPU的内存压力。</li>
+</ol>
+<p>可以计算出，bubble 部分的时间复杂度为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mfrac><mrow><mi>K</mi><mo>−</mo><mn>1</mn></mrow><mi>K</mi></mfrac><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(\frac{K-1}{K})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.217331em;vertical-align:-0.345em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.872331em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose">)</span></span></span></span>  ，设备数量越多，<strong>空置的比例接近1，即GPU的资源都被浪费掉了</strong>。</p>
+<h2 id="pipeline-并行的模式"><a class="markdownIt-Anchor" href="#pipeline-并行的模式"></a> Pipeline 并行的模式</h2>
+<ol>
+<li>
+<p>F-then-B （ Forward-Then-Backward ：先计算正向传播，再计算反向传播。 -》 Gpipe</p>
+<p>缺点：</p>
+<ul>
+<li>
+<p>仍然无法避免 bubble 。</p>
+</li>
+<li>
+<p>将 mini-batch 切分成 m 份 micro-batch 后， 需要缓存 m 份 activation，这将导致内存增加。</p>
+<p>由于缓存了多个 micro-batch 的中间变量和梯度，（即使用了重计算），显存的实际利用率并不高。</p>
+</li>
+</ul>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled36.png" alt="Untitled" /></p>
+</li>
+<li>
+<p>1F1B （ One Forward pass followed by One Backward pass</p>
+<p>在计算完前向传播后，立刻开始反向传播计算梯度，如图在 data1 计算完前向后，立即在同一个机器4上进行反向传播。</p>
+<p>研究表明，1F1B 方式相比于 F-then-B 方式，峰值显存可以节省 37.5% ，因为不需要存储所有 macro-batch 的激活值了。</p>
+<p>缺点：到后面 steady state 的时候，虽然不会产出 bubble，但是计算块很凌乱 → PipeDream</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled37.png" alt="Untitled" /></p>
+</li>
+</ol>
+<h2 id="gpipe-mini-batch-pipeline-parallelism-小批量流水线并行"><a class="markdownIt-Anchor" href="#gpipe-mini-batch-pipeline-parallelism-小批量流水线并行"></a> Gpipe ：Mini-batch Pipeline Parallelism 小批量流水线并行</h2>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled38.png" alt="Untitled" /></p>
+<ol>
+<li>
+<p><strong>切分micro-batch</strong></p>
+<p>当有 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span> 个设备时，大 batch 切分成 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span></span></span></span> 个小 batch ，未划分前的数据，叫<strong>mini-batch</strong>。在mini-batch上再划分的数据，叫<strong>micro-batch</strong>。</p>
+<p>空转时间为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mi>K</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mo stretchy="false">(</mo><mi>M</mi><mo>+</mo><mi>K</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O((K-1)/(M+K-1))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mord">/</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span> ，当 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>&gt;</mo><mo>&gt;</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">M &gt;&gt; K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72243em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span></span><span class="base"><span class="strut" style="height:0.5782em;vertical-align:-0.0391em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span>（如果 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>&gt;</mo><mo>=</mo><mn>4</mn><mi>K</mi></mrow><annotation encoding="application/x-tex">M&gt;=4K</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72243em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span></span><span class="base"><span class="strut" style="height:0.36687em;vertical-align:0em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span></span></span> ），时间就很少了。</p>
+</li>
+<li>
+<p><strong>Re-Materialization（active checkpoint）</strong></p>
+<p>前文说过，随着模型的增加，每块GPU中存储的中间结果也会越大。</p>
+<p>Gpipe用一种非常简单粗暴的办法：<strong>用时间换空间，在论文里，这种方法被命名为 re-materalization，也称 active checkpoint</strong>。</p>
+<p><strong>每块GPU上，只保存上一块给到的输入z，其余中间结果算完就删除。backward时，由保存下来的z重新进行forward计算。</strong></p>
+<p>于是 ，每块GPU峰值时刻的内存：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext> 每块GPU峰值时刻存储大小 </mtext><mo>=</mo><mtext> 每块 GPU上的輪入数据大小 </mtext><mo>+</mo><mtext> 每块 GPU在forward过程中的中间结果大小 </mtext></mrow><annotation encoding="application/x-tex">\text { 每块GPU峰值时刻存储大小 }=\text { 每块 GPU上的輪入数据大小 }+ \text { 每块 GPU在forward过程中的中间结果大小 }
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">每块</span><span class="mord">GPU</span><span class="mord cjk_fallback">峰值时刻存储大小</span><span class="mord"> </span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">每块</span><span class="mord"> GPU</span><span class="mord cjk_fallback">上的輪入数据大小</span><span class="mord"> </span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">每块</span><span class="mord"> GPU</span><span class="mord cjk_fallback">在</span><span class="mord">forward</span><span class="mord cjk_fallback">过程中的中间结果大小</span><span class="mord"> </span></span></span></span></span></span></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled39.png" alt="N是batch大小 ； d就是每层hidden layer的宽度，一共有L层 ；" /></p>
+<p>N是batch大小 ； d就是每层hidden layer的宽度，一共有L层 ；</p>
+</li>
+<li>
+<p>也有一个坏处，那就是把 batch 拆小了之后，对于那些需要<strong>统计量</strong>的层，比如Batch Normalization来说，就会导致计算变得麻烦，需要重新实现。</p>
+<p>实现方法为：在训练时计算和运用的是 micro-batch 里的均值和方差，但同时持续追踪全部 mini-batch 的移动平均和方差，以便在测试阶段进行使用。这样 Layer Normalization 则不受影响。</p>
+</li>
+</ol>
+<p>源码：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/667500496"><strong>https://zhuanlan.zhihu.com/p/667500496</strong></a></p>
+<h2 id="pipedream"><a class="markdownIt-Anchor" href="#pipedream"></a> PipeDream</h2>
+<p>PipeDream 论文解读，移步本站 <a href="/2023/12/25/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%833-PipeDream/" title="并行训练3-PipeDream">并行训练3-PipeDream</a></p>
+<p>Gpipe 的缺点：</p>
+<p>时间上：mini-batch 太小导致大量的通信时间，同时需要重新计算前向传播（ 通信时间大于计算时间 ）</p>
+<p>内存上：即使使用了重计算技术，降低了缓存，每一个 minibach 对应的层仍然需要保存 activation，仍会导致内存增加。</p>
+<p>PipeDream 混合了 1F1B 和 重新计算正向 的方法</p>
+<p>思路：努力减少每个 activation 的保存时间，让每个 activation 尽可能早释放；从而减少了显存用量。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled40.png" alt="Untitled" /></p>
+<ul>
+<li>在做完一次 micro-batch 的前向传播之后，就立即进行 micro-batch 的后向传播，然后释放资源一个阶段（stage）在做完一次 micro-batch 的前向传播之后，就立即进行 micro-batch 的后向传播，然后释放资源。</li>
+<li>在 1F1B 的稳定状态（steady state,）下，会在每台机器上严格交替的进行前向计算/后向计算，这样使得每个GPU上都会有一个 micro-batch 数据正在处理，从而保证资源的高利用率（整个流水线比较均衡，没有流水线刷新（Pipeline Flush），这样就能确保以固定周期执行每个阶段上的参数更新。</li>
+</ul>
+<p>PipeDream核心在于解决两个问题：</p>
+<ol>
+<li>
+<p><strong>模型划分</strong>：对于一个给定的模型，如何划分 layer（即哪个节点负责哪些layer，某些layer是数据并行还是模型并行）</p>
+<p>PipeDream将网络看成一个具有层次性的网络，同一层之间的带宽是相同的，PipeDream通过动态规划从最底层开始往上面求，通过一个profiler采集网络在单个gpu上面的每层运行时间，参数量和通信量。</p>
+</li>
+<li>
+<p><strong>不同版本的权重</strong>：</p>
+<p>比如 Machine2，当他在forward算第5个batch（图中第二行深蓝色的5）的时候，它用的weights是更新两次的（即前面浅绿色的1和2更新了两次参数），而当backward算第5个batch（图作用第二行浅绿色的5）时，用到的weights是更新了4次的（即前面浅绿色的1,2,3,4）。</p>
+<p>针对于这个问题，作者提出了</p>
+<p><strong>Weight Stashing 权重存储 ：</strong> 每个node多备份几个版本的weights，forward用哪个weights算的，backward就还用它。</p>
+<p><strong>轮询 round-robin 的调度模式 ：</strong> 将任务分配在同一个 stage 的各个设备上，保证了一个小批次的数据的前向传播计算和后向传播计算发生在同一台机器上，这就是 1F1B-RR（one-forward-noe-backward-round-robin）。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled41.png" alt="Untitled" /></p>
+</li>
+</ol>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/658773834">PyTorch 源码解读之流水线并行</a></p>
+<h3 id="virtual-pipeline"><a class="markdownIt-Anchor" href="#virtual-pipeline"></a> Virtual Pipeline</h3>
+<p>来自 Megetron v2 ： 移步本站 <a href="/2023/12/28/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%832-Megatron/" title="并行训练2-Megatron">并行训练2-Megatron</a></p>
+<h2 id="deepspeed"><a class="markdownIt-Anchor" href="#deepspeed"></a> DeepSpeed</h2>
+<h1 id="混合并行"><a class="markdownIt-Anchor" href="#混合并行"></a> 混合并行</h1>
+<p>Megatron-LM</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled42.png" alt="Untitled" /></p>
+<p><strong>张量模型并行 + 数据并行</strong></p>
+<p><strong>在同一台 Node 的 GPU 间做张量模型并行 ; 在不同的 Node 上做数据并行</strong>。</p>
+<p><strong>张量并行所需的all-reduce通信需要通过服务器间的链接，这比multi-GPU服务器内的高带宽NVLink要慢；</strong></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/622212228">https://zhuanlan.zhihu.com/p/622212228</a></p>
+<p>为什么会这么选择呢？</p>
+<ol>
+<li>
+<p>张量并行需要的通信量更大，所以在同一个节点内部进行，同一个节点内部设备速度更快</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled43.png" alt="Untitled" /></p>
+<p>在 <strong>张量模型并行</strong> 中，我们设单张卡每次通讯量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Φ</mi><mrow><mi>T</mi><mi>P</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\Phi_{TP}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Φ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span><span class="mord mathnormal mtight" style="margin-right:0.13889em;">P</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> ，每一层前向后向传播一共需要进行 4 次 AllReduce ，总通讯量为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msub><mi mathvariant="normal">Φ</mi><mrow><mi>T</mi><mi>P</mi></mrow></msub><mo>=</mo><mn>8</mn><mi>b</mi><mi>s</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">8\Phi_{TP}  = 8bsh</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord">8</span><span class="mord"><span class="mord">Φ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span><span class="mord mathnormal mtight" style="margin-right:0.13889em;">P</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">8</span><span class="mord mathnormal">b</span><span class="mord mathnormal">s</span><span class="mord mathnormal">h</span></span></span></span> 。</p>
+<p>在数据 <strong>模型并行</strong> 中，每一层module得到对应梯度后，需要和其他数据产生的梯度进行一次 AllReduce ，交换的是梯度，通讯量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Φ</mi><mrow><mi>D</mi><mi>P</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\Phi_{DP}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Φ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02778em;">D</span><span class="mord mathnormal mtight" style="margin-right:0.13889em;">P</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 基本上是  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>∗</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">h*h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">h</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">h</span></span></span></span> （ 梯度形状和参数差不多， QKV Liner 都是  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>∗</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">h*h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">h</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">h</span></span></span></span> ）</p>
+<p>在实际应用中，前者可能会比后者大一些。因此，从通讯量上来说，有差异但不会显著（主要还是和模型设计相关）。<br />
+不过按照常理， <strong>通讯量大的，尽量放在一台机器里（机器内的带宽大，通讯时间也会小）</strong> 。通讯量相对小的，可以考虑在不同机器间做并行</p>
+</li>
+<li>
+<p>Backward 过程中</p>
+<p>TP在从上一层往下一层做backward的过程中，所有GPU间需要做一次AllReduce的。例如下图：</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled44.png" alt="Untitled" /></p>
+<p>而对DP来说，本层算完梯度以后，就正常把本层的梯度发出去，和属于一个DP组的GPU做AllReduce，同时继续往下一层做backward。下一层也是同理。 <strong>也就是在DP组中，下一层不依赖上一层的梯度聚合结果</strong> 。因此在DP组中对带宽的要求就没那么高了。所以可以放到机器间做DP。</p>
+</li>
+</ol>
+<h2 id="精度范围分析"><a class="markdownIt-Anchor" href="#精度范围分析"></a> 精度范围分析</h2>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/leo0308/article/details/117398166">【精选】彻底搞懂float16与float32的计算方式-CSDN博客</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/657886517?utm_id=0">LLM大模型之精度问题（FP16，FP32，BF16）详解与实践</a></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled45.png" alt="Untitled" /></p>
+<h3 id="float-16"><a class="markdownIt-Anchor" href="#float-16"></a> Float 16</h3>
+<p>半进度float16仅有16bit，2个字节组成，存储空间是float的一半。</p>
+<p>float16的组成分为了三个部分：</p>
+<p>sign (1 bit) ;</p>
+<p>exponent (5 bits) ：全0和全1有特殊用途，所以是00001~11110， 也就是1到30</p>
+<p>fraction (10 bits) ：范围为（0~1023）/1024.</p>
+<p>如何从其bitmap计算出表示的数字：</p>
+<ol>
+<li>如果 Exponent 位全部为 0：
+<ol>
+<li>如果 fraction 位 全部为0，则表示数字 0</li>
+<li>如果 fraction 位 不为0，则表示<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1</mn><msup><mo stretchy="false">)</mo><mtext>sign </mtext></msup><mo>×</mo><msup><mn>2</mn><mrow><mo>−</mo><mn>14</mn></mrow></msup><mo>×</mo><mrow><mo fence="true">(</mo><mn>0</mn><mo>+</mo><mfrac><mtext> fraction </mtext><mn>1024</mn></mfrac><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">(-1)^{\text {sign }} \times 2^{-14} \times\left(0+\frac{\text { fraction }}{1024}\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.080502em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">−</span><span class="mord">1</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.830502em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">sign </span></span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.897438em;vertical-align:-0.08333em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">1</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.2301179999999998em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">(</span></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801079999999999em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span><span class="mord mtight">0</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight"> fraction </span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">)</span></span></span></span></span></span></li>
+</ol>
+</li>
+<li>如果 Exponent 位全部为 1：
+<ol>
+<li>如果 fraction 位 全为1，则表示 ±inf</li>
+<li>如果 fraction 位 不为0，则表示 NAN</li>
+</ol>
+</li>
+<li>正常情况：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1</mn><msup><mo stretchy="false">)</mo><mtext>sign </mtext></msup><mo>∗</mo><msup><mn>2</mn><mrow><mtext>exponent </mtext><mo>−</mo><mn>15</mn></mrow></msup><mo>∗</mo><mrow><mo fence="true">(</mo><mn>1</mn><mo>+</mo><mfrac><mtext> fraction </mtext><mn>1024</mn></mfrac><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">(-1)^{\text {sign }} * 2^{\text {exponent }-15} *\left(1+\frac{\text { fraction }}{1024}\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.080502em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">−</span><span class="mord">1</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.830502em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">sign </span></span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">exponent </span></span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.2301179999999998em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">(</span></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801079999999999em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span><span class="mord mtight">0</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight"> fraction </span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">)</span></span></span></span></span></span></li>
+</ol>
+<p>范围：</p>
+<p>根据上面的计算方法,<br />
+最大值为：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mspace width="1em"/><mn>11110</mn><mspace width="1em"/><mn>1111111111</mn><mo>=</mo><msup><mn>2</mn><mn>15</mn></msup><mo>∗</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mn>1023</mn><mi mathvariant="normal">/</mi><mn>1024</mn><mo stretchy="false">)</mo><mo>=</mo><mn>65504</mn></mrow><annotation encoding="application/x-tex">0 \quad 11110 \quad 1111111111=2^{15} *(1+1023 / 1024)=65504</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:1em;"></span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">0</span><span class="mspace" style="margin-right:1em;"></span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mord">0</span><span class="mord">2</span><span class="mord">3</span><span class="mord">/</span><span class="mord">1</span><span class="mord">0</span><span class="mord">2</span><span class="mord">4</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">0</span><span class="mord">4</span></span></span></span><br />
+最小值为：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mspace width="1em"/><mn>11110</mn><mspace width="1em"/><mn>1111111111</mn><mo>=</mo><mo>−</mo><mn>1</mn><mo>∗</mo><msup><mn>2</mn><mn>15</mn></msup><mo>∗</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mn>1023</mn><mi mathvariant="normal">/</mi><mn>1024</mn><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mn>65504</mn></mrow><annotation encoding="application/x-tex">1\quad 11110\quad 1111111111=-1 * 2^{15} *(1+1023 / 1024)=-65504</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:1em;"></span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">0</span><span class="mspace" style="margin-right:1em;"></span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">−</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mord">0</span><span class="mord">2</span><span class="mord">3</span><span class="mord">/</span><span class="mord">1</span><span class="mord">0</span><span class="mord">2</span><span class="mord">4</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">−</span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">0</span><span class="mord">4</span></span></span></span><br />
+精度为：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mn>24</mn></mrow></msup><mo>=</mo><mn>5.960464477539063</mn><mi mathvariant="normal">e</mi><mo>−</mo><mn>08</mn></mrow><annotation encoding="application/x-tex">2^{-24}=5.960464477539063 \mathrm{e}-08</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">5</span><span class="mord">.</span><span class="mord">9</span><span class="mord">6</span><span class="mord">0</span><span class="mord">4</span><span class="mord">6</span><span class="mord">4</span><span class="mord">4</span><span class="mord">7</span><span class="mord">7</span><span class="mord">5</span><span class="mord">3</span><span class="mord">9</span><span class="mord">0</span><span class="mord">6</span><span class="mord">3</span><span class="mord"><span class="mord mathrm">e</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">8</span></span></span></span></p>
+<p>有效动态范围： <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mn>24</mn></mrow></msup><mo>∼</mo><mn>65504</mn></mrow><annotation encoding="application/x-tex">2^{-24} \sim 65504</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">0</span><span class="mord">4</span></span></span></span>  注意这里不是从最小值到最大值， 而是说的正数的部分， 因为正负是对称的</p>
+<p>另外， 需要注意的一点是， fp16表示的数的范围是非均匀的， 什么意思呢？<br />
+fp16表示的数的范围是<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>65536</mn><mo>∼</mo><mn>65536</mn></mrow><annotation encoding="application/x-tex">-65536 \sim 65536</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">−</span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">3</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">3</span><span class="mord">6</span></span></span></span>， 但这些数并不是等间隔分布的。 在不同的区间， 间隔是不一样的。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled46.png" alt="Untitled" /></p>
+<h3 id="float32"><a class="markdownIt-Anchor" href="#float32"></a> Float32</h3>
+<p>组成：</p>
+<p>sign (1 bit) ;</p>
+<p>exponent (8 bits) ：全0和全1有特殊用途，所以是00000001~11111110， 也就是1到254</p>
+<p>fraction (23 bits) ：范围为<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>（</mtext><mn>0</mn><mo>∼</mo><msup><mn>2</mn><mn>23</mn></msup><mtext>）</mtext><mi mathvariant="normal">/</mi><msup><mn>2</mn><mn>23</mn></msup></mrow><annotation encoding="application/x-tex">（0\sim2^{23}）/ 2^{23}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord cjk_fallback">（</span><span class="mord">0</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span><span class="mord mtight">3</span></span></span></span></span></span></span></span></span><span class="mord cjk_fallback">）</span><span class="mord">/</span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span><span class="mord mtight">3</span></span></span></span></span></span></span></span></span></span></span></span></p>
+<h2 id="混合精度训练"><a class="markdownIt-Anchor" href="#混合精度训练"></a> 混合精度训练</h2>
+<ol>
+<li>
+<p><strong>数据溢出问题 Overflow / Underflow：</strong> fp16 的有效的动态范围约为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mn>24</mn></mrow></msup><mo>∼</mo><mn>65504</mn></mrow><annotation encoding="application/x-tex">2^{-24} \sim 65504</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">6</span><span class="mord">5</span><span class="mord">5</span><span class="mord">0</span><span class="mord">4</span></span></span></span>  ，如果计算出的梯度小于最小值 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-24}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span>，那么会被置为 0 。</p>
+</li>
+<li>
+<p><strong>舍入误差 Rounding Error：</strong></p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled47.png" alt="Untitled" /></p>
+</li>
+</ol>
+<p>解决方法：</p>
+<ol>
+<li>
+<p><strong>FP32 权重备份 → 解决舍入误差</strong>的问题:</p>
+<p>weights, activations, gradients 等数据在训练中都利用FP16来存储，同时拷贝一份FP32的weights，用于更新。</p>
+<p><img src="/images/NLP/LLM/%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5/Untitled48.png" alt="Untitled" /></p>
+<p><strong>权重 = 旧权重(float32) + lr * 梯度(float16→float32)</strong></p>
+<p>看到这里，可能有人提出这种 fp32 拷贝weight的方式，那岂不是使得内存占用反而更高了呢？是的， fp32 额外拷贝一份 weight 的确新增加了训练时候存储的占用。 但是实际上，在训练过程中，内存中占据大部分的基本都是 activations 的值。特别是在batchsize 很大的情况下， activations 更是特别占据空间。 保存 activiations 主要是为了在 back-propogation 的时候进行计算。因此，只要 activation 的值基本都是使用 fp16 来进行存储的话，则最终模型与 fp32 相比起来， 内存占用也基本能够减半。</p>
+</li>
+<li>
+<p><strong>Loss Scale → 解决 fp16 underflow</strong></p>
+<p>也就是计算出的梯度小于 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-24}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span> ，为了解决梯度过小的问题，论文中对计算出来的loss值进行scale。<br />
+由于链式法则的存在，loss上的scale会作用也会作用在梯度上。这样比起对每个梯度进行scale更加方便。<br />
+scaled 过后的损失和梯度，就会平移到 fp16 有效的展示范围内。于是在求导时就可以一直使用 fp16 进行 BWD 了。</p>
+<p>只有在进行更新的时候（最下面绿色框框），才会将 scaled-gradient 转化为 fp32，同时<strong>将scale抹去</strong>。</p>
+<p>论文指出， scale 并非对于所有网络而言都是必须的。而scale的取值为也会特别大，论文给出在 <strong>8 - 32k</strong> 之间皆可。</p>
+</li>
+<li>
+<p><strong>提高算数精度</strong></p>
+<p>在某些模型中，fp16矩阵乘法的过程中，需要利用 fp32 来进行矩阵乘法中间的累加(accumulated)，然后再将 fp32 的值转化为 fp16 进行存储。</p>
+<p>这么做的原因主要是为了减少加法过程中的舍入误差，保证精度不损失。</p>
+</li>
+</ol>
+<p>踩坑：</p>
+<ol>
+<li>
+<p>定位模型出现nan的地方，这里可以采用torch提供的set_detect_anomaly()和detect_anomaly()函数:</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">torch.autograd.set_detect_anomaly(<span class="literal">True</span>)<span class="comment"># 正向传播时：开启自动求导的异常侦测</span></span><br><span class="line"><span class="keyword">with</span> autocast(): <span class="comment">#混合精度训练</span></span><br><span class="line">    batch_out = model(data)  <span class="comment"># x, edge_index, edge_attr, u, batch</span></span><br><span class="line">    batch_loss = loss(batch_out, data.y)</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> torch.autograd.detect_anomaly():<span class="comment"># 反向传播时：在求导时开启侦测</span></span><br><span class="line">    scaler.scale(batch_loss).backward()</span><br></pre></td></tr></table></figure>
+<p>当出现nan时，这两个函数会提供报错信息，告诉你是模型forward出现了nan，还是backward出现了nan。</p>
+</li>
+<li>
+<p>前向传播出现问题：</p>
+<p>对这行代码进行单独处理，使之进行全精度训练(float32)</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">x = x.<span class="built_in">float</span>()<span class="comment">#转换成float32</span></span><br><span class="line">x= self.mlp_vn(x)</span><br><span class="line"><span class="built_in">print</span>(x.dtype)</span><br></pre></td></tr></table></figure>
+<p>或者先将torch的混合精度训练关闭</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> autocast(enabled=<span class="literal">False</span>):</span><br><span class="line">    x= self.mlp_vn(x)</span><br><span class="line"><span class="keyword">with</span> autocast(enabled=<span class="literal">True</span>):</span><br><span class="line">    ...（后续代码）</span><br><span class="line"><span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="基本通信操作"><a class="markdownIt-Anchor" href="#基本通信操作"></a> 基本通信操作：</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/607605729">【深度学习】【分布式训练】Collective通信操作及Pytorch示例</a></p>
+<p>链接：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/616929229">https://zhuanlan.zhihu.com/p/616929229</a></p>
+<ul>
+<li>
+<p><strong>并行技术汇总</strong>：</p>
+<ul>
+<li>数据并行（如：PyTorch DDP）</li>
+<li>模型/张量并行（如：Megatron-LM（1D）、Colossal-AI（2D、2.5D、3D））</li>
+<li>流水线并行（如：GPipe、PipeDream、PipeDream-2BW、PipeDream Flush（1F1B））</li>
+<li>多维混合并行（如：3D并行（数据并行、模型并行、流水线并行））</li>
+<li>自动并行（如：Alpa（自动算子内/算子间并行））</li>
+<li>优化器相关的并行（如：ZeRO（<strong>零冗余优化器</strong>，在执行的逻辑上是数据并行，但可以达到模型并行的显存优化效果）、PyTorch FSDP）</li>
+</ul>
+<p><strong>显存优化技术</strong>：</p>
+<ul>
+<li>重计算(Recomputation)：Activation checkpointing(Gradient checkpointing)，本质上是一种用时间换空间的策略。</li>
+<li>卸载（Offload）技术：一种用通信换显存的方法，简单来说就是让模型参数、激活值等在CPU内存和GPU显存之间左右横跳。如：ZeRO-Offload、ZeRO-Infinity等。</li>
+<li>混合精度（BF16/FP16）：降低训练显存的消耗，还能将训练速度提升2-4倍。
+<ul>
+<li>BF16 计算时可避免计算溢出，出现Inf case。</li>
+<li>FP16 在输入数据超过65506 时，计算结果溢出，出现Inf case。</li>
+</ul>
+</li>
+</ul>
+<p><strong>如何选择一款分布式训练框架</strong>？</p>
+<ul>
+<li><strong>训练成本</strong>：不同的训练工具，训练同样的大模型，成本是不一样的。对于大模型，训练一次动辄上百万/千万美元的费用。合适的成本始终是正确的选择。</li>
+<li><strong>训练类型</strong>：是否支持数据并行、张量并行、流水线并行、多维混合并行、自动并行等</li>
+<li><strong>效率</strong>：将普通模型训练代码变为分布式训练所需编写代码的行数，我们希望越少越好。</li>
+<li><strong>灵活性</strong>：你选择的框架是否可以跨不同平台使用？</li>
+</ul>
+<p><strong>常见的分布式训练框架</strong>：</p>
+<ul>
+<li>第一类：深度学习框架自带的分布式训练功能。如：TensorFlow、PyTorch、MindSpore、Oneflow、PaddlePaddle等。</li>
+<li>第二类：基于现有的深度学习框架（如：PyTorch、Flax）进行扩展和优化，从而进行分布式训练。如：Megatron-LM（张量并行）、DeepSpeed（Zero-DP）、Colossal-AI（高维模型并行，如2D、2.5D、3D）、Alpa（自动并行）等</li>
+</ul>
+<p><strong>目前训练超大规模语言模型主要有两条技术路线</strong>：</p>
+<ol>
+<li>TPU + XLA + TensorFlow/JAX ：由Google主导，由于TPU和自家云平台GCP深度绑定。</li>
+<li><strong>GPU + PyTorch + Megatron-LM + DeepSpeed</strong> ：由NVIDIA、Meta、MicroSoft大厂加持，社区氛围活跃，也更受到大家欢迎。</li>
+</ol>
+</li>
+<li>
+<p>模型并行的比较</p>
+<p><a target="_blank" rel="noopener" href="https://www.zhihu.com/people/liguodong-iot/columns">吃果冻不吐果冻皮 - 知乎</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/428117575">模型并行的变种</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/458941585">pytorch实现层内模型并行(pytorch.distributed.shard)</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/467185980">单机多卡深度学习-分布式策略的选择</a></p>
+<p><strong><a target="_blank" rel="noopener" href="http://www.aw.com/catalog/academic/product/1,4096,0201648652,00.html">Introduction to Parallel Computing.：</a></strong><a target="_blank" rel="noopener" href="https://www.cs.purdue.edu/homes/ayg/book/Slides/">https://www.cs.purdue.edu/homes/ayg/book/Slides/</a></p>
+<p>Colossal-AI：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2110.14883.pdf">https://arxiv.org/pdf/2110.14883.pdf</a></p>
+<p>2D并行：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2104.05343.pdf">https://arxiv.org/pdf/2104.05343.pdf</a></p>
+<p>2.5D并行：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2105.14500">https://arxiv.org/abs/2105.14500</a></p>
+<p>3D并行：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2105.14450">https://arxiv.org/abs/2105.14450</a> / A three-dimensional approach to parallel matrix multiplication</p>
+<p>模型并行分两类：</p>
+<p>「层间模型并行(inter-layer) / 流水线并行」和 「层内模型并行(intra-layer) / 张量并行」</p>
+<p>简单的做一个比较。假设我们现在有两层模型，两张卡，对模型分别进行层间模型并行，按W的input_size进行切分的层内模型并行，以及按W的output_size进行切分的层内模型并行。则有下表：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>层间</th>
+<th>1D层内(按in_size切分)</th>
+<th>1D层内(按out_size切分)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>计算时间</td>
+<td>串行执行，较慢</td>
+<td>并行执行，更快</td>
+<td>并行执行，更快</td>
+</tr>
+<tr>
+<td>通信量</td>
+<td>send/recv 第一层的中间值大小</td>
+<td>两层的输出均需做Allreduce</td>
+<td>两层的输出需做Allgather后向传播中输入误差需要Allreduce</td>
+</tr>
+<tr>
+<td>内存开销</td>
+<td>总开销与单机单卡情况一致</td>
+<td>激活值增加（输出）</td>
+<td>激活值增加（输入）</td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/11/07/%E5%A4%9A%E6%A8%A1%E6%80%81/multi-moddal%20backbones/BLIP/" rel="prev" title="BLIP">
+      <i class="fa fa-chevron-left"></i> BLIP
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/11/09/NLP/LLM/%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81-RoPE,ALiBi%E5%92%8C%E5%A4%96%E6%8E%A8%E6%96%B9%E6%A1%88/" rel="next" title="位置编码1-RoPE,ALiBi和外推方案">
+      位置编码1-RoPE,ALiBi和外推方案 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E5%B9%B6%E8%A1%8C%E7%AD%96%E7%95%A5"><span class="nav-number">1.</span> <span class="nav-text"> 训练并行策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C-data-parallelism"><span class="nav-number">2.</span> <span class="nav-text"> 数据并行 Data Parallelism</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#dp"><span class="nav-number">2.1.</span> <span class="nav-text"> DP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ring-all-reduce"><span class="nav-number">2.2.</span> <span class="nav-text"> Ring All reduce</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ddp"><span class="nav-number">2.3.</span> <span class="nav-text"> DDP</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zero-dpzero-redundancy-optimizer-data-parallelism"><span class="nav-number">3.</span> <span class="nav-text"> ZeRO-DP(Zero Redundancy Optimizer-Data Parallelism)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%95%E5%8D%A1%E6%98%BE%E5%AD%98%E5%8D%A0%E7%94%A8%E5%88%86%E6%9E%90"><span class="nav-number">3.1.</span> <span class="nav-text"> 单卡显存占用分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#zero-%E6%98%BE%E5%AD%98%E5%8D%A0%E7%94%A8%E5%88%86%E6%9E%90"><span class="nav-number">3.2.</span> <span class="nav-text"> ZeRO 显存占用分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#zero-%E9%80%9A%E4%BF%A1%E9%87%8F%E5%88%86%E6%9E%90"><span class="nav-number">3.3.</span> <span class="nav-text"> Zero 通信量分析</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C-fsdp"><span class="nav-number">4.</span> <span class="nav-text"> 数据并行 FSDP</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%A0%E9%87%8F%E5%B9%B6%E8%A1%8C-tensor-parallelism"><span class="nav-number">5.</span> <span class="nav-text"> 张量并行 Tensor Parallelism</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%99%AE%E9%80%9A%E7%82%B9%E4%B9%98"><span class="nav-number">5.1.</span> <span class="nav-text"> 普通点乘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9A%8F%E6%9C%BA%E6%80%A7%E6%8E%A7%E5%88%B6"><span class="nav-number">5.2.</span> <span class="nav-text"> 随机性控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%A0%E9%87%8F%E8%87%AA%E5%8A%A8%E5%B9%B6%E8%A1%8C"><span class="nav-number">5.3.</span> <span class="nav-text"> 张量自动并行</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#megatron-lm-%E4%BB%A3%E7%A0%81"><span class="nav-number">5.4.</span> <span class="nav-text"> Megatron-LM 代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#input-embedding"><span class="nav-number">5.5.</span> <span class="nav-text"> Input Embedding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#output-embedding"><span class="nav-number">5.6.</span> <span class="nav-text"> Output Embedding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#transformer-mlp"><span class="nav-number">5.7.</span> <span class="nav-text"> Transformer MLP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#self-attention"><span class="nav-number">5.8.</span> <span class="nav-text"> Self-Attention</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cross-entropy-loss"><span class="nav-number">5.9.</span> <span class="nav-text"> Cross-Entropy Loss</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%9A%E8%AE%AF%E9%87%8F"><span class="nav-number">5.9.1.</span> <span class="nav-text"> 通讯量</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AF%8F%E5%B1%82%E9%80%9A%E8%AE%AF%E9%87%8F"><span class="nav-number">5.10.</span> <span class="nav-text"> 每层通讯量</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%81%E6%B0%B4%E7%BA%BF%E5%B9%B6%E8%A1%8C-pipeline-parallelism"><span class="nav-number">6.</span> <span class="nav-text"> 流水线并行 Pipeline Parallelism</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#naive-pipeline"><span class="nav-number">6.1.</span> <span class="nav-text"> Naive pipeline</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pipeline-%E5%B9%B6%E8%A1%8C%E7%9A%84%E6%A8%A1%E5%BC%8F"><span class="nav-number">6.2.</span> <span class="nav-text"> Pipeline 并行的模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gpipe-mini-batch-pipeline-parallelism-%E5%B0%8F%E6%89%B9%E9%87%8F%E6%B5%81%E6%B0%B4%E7%BA%BF%E5%B9%B6%E8%A1%8C"><span class="nav-number">6.3.</span> <span class="nav-text"> Gpipe ：Mini-batch Pipeline Parallelism 小批量流水线并行</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pipedream"><span class="nav-number">6.4.</span> <span class="nav-text"> PipeDream</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#virtual-pipeline"><span class="nav-number">6.4.1.</span> <span class="nav-text"> Virtual Pipeline</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#deepspeed"><span class="nav-number">6.5.</span> <span class="nav-text"> DeepSpeed</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E5%B9%B6%E8%A1%8C"><span class="nav-number">7.</span> <span class="nav-text"> 混合并行</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B2%BE%E5%BA%A6%E8%8C%83%E5%9B%B4%E5%88%86%E6%9E%90"><span class="nav-number">7.1.</span> <span class="nav-text"> 精度范围分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#float-16"><span class="nav-number">7.1.1.</span> <span class="nav-text"> Float 16</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#float32"><span class="nav-number">7.1.2.</span> <span class="nav-text"> Float32</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B7%B7%E5%90%88%E7%B2%BE%E5%BA%A6%E8%AE%AD%E7%BB%83"><span class="nav-number">7.2.</span> <span class="nav-text"> 混合精度训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E9%80%9A%E4%BF%A1%E6%93%8D%E4%BD%9C"><span class="nav-number">7.3.</span> <span class="nav-text"> 基本通信操作：</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

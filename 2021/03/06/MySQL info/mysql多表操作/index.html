@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="多表操作的结果是一个新的临时表，一般是用于 FROM 后面，然后进行新的 SELECT。  表文件的关系   [Coding, MySQL]通过表文件的数据关系来描述现实生活中的隶属关系。   隶属关系角色划分：  一方：拥有资源的一方 多方：依附于一方的资源    三种关系   一对一  e.g. 用户和用户详情 常用于单表拆分，将一个列数很多的用户信息表，拆分称为一个只包含基础信息的小表（列数">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql多表操作">
+<meta property="og:url" content="http://example.com/2021/03/06/MySQL%20info/mysql%E5%A4%9A%E8%A1%A8%E6%93%8D%E4%BD%9C/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="多表操作的结果是一个新的临时表，一般是用于 FROM 后面，然后进行新的 SELECT。  表文件的关系   [Coding, MySQL]通过表文件的数据关系来描述现实生活中的隶属关系。   隶属关系角色划分：  一方：拥有资源的一方 多方：依附于一方的资源    三种关系   一对一  e.g. 用户和用户详情 常用于单表拆分，将一个列数很多的用户信息表，拆分称为一个只包含基础信息的小表（列数">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/bP5EAJrKw6UmITV.png">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/az4oADiXKqUeNuf.png">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/7nL35adAqH9xK8Z.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/K7NBW9jegCGcdJM.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/ZXmcUFJVAs45tg7.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/FtNBRG6uZWO2alx.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/zRvmacoNsYyelQC.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/6fELZ4BOCcqgpTx.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/5i1EWtFDmSYuIZQ.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/4ep8scuLDGgAN5y.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/SjtZW4PQDK7Fp1h.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/hq3JyTwfI7kBMXE.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/Hajp7eFmAyz24YC.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/03/06/Pfz1bsqYZeS5c82.jpg">
+<meta property="article:published_time" content="2021-03-06T08:41:04.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:15.451Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2021/03/06/bP5EAJrKw6UmITV.png">
+
+<link rel="canonical" href="http://example.com/2021/03/06/MySQL%20info/mysql%E5%A4%9A%E8%A1%A8%E6%93%8D%E4%BD%9C/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>mysql多表操作 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/06/MySQL%20info/mysql%E5%A4%9A%E8%A1%A8%E6%93%8D%E4%BD%9C/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql多表操作
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-06 00:41:04" itemprop="dateCreated datePublished" datetime="2021-03-06T00:41:04-08:00">2021-03-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.8k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>19 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>多表操作的结果是一个新的临时表，一般是用于 <code>FROM</code> 后面，然后进行新的 <code>SELECT</code>。</p>
+<h1 id="表文件的关系"><a class="markdownIt-Anchor" href="#表文件的关系"></a> 表文件的关系</h1>
+<ul>
+<li>
+<p>[Coding, MySQL]通过表文件的数据关系来描述现实生活中的隶属关系。</p>
+</li>
+<li>
+<p>隶属关系角色划分：</p>
+<ol>
+<li>一方：拥有资源的一方</li>
+<li>多方：依附于一方的资源</li>
+</ol>
+</li>
+<li>
+<p>三种关系</p>
+<ul>
+<li>
+<p>一对一</p>
+<ul>
+<li>e.g. 用户和用户详情<br />
+常用于单表拆分，将一个列数很多的用户信息表，拆分称为一个只包含基础信息的小表（列数小）和一个包含其他信息的大表（列数大），来提升操作效率。</li>
+<li>实现：<br />
+在任意的一个表中加一个 UNIQUE 外键，关联另一个表的主键。<br />
+UNIQUE 保证了一对一的关系。</li>
+</ul>
+</li>
+<li>
+<p>多对多</p>
+<ul>
+<li>e.g. 学生-课程：一个学生可以选修多门课，一门课可以被多个学生选择。</li>
+<li>实现：建立第三个中间表（选课表），中间表的一个外键关联学生的主键，一个外键关联课程的主键。</li>
+</ul>
+</li>
+<li>
+<p>一对多 / 多对一</p>
+<ul>
+<li>e.g. 部门-员工：一个部门对应多个员工，一个员工只对应一个部门。</li>
+<li>实现：多方表（员工）建立外键，指向一方表（部门）的主键。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="表文件字段的分类"><a class="markdownIt-Anchor" href="#表文件字段的分类"></a> 表文件字段的分类</h1>
+<ul>
+<li>主键字段：
+<ol>
+<li>存放主键编号，每一个表都应该有一个主键字段。</li>
+<li>用来区分表中的唯一的一个元组/对象。</li>
+<li>不为null，同一表中不可重复。</li>
+</ol>
+</li>
+<li>非主键字段：描述主键编号。</li>
+<li>外键字段：
+<ol>
+<li>只存在多方表，描述多方数据与一方数据的依赖关系。</li>
+<li>外键字段的值应该来源于一方表中的主键值。</li>
+</ol>
+</li>
+</ul>
+<h1 id="多表查询"><a class="markdownIt-Anchor" href="#多表查询"></a> 多表查询</h1>
+<ul>
+<li>本质：将多张表数据合并到同一个临时表中，然后使用六个查询命令，根据需求得到需要的数据。</li>
+<li>关键：如何将多张表中的数据合并到同一张表中。</li>
+<li>多张表数据合并方案：
+<ol>
+<li><strong>连接查询</strong> 合并方案<br />
+a. 首先确保两张表之间存在了<strong>隶属关系</strong>。<br />
+b. 将两张表的内容<strong>水平方向</strong>拼接。<br />
+c. 最终得到拥有<strong>完整隶属关系</strong>的新数据行。</li>
+<li><strong>联合查询</strong> 合并方案<br />
+a. 不需要两张表存在隶属关系。<br />
+b. 两张表的数据行沿着<strong>垂直方向</strong>堆砌。</li>
+</ol>
+</li>
+</ul>
+<p><img src="https://i.loli.net/2021/03/06/bP5EAJrKw6UmITV.png" alt="" /><br />
+<img src="https://i.loli.net/2021/03/06/az4oADiXKqUeNuf.png" alt="" /></p>
+<h1 id="连接查询合并方案"><a class="markdownIt-Anchor" href="#连接查询合并方案"></a> 连接查询合并方案</h1>
+<p>例子：查询各个部门名称及其部门下的职员名称。</p>
+<ul>
+<li>数据来源：Dept.dname 和 Emp.ename</li>
+<li>表文件的关系：Emp隶属于Dept</li>
+<li>命令：<code>join</code></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT Dept.dname, Emp.ename</span><br><span class="line">FROM Dept JOIN Emp  &lt;-- join两边表的位置对结果没有影响</span><br></pre></td></tr></table></figure>
+<ul>
+<li>运算过程：</li>
+</ul>
+<ol>
+<li>JOIN 将两个表水平拼接生成一张新的临时表，字段由两个表相加而成，新的字段名格式为<strong>表名.字段名</strong>，这样解决了重复字段名的问题。</li>
+<li>临时表行数为<strong>原表行数做乘法</strong>，是一个笛卡尔积。</li>
+<li>这时候行数很多，而且每一行是直接拼接的，很多数据根本不合法（脏数据）。这时候我们就需要进行过滤操作了 。<br />
+Join 过滤操作会删除不合法的行，即主客键数据冲突的信息（脏数据），然后放置在一个新的临时表中，接受后续操作。</li>
+</ol>
+<p><strong>连接查询过滤方案</strong>：将合法数据行与脏数据行进行剥离的形为。</p>
+<ul>
+<li>命令格式： <code>FROM 一方表 [INNER/LEFT/RIGHT] JOIN 多方表 ON 定位合法数据行条件</code></li>
+<li>合法数据行与脏数据行区分原则：
+<ol>
+<li>表文件<strong>存在明显外键字段</strong>：<code>ON 一方表.主键字段 = 多方表.外键字段</code></li>
+<li>表文件<strong>没有明显外键字段</strong>：<code>ON 根据实际隶属关系进行判断</code></li>
+</ol>
+</li>
+<li>分类：内连接过滤方案，外连接过滤方案，自连接过滤方案</li>
+</ul>
+<h2 id="内连接查询"><a class="markdownIt-Anchor" href="#内连接查询"></a> <strong>内连接查询</strong></h2>
+<h3 id="不指定字段"><a class="markdownIt-Anchor" href="#不指定字段"></a> 不指定字段</h3>
+<p>使用 <code>natural join</code> ，不需要用户声明需要匹配的特征名称，会自动将两个表中<strong>具有相同名称的列进行匹配</strong>。</p>
+<h3 id="指定字段方式"><a class="markdownIt-Anchor" href="#指定字段方式"></a> 指定字段方式</h3>
+<p>查询两个表交集部分的数据</p>
+<ul>
+<li>
+<p>命令格式：</p>
+<ul>
+<li>隐式：<code>SELECT 字段列表 FROM 表1, 表2 WHERE 条件 ...;</code></li>
+<li>显式：<code>SELECT 字段列表 FROM 表1 [INNER] JOIN 表2 ON 连接条件 ...;</code>，<code>INNER</code> 关键字可以省略。</li>
+</ul>
+</li>
+<li>
+<p>例子：<br />
+<img src="https://i.loli.net/2021/03/06/7nL35adAqH9xK8Z.jpg" alt="" /></p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SELECT Dept.Dname, Emp.job, COUNT(*)</span><br><span class="line">FROM Dept JOIN Emp</span><br><span class="line">ON Dept.Deptno = Emp.Deptno</span><br><span class="line">WHERE Dept.Deptno=20</span><br><span class="line">GROUP BY Emp.job</span><br></pre></td></tr></table></figure>
+<ul>
+<li>
+<p>顺序：</p>
+<ol>
+<li>FROM Dept JOIN Emp<br />
+<img src="https://i.loli.net/2021/03/06/K7NBW9jegCGcdJM.jpg" alt="" /></li>
+<li>ON Dept.Deptno = Emp.Deptno<br />
+<img src="https://i.loli.net/2021/03/06/ZXmcUFJVAs45tg7.jpg" alt="" /></li>
+<li>WHERE Dept.Deptno=20<br />
+<img src="https://i.loli.net/2021/03/06/FtNBRG6uZWO2alx.jpg" alt="" /></li>
+<li>GROUP BY Emp.job <strong>生成两个临时表</strong><br />
+<img src="https://i.loli.net/2021/03/06/zRvmacoNsYyelQC.jpg" alt="" /></li>
+<li>SELECT Dept.Dname, Emp.job, COUNT(*) <strong>对每一个临时表进行操作</strong><br />
+<img src="https://i.loli.net/2021/03/06/6fELZ4BOCcqgpTx.jpg" alt="" /></li>
+</ol>
+</li>
+<li>
+<p>简化：别名<br />
+在<code>SELECT</code>,<code>ON</code>,<code>WHERE</code>中都需要写下<code>表名.字段名</code>，比较繁琐，这时我们可以在<code>FROM</code>处给表起别名。<br />
+但是起了别名以后的操作，就不能通过<code>表名.字段名</code>来指定别名了，只能通过<code>别名.字段名</code>的方式指定。</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">-- 隐式方法</span><br><span class="line">SELECT d.Dname, e.job, COUNT(*)</span><br><span class="line">FROM Dept d, Emp e</span><br><span class="line">WHERE d.Deptno=20 and d.Deptno = e.Deptno</span><br><span class="line">GROUP BY e.job</span><br><span class="line"></span><br><span class="line">-- 显式方式</span><br><span class="line">SELECT d.Dname, e.job, COUNT(*)</span><br><span class="line">FROM Dept d JOIN Emp e</span><br><span class="line">ON d.Deptno = e.Deptno</span><br><span class="line">WHERE d.Deptno=20</span><br><span class="line">GROUP BY e.job</span><br></pre></td></tr></table></figure>
+<h2 id="外连接查询"><a class="markdownIt-Anchor" href="#外连接查询"></a> <strong>外连接查询</strong></h2>
+<ul>
+<li>
+<p>两种方式：</p>
+<ul>
+<li>左外连接：查询左表<strong>所有</strong>数据，和两张表的交集部分。</li>
+<li>右外连接：查询右表<strong>所有</strong>数据，和两张表的交集部分。</li>
+</ul>
+</li>
+<li>
+<p>查询各个部门以及其部门下的人数：</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SELECT dept.dname, COUNT(*)</span><br><span class="line">FROM dept JOIN EMP</span><br><span class="line">ON dept.deptno=emp.deptno</span><br><span class="line">GROUP BY dept.dname</span><br></pre></td></tr></table></figure>
+<ul>
+<li>
+<p>场景介绍：服务器在执行<code>ON dept.deptno=emp.deptno</code>时，如果dept.deptno存在一个数据，但是emp.deptno不存在该匹配数据，服务器不会保存该数据。但是我们要求保存该数据，这时需要使用外连接过滤方案。</p>
+</li>
+<li>
+<p>外连接过滤方案表文件角色划分：</p>
+<ol>
+<li>需要被帮助表</li>
+<li>不需要被帮助表</li>
+</ol>
+</li>
+<li>
+<p>执行原理：如果<strong>需要被帮助表</strong>中某行数据与<strong>不需要被帮助表</strong>中的所有数据行都无法拼接成为合法的数据。此时将这个数据行作为一个独立的数据行。</p>
+</li>
+<li>
+<p>代码格式：</p>
+<ol>
+<li>左外连接查询：</li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FROM 需要被帮助表 LEFT JOIN 不需要被帮助表</span><br><span class="line">ON 合法数据定位条件</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>右外连接查询：</li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FROM 不需要被帮助表 RIGHT JOIN 需要被帮助表</span><br><span class="line">ON 合法数据定位条件</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>临时表例子：<br />
+需求：查询所有部门的名称及其人数，无论是否有人，都需要展示出来。<br />
+<img src="https://i.loli.net/2021/03/06/5i1EWtFDmSYuIZQ.jpg" alt="" /></p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SELECT dept.dname, COUNT(*)</span><br><span class="line">FROM dept LEFT JOIN emp</span><br><span class="line">ON dept.deptno = emp.deptno</span><br><span class="line">GROUP BY dept.dname</span><br></pre></td></tr></table></figure>
+<ul>
+<li>
+<p>执行顺序：</p>
+<ol>
+<li><code>FROM dept LEFT JOIN emp</code><br />
+<img src="https://i.loli.net/2021/03/06/4ep8scuLDGgAN5y.jpg" alt="" /></li>
+<li><code>ON dept.deptno = emp.deptno</code> <strong>外链接影响的就是on步骤的删除数据行操作</strong><br />
+<img src="https://i.loli.net/2021/03/06/SjtZW4PQDK7Fp1h.jpg" alt="" /></li>
+<li><code>GROUP BY dept.dname</code><br />
+<img src="https://i.loli.net/2021/03/06/hq3JyTwfI7kBMXE.jpg" alt="" /></li>
+<li><code>SELECT dept.dname, COUNT(*)</code><br />
+<img src="https://i.loli.net/2021/03/06/Hajp7eFmAyz24YC.jpg" alt="" /></li>
+</ol>
+<p>需要改成<code>count(emp.deptno)</code><br />
+即：<code>SELECT dept.dname, COUNT(emp.deptno)</code><br />
+<img src="https://i.loli.net/2021/03/06/Pfz1bsqYZeS5c82.jpg" alt="" /></p>
+</li>
+</ul>
+<h3 id="full-outer-join"><a class="markdownIt-Anchor" href="#full-outer-join"></a> Full outer join</h3>
+<p>mysql 没有 full outer join 的选项，可以使用两个连接查询+union 的方式：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Select *</span><br><span class="line">From R natural left outer join S where C is null</span><br><span class="line">UNION ALL</span><br><span class="line">Select *</span><br><span class="line">From R natural right outer join S;</span><br></pre></td></tr></table></figure>
+<p>其中 <code>C</code> 为 <code>S-R</code> 的特征</p>
+<h2 id="自连接查询"><a class="markdownIt-Anchor" href="#自连接查询"></a> <strong>自连接查询</strong></h2>
+<p>语法格式：<code>SELECT 字段名称 FROM 表A 别名A [LEFT/RIGHT] JOIN 表A 别名B ON 条件 ...;</code><br />
+自连接可以是 内连接，左连接 和 右连接。<br />
+注意这里<code>JOIN</code>两边的表都是<code>表A</code>，但是别名是不同的。这两个别名必须指定，用来作为条件处的指定。</p>
+<p>比如，一张 emp 表，其中每个员工都有自己的 <code>id</code>，同时也有 <code>boss_id</code> 表示自己领导的 <code>id</code>。<br />
+现在需要查询每个员工和自己的所属领导：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT a.name &#x27;employee&#x27; , b.name &#x27;boss&#x27;</span><br><span class="line">FROM emp a LEFT JOIN emp b</span><br><span class="line">ON a.boss_id = b.id;</span><br></pre></td></tr></table></figure>
+<h2 id="null-值现象"><a class="markdownIt-Anchor" href="#null-值现象"></a> Null 值现象</h2>
+<p>首先空值 <code>''</code> 也是一个值，和普通值一样的，和 null 没关系。<br />
+在 MySQL 中，NULL 值与任何其它值的比较（即使是 NULL）永远返回 NULL，即 NULL = NULL 返回 NULL ，而我们筛选是需要返回 <code>True / False</code> 。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"> A TABLE     B TABLE</span><br><span class="line">+--+----+   +--+----+</span><br><span class="line">|ID|NAME|   |ID|NAME|</span><br><span class="line">+--+----+   +--+----+</span><br><span class="line">|1 |    |   |1 |A   |</span><br><span class="line">|2 |null|   |2 |B   |</span><br><span class="line">|3 |C   |   |3 |null|</span><br><span class="line">|4 |D   |   |4 |    |</span><br><span class="line">|5 |null|   |5 |    |</span><br><span class="line">+--+----+   +--+----+</span><br></pre></td></tr></table></figure>
+<p><code>left join</code> 时，如果多方表中没有和一方表中匹配的选项，那么一方表中的该 tuple 也会被输出，但是多方字段就是 null 了。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">SELECT A.ID, A.NAME, B.ID, B.NAME</span><br><span class="line">FROM A</span><br><span class="line">LEFT JOIN B</span><br><span class="line">ON A.NAME = B.NAME</span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">+--+----+----+----+</span><br><span class="line">|ID|NAME|ID  |NAME|</span><br><span class="line">+--+----+----+----+</span><br><span class="line">|1 |    |4   |    |</span><br><span class="line">|1 |    |5   |    |</span><br><span class="line">|2 |null|null|null|</span><br><span class="line">|3 |C   |null|null|</span><br><span class="line">|4 |D   |null|null|</span><br><span class="line">|5 |null|null|null|</span><br><span class="line">+--+----+----+----+</span><br></pre></td></tr></table></figure>
+<p>可以看到 <code>|2 |null|null|null|</code> 和 <code>|5 |null|null|null|</code> ，<code>A.NAME=Null</code>，并未关联到B表NAME为NULL的部分 <code>B: |3 |null|</code> ，所以 <strong>一方表中的 null，不会匹配多方表中的任何结果，即使多方表中也是 null</strong> 。</p>
+<p>解决方法：</p>
+<ol>
+<li>让 <code>Null</code> 也去匹配多方表中的 <code>Null</code> 或者 <code>''</code><br />
+使用 <code>COALESCE</code> 关键字，<code>COALESCE(A.NAME,'')</code>，如果是 <code>Null</code> 则返回空值 。<br />
+因为左右都将 <code>Null</code> 转换为了 <code>''</code>，所以一方表中的 <code>Null</code> 可以匹配到多方表中的 <code>Null</code> 和 <code>''</code> ，并且返回表还会显示原始的元素值。</li>
+</ol>
+<blockquote>
+<p><code>COALESCE (expression_1, expression_2, ...,expression_n)</code> 依次参考各参数表达式，遇到非 <code>null</code> 值即停止并返回该值。如果所有的表达式都是空值，最终将返回一个空值。</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">SELECT A.ID,A.NAME,B.ID,B.NAME</span><br><span class="line">FROM A</span><br><span class="line">LEFT JOIN B</span><br><span class="line">ON COALESCE(A.NAME,&#x27;&#x27;) = COALESCE(B.NAME,&#x27;&#x27;)</span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">+--+----+----+----+</span><br><span class="line">|ID|NAME|ID  |NAME|</span><br><span class="line">+--+----+----+----+</span><br><span class="line">|1 |    |3   |null|</span><br><span class="line">|2 |null|3   |null|</span><br><span class="line">|5 |null|3   |null|</span><br><span class="line">|1 |    |4   |    |</span><br><span class="line">|2 |null|4   |    |</span><br><span class="line">|5 |null|4   |    |</span><br><span class="line">|1 |    |5   |    |</span><br><span class="line">|2 |null|5   |    |</span><br><span class="line">|5 |null|5   |    |</span><br><span class="line">|3 |C   |null|null|</span><br><span class="line">+--+----+----+----+</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>不想让一方表中的 <code>''</code> 也参与匹配：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SELECT A.ID, A.NAME, B.ID, B.NAME</span><br><span class="line">FROM A LEFT JOIN B</span><br><span class="line">ON A.NAME = B.NAME</span><br><span class="line">AND A.NAME != &#x27;&#x27;;</span><br><span class="line"></span><br><span class="line">-- same as -&gt; AND COALESCE(A.NAME, &#x27;&#x27;) != &#x27;&#x27;;</span><br></pre></td></tr></table></figure>
+<h1 id="子查询合并方案"><a class="markdownIt-Anchor" href="#子查询合并方案"></a> 子查询合并方案</h1>
+<p>返回的结果会自动过滤重复的元素</p>
+<h2 id="union"><a class="markdownIt-Anchor" href="#union"></a> Union</h2>
+<p>Union (all): {a,b,b,c} U {a,b,b,b,e,f,f} = {a,a,b,b,b,b,b,c,e,f,f}</p>
+<ul>
+<li>
+<p>定义：将两张表 <strong>沿着垂直方向进行堆砌</strong> ，即把多次查询结果竖直合并起来，形成一个新的查询结果集。</p>
+</li>
+<li>
+<p>命令：</p>
+<ul>
+<li><code>UNION</code>会自动删除重复行（同一个表和 <code>or</code> 类似）</li>
+<li><code>UNION ALL</code>则不会删除重复数据。且效率高于 <code>UNION</code> 。</li>
+</ul>
+</li>
+<li>
+<p>要求：</p>
+<ol>
+<li>参与合并的临时表字段结构保持一致，即<strong>字段个数/列数</strong>和<strong>字段类型的顺序</strong>保持一致。</li>
+<li>联合查询生成临时表的字段只能来自于<strong>第一个临时表字段</strong>。即表头使用前面的父表。</li>
+</ol>
+</li>
+<li>
+<p>例子：</p>
+<ul>
+<li>需求：将部门编号，部门名称，职员编号，职员名称展示出来</li>
+<li>命令：  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT deptno, dname FROM dept</span><br><span class="line">UNION</span><br><span class="line">SELECT empno, ename FROM emp</span><br></pre></td></tr></table></figure>
+</li>
+<li>临时表：
+<ol>
+<li><code>SELECT deptno, dname FROM dept</code></li>
+<li><code>SELECT empno, ename FROM emp</code></li>
+<li>通过<code>UNION</code>命令，将两个临时表沿着垂直方向堆砌。</li>
+</ol>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="difference"><a class="markdownIt-Anchor" href="#difference"></a> Difference</h2>
+<p>Difference (except): {a,b,b,b,c,c} - {b,c,c,c,d} = {a,b,b}<br />
+sql 不支持这种方式</p>
+<h2 id="intersection"><a class="markdownIt-Anchor" href="#intersection"></a> Intersection</h2>
+<p>Intersection: {a,b,b,b,c,c} ∩ {b,b,c,c,c,c,d} = {b,b,c,c}<br />
+sql 不支持这种方式，可以使用 Join</p>
+<h1 id="子查询"><a class="markdownIt-Anchor" href="#子查询"></a> 子查询</h1>
+<ul>
+<li>
+<p>定义：在查询时无法从当前临时表得到需要的数据，此时mysql服务器允许开发人员通过<strong>完整查询语句</strong>从<strong>别的表</strong>中得到需要的数据，从而保证查询正常执行。<br />
+这个起到帮助作用的<strong>完整查询语句</strong>相当于外援，在技术上被称之为<strong>子查询</strong>或者<strong>嵌套查询</strong>。</p>
+</li>
+<li>
+<p>适用条件：根据某些限制特征来得到某一目标群体的其他特征</p>
+</li>
+<li>
+<p>用法：使用 <strong>小括号</strong> 放置查询命令，令其返回一个值。可以看成调用了一次简单的函数。</p>
+</li>
+<li>
+<p>命令：<code>SELECT * FROM t1 WHERE column1=(SELECT column1 FROM t2)</code></p>
+</li>
+<li>
+<p>根据查询结果，即 <strong>小括号<code>()</code></strong> 内部查询命令返回值的不同，分为四种子查询：</p>
+<ul>
+<li>标量子查询：返回结果为一个标量</li>
+<li>列子查询：返回结果为一列</li>
+<li>行子查询：返回结果为一行</li>
+<li>表子查询：返回结果为一个临时表</li>
+</ul>
+</li>
+<li>
+<p>可用范围：</p>
+<ul>
+<li>SELECT 命令：<code>SELECT ename,sal,(SELECT AVG(sal) FROM emp) AS 'avg'</code></li>
+<li>FROM 命令：把子查询的结果(内存里的一张表)当作一张临时表，然后交给外部继续对它进行处理。</li>
+<li>WHERE 命令：把内层查询的结果当作外层查询的条件。</li>
+<li>HAVING 命令：通过子查询来得到判断标准。<code>HAVING avg(sal)&gt;(SELECT avg(sal) FROM emp)</code></li>
+<li>EXISTS 命令：对外层表进行循环，再对内表进行内层查询。<br />
+和 <code>in()</code> 差不多，但是它们还是有区别的。主要是看两个张表大小差的程度。若子查询表大则用exists（内层索引），子查询表小则用in（外层索引）。</li>
+</ul>
+</li>
+<li>
+<p>运算符号：</p>
+</li>
+</ul>
+<ol>
+<li>in子查询：内层查询语句仅返回一个数据列，这个数据列的值将供外层查询语句进行比较。</li>
+<li>any子查询：只要满足内层子查询中的任意一个比较条件，就返回一个结果作为外层查询条件。</li>
+<li>all子查询：内层子查询返回的结果需同时满足所有内层查询条件。</li>
+<li>比较运算符子查询：子查询中可以使用的比较运算符如  &gt;、&gt;=、&lt;=、&lt;、=、 &lt;&gt;</li>
+<li>exists子查询：把外层的查询结果（支持多行多列），拿到内层，看内层是否成立，简单来说后面的返回true,外层（也就是前面的语句）才会执行，否则不执行。</li>
+</ol>
+<ul>
+<li>子查询的顺序：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/houqijun/p/6085603.html">https://www.cnblogs.com/houqijun/p/6085603.html</a></li>
+</ul>
+<h2 id="标量子查询"><a class="markdownIt-Anchor" href="#标量子查询"></a> 标量子查询</h2>
+<p>子查询返回的是一个标量结果（数字，字符串，日期），最简单的形式，这种子查询被称为 <strong>标量子查询</strong>。</p>
+<p>常见的操作符号为 <code>&gt; &lt; &gt;= &lt;= = &lt;&gt;</code>。</p>
+<ul>
+<li>例子：查看工资高于公司平均工资的职员信息</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE sal &gt; (SELECT avg(sal) FROM emp)</span><br></pre></td></tr></table></figure>
+<h2 id="列子查询"><a class="markdownIt-Anchor" href="#列子查询"></a> 列子查询</h2>
+<p>子查询返回的是一列（多行），可以看作是一个<code>集合</code>或者<code>列表</code>。</p>
+<p>常见操作符为 <code>IN, NOT IN, ANY, SOME, ALL</code></p>
+<ul>
+<li>例子：
+<ul>
+<li>查询销售部和市场部所有员工信息：</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE dept_id IN (SELECT id FROM dept WHERE name IN (&#x27;销售部&#x27;, &#x27;市场部&#x27;))</span><br></pre></td></tr></table></figure>
+<ul>
+<li>查询比财务部<strong>所有人</strong>工资都高的员工信息 --》max</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">-- 使用 max 的方法</span><br><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE salary &gt; (</span><br><span class="line">    SELECT MAX(salary)</span><br><span class="line">    FROM emp</span><br><span class="line">    WHERE dept_id = (</span><br><span class="line">        SELECT id</span><br><span class="line">        FROM dept</span><br><span class="line">        WHERE name = &#x27;财务部&#x27;</span><br><span class="line">    )</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">-- 使用 all 的方法</span><br><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE salary &gt; ALL (</span><br><span class="line">    SELECT salary</span><br><span class="line">    FROM emp</span><br><span class="line">    WHERE dept_id = (</span><br><span class="line">        SELECT id</span><br><span class="line">        FROM dept</span><br><span class="line">        WHERE name = &#x27;财务部&#x27;</span><br><span class="line">    )</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>查询比财务部<strong>任意一个人</strong>工资都高的员工信息 --》 min</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">- 使用 all 的方法</span><br><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE salary &gt; ANY (</span><br><span class="line">    SELECT salary</span><br><span class="line">    FROM emp</span><br><span class="line">    WHERE dept_id = (</span><br><span class="line">        SELECT id</span><br><span class="line">        FROM dept</span><br><span class="line">        WHERE name = &#x27;财务部&#x27;</span><br><span class="line">    )</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="行子查询"><a class="markdownIt-Anchor" href="#行子查询"></a> 行子查询</h2>
+<p>子查询返回结果为一行，可以看作一个新的实例，有结构关系。</p>
+<p>常用操作符为：<code>=, !=, IN, NOT IN</code></p>
+<p>使用小括号进行组合，来实现行与行的比较。</p>
+<ul>
+<li>例子：查询和 Sam 薪资和直属领导相同的员工</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE (salary, boss) = (SELECT salary, boss FROM emp WHERE name=&#x27;Sam&#x27;);</span><br></pre></td></tr></table></figure>
+<h2 id="表子查询"><a class="markdownIt-Anchor" href="#表子查询"></a> 表子查询</h2>
+<p>返回结果为多行，一个临时表，常用操作为 <code>IN</code>。</p>
+<ul>
+<li>例子：
+<ul>
+<li>查询与 Jim，Bob 职位薪资相同的员工信息：</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM emp</span><br><span class="line">WHERE (position, salary) = (SELECT position, salary FROM emp WHERE name=&#x27;Jim&#x27; OR name=&#x27;Bob&#x27;)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>查询入职时间在 2000-11-11 之后的员工信息</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT e.*, d.*</span><br><span class="line">FROM (SELECT * FROM emp WHERE entrytime&gt;&#x27;2000-11-11&#x27;) e LEFT JOIN dept d</span><br><span class="line">ON e.dept_id=d.id;</span><br></pre></td></tr></table></figure></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/06/MySQL%20info/%E5%85%B3%E7%B3%BB%E5%9E%8B%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="prev" title="关系型数据库">
+      <i class="fa fa-chevron-left"></i> 关系型数据库
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/08/Coding/Pandas/Pandas-plot/" rel="next" title="Pandas-plot">
+      Pandas-plot <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A1%A8%E6%96%87%E4%BB%B6%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-number">1.</span> <span class="nav-text"> 表文件的关系</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A1%A8%E6%96%87%E4%BB%B6%E5%AD%97%E6%AE%B5%E7%9A%84%E5%88%86%E7%B1%BB"><span class="nav-number">2.</span> <span class="nav-text"> 表文件字段的分类</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2"><span class="nav-number">3.</span> <span class="nav-text"> 多表查询</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%E5%90%88%E5%B9%B6%E6%96%B9%E6%A1%88"><span class="nav-number">4.</span> <span class="nav-text"> 连接查询合并方案</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.1.</span> <span class="nav-text"> 内连接查询</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E6%8C%87%E5%AE%9A%E5%AD%97%E6%AE%B5"><span class="nav-number">4.1.1.</span> <span class="nav-text"> 不指定字段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%87%E5%AE%9A%E5%AD%97%E6%AE%B5%E6%96%B9%E5%BC%8F"><span class="nav-number">4.1.2.</span> <span class="nav-text"> 指定字段方式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%96%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.2.</span> <span class="nav-text"> 外连接查询</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#full-outer-join"><span class="nav-number">4.2.1.</span> <span class="nav-text"> Full outer join</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.3.</span> <span class="nav-text"> 自连接查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#null-%E5%80%BC%E7%8E%B0%E8%B1%A1"><span class="nav-number">4.4.</span> <span class="nav-text"> Null 值现象</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%90%E6%9F%A5%E8%AF%A2%E5%90%88%E5%B9%B6%E6%96%B9%E6%A1%88"><span class="nav-number">5.</span> <span class="nav-text"> 子查询合并方案</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#union"><span class="nav-number">5.1.</span> <span class="nav-text"> Union</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#difference"><span class="nav-number">5.2.</span> <span class="nav-text"> Difference</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#intersection"><span class="nav-number">5.3.</span> <span class="nav-text"> Intersection</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.</span> <span class="nav-text"> 子查询</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%87%E9%87%8F%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.1.</span> <span class="nav-text"> 标量子查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%97%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.2.</span> <span class="nav-text"> 列子查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%8C%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.3.</span> <span class="nav-text"> 行子查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%A8%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.4.</span> <span class="nav-text"> 表子查询</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

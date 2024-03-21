@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="34、python并发编程之多进程（操作篇） 【Python】Python多进程详解 僵尸进程与孤儿进程（了解） python多进程总结">
+<meta property="og:type" content="article">
+<meta property="og:title" content="python 多进程">
+<meta property="og:url" content="http://example.com/2021/02/14/Coding/Python/python%20%E5%A4%9A%E8%BF%9B%E7%A8%8B/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="34、python并发编程之多进程（操作篇） 【Python】Python多进程详解 僵尸进程与孤儿进程（了解） python多进程总结">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-02-14T18:57:32.000Z">
+<meta property="article:modified_time" content="2024-03-17T01:17:05.971Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/02/14/Coding/Python/python%20%E5%A4%9A%E8%BF%9B%E7%A8%8B/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>python 多进程 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/14/Coding/Python/python%20%E5%A4%9A%E8%BF%9B%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          python 多进程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-14 10:57:32" itemprop="dateCreated datePublished" datetime="2021-02-14T10:57:32-08:00">2021-02-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.8k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>14 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/111430051">34、python并发编程之多进程（操作篇）</a><br />
+<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/493699150">【Python】Python多进程详解</a><br />
+<a target="_blank" rel="noopener" href="http://www.cnblogs.com/Anker/p/3271773.html">僵尸进程与孤儿进程（了解）</a><br />
+<a target="_blank" rel="noopener" href="https://www.cnblogs.com/fengf233/p/11506337.html">python多进程总结</a></p>
+<span id="more"></span>
+<h2 id="实例化进程"><a class="markdownIt-Anchor" href="#实例化进程"></a> 实例化进程</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">from multiprocessing import Process</span><br><span class="line">p = Process(target=方法名, args=(传入参数1, 传入参数2 ...))</span><br></pre></td></tr></table></figure>
+<p>通过 <code>python demo.py</code> 命令开始执行 <code>demo.py</code> 这个程序时，程序被赋予了声明，成为一个进程，这个进程是主进程。<br />
+<code>Process()</code> 方法构造的进程都是子进程。</p>
+<ul>
+<li>
+<p>参数：</p>
+<ul>
+<li><code>target</code>：调用对象，表示子进程需要调用的方法。</li>
+<li><code>args</code>：使用关键字的方式来指定参数，<code>args</code>指定的为传给<code>target</code>函数的<strong>位置参数</strong>，<strong>是一个元组形式，必须有逗号</strong>。</li>
+<li><code>kwargs</code>：调用对象的<strong>字典</strong>，传入的是<strong>关键字形参</strong>，比如<code>kwargs=&#123;'name':'egon','age':18&#125;</code>。</li>
+<li><code>name</code>：子进程的名称</li>
+</ul>
+</li>
+<li>
+<p>方法：</p>
+<ul>
+<li><code>p.start()</code>：启动进程，并调用该子进程中的 <code>p.run()</code>。</li>
+<li><code>p.run()</code>：进程启动时运行的方法，正是它去调用target指定的函数。</li>
+<li><code>p.terminate()</code>：强制终止进程p，不会进行任何清理操作（子进程，锁）。
+<ul>
+<li>不会立即关闭，所以is_alive立刻查看的结果可能还是存活。</li>
+<li>注意：<strong>如果p创建了子进程，该子进程就成了僵尸进程</strong>，使用该方法需要特别小心这种情况。</li>
+<li>如果p还保存了一个锁那么也将不会被释放，进而导致死锁。</li>
+</ul>
+</li>
+<li><code>p.is_alive()</code>：如果p仍然运行，返回<code>True</code></li>
+<li><code>p.join(timeout=None)</code>:主线程等待p终止（强调：是主线程处于等的状态，而p是处于运行的状态）。
+<ul>
+<li><code>timeout</code>是可选的超时时间，需要强调的是，<code>p.join()</code>只能join住<code>p.start()</code>开启的进程，而不能join住<code>p.run()</code>开启的进程</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>属性：</p>
+<ul>
+<li><code>daemon=False</code>：必须在<code>p.start()</code>之前设置，如果设置为<code>True</code>，代表p为后台运行的<strong>守护进程，当p的父进程终止时，p也随之终止</strong>；同时p不能创建自己的新进程。</li>
+<li><code>name</code></li>
+<li><code>pid</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="进程启动"><a class="markdownIt-Anchor" href="#进程启动"></a> 进程启动</h2>
+<p>有三种启动方式：</p>
+<ul>
+<li><code>spawn</code>：子进程仅继承<strong>有限</strong>的资源。适用于 Unix/Linux 和 Windows，Windows 和 MacOS 的默认方式。</li>
+<li><code>fork</code>：子进程会继承父进程中<strong>所有</strong>的资源，仅适用于。Unix/Linux，Unix/Linux 默认方式。</li>
+<li><code>forkserver</code>：创建一个<strong>单进程的服务进程</strong>，专门用来处理子进程的创建，仅适用于 Unix/Linux。</li>
+</ul>
+<h3 id="初始化设置-target-参数"><a class="markdownIt-Anchor" href="#初始化设置-target-参数"></a> 初始化设置 target 参数</h3>
+<p>上一步方式初始化进程后，通过 <code>p.start()</code> 方法启动进程，进程会默认调用<code>target</code>指定的方法。</p>
+<h3 id="重写-run-方法"><a class="markdownIt-Anchor" href="#重写-run-方法"></a> 重写 run() 方法</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">class Piao(Process):</span><br><span class="line">    def __init__(self,name):</span><br><span class="line">        super().__init__()</span><br><span class="line">        self.name=name</span><br><span class="line">    def run(self): # 重写 run 实现方法</span><br><span class="line">        print(&#x27;%s piaoing&#x27; %self.name)</span><br><span class="line"></span><br><span class="line">        time.sleep(random.randrange(1,5))</span><br><span class="line">        print(&#x27;%s piao end&#x27; %self.name)</span><br><span class="line"></span><br><span class="line">p1=Piao(&#x27;egon&#x27;)</span><br><span class="line">p2=Piao(&#x27;alex&#x27;)</span><br><span class="line"></span><br><span class="line">p1.start() #start会自动调用run</span><br><span class="line">p2.start()</span><br><span class="line">print(&#x27;主线程&#x27;)</span><br></pre></td></tr></table></figure>
+<ol>
+<li>继承 <code>Process</code> 类</li>
+<li>重写 <code>run()</code> 方法</li>
+</ol>
+<h2 id="阻塞主进程"><a class="markdownIt-Anchor" href="#阻塞主进程"></a> 阻塞主进程</h2>
+<p><code>p.join()</code> 方法会使主线程进入阻塞，直到调用 <code>p.join()</code> 方法的子线程执行完毕。</p>
+<p>例1：进程1，2同步进行</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">p1.start()</span><br><span class="line">p2.start()</span><br><span class="line">p1.join()</span><br><span class="line">p2.join()</span><br></pre></td></tr></table></figure>
+<p>例2：进程1先开始，结束后进程2才开始</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">p1.start()</span><br><span class="line">p1.join()</span><br><span class="line">p2.start()</span><br><span class="line">p2.join()</span><br></pre></td></tr></table></figure>
+<h2 id="pool-方法"><a class="markdownIt-Anchor" href="#pool-方法"></a> Pool() 方法</h2>
+<p>用于一次性创建多个进程<br />
+构造进程池：<code>p=Pool(3)</code>，参数表示每次执行的子进程个数的限制。<br />
+<code>Pool</code>的默认大小是你所用的电脑CPU的核数，CPU核数可通过<code>os.cpu_count()</code>获得。</p>
+<p><font size=3.5 color='red'>一定要注意放在 <code>if __name__ ==&quot;__main__&quot;:</code> 主进程内，不然会报错 ！！！</font></p>
+<h3 id="apply-与-apply_async"><a class="markdownIt-Anchor" href="#apply-与-apply_async"></a> apply() 与 apply_async()</h3>
+<p>都是一次执行一个任务，</p>
+<ul>
+<li><code>apply()</code> 方法调用后，主进程分配一个任务给子进程，然后主进程会阻塞直到子进程完成，所以不支持并行/异步。</li>
+<li>但是 <code>apply_async()</code> 支持异步执行，即提交完之后主进程不等待子进程的完成，直接返回 <code>ApplyResult</code>对象 ，继续进行主进程下面的操作（通常是循环内继续分配任务给其他子进程），因而可以实现并发。</li>
+</ul>
+<p>异步例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> multiprocessing <span class="keyword">import</span> Process, Pool</span><br><span class="line">p = Pool(<span class="number">3</span>)</span><br><span class="line">result= []</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="number">5</span>):</span><br><span class="line">    r= p.apply_async(方法名, args=(参数<span class="number">1</span>, 参数, ...))</span><br><span class="line">    result.append(r)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 和主进程异步，需要阻塞主进程</span></span><br><span class="line">p.close()  <span class="comment"># 进程池不接受任何新作业.</span></span><br><span class="line">p.join()   <span class="comment"># 进程池等待所有作业完成然后退出，导致主进程阻塞，然后清理池</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 得到返回值</span></span><br><span class="line">result = [i.get() <span class="keyword">for</span> i <span class="keyword">in</span> result]</span><br></pre></td></tr></table></figure>
+<p>因为已经设置了最大子进程数量为 3，所以前三个进程先同步开始，然后后两个进程才开始。<br />
+<code>pool.apply_async()</code> 这方法返回的是结果是值的对象，不是值本身，所以要加 <code>get()</code> 方法</p>
+<p>虽然 apply_async是非阻塞的，函数返回 <code>multiprocessing.pool.ApplyResult</code> 类型的对象。<br />
+可以通过调用该对象的 <code>get()</code> 方法，得到函数返回值，但是这个  <code>get()</code> 方法是阻塞的，即该子进程完成之前，主进程都会阻塞。<br />
+所以不要放在循环里，先把 <code>ApplyResult</code> 存起来，然后最后统一得到返回值。</p>
+<p>关于和 tqdm 配合：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 设置 tqdm</span></span><br><span class="line">pbar = tqdm(total=<span class="built_in">len</span>(remain_links))</span><br><span class="line">pbar.set_description(<span class="string">f&#x27;Round <span class="subst">&#123;counter2&#125;</span> of <span class="subst">&#123;root_website&#125;</span>&#x27;</span>)</span><br><span class="line">update = <span class="keyword">lambda</span> *args: pbar.update(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 这里使用多线程</span></span><br><span class="line">pool = multiprocessing.Pool(processes=<span class="number">2</span>)</span><br><span class="line">result_list = []</span><br><span class="line"><span class="keyword">for</span> link <span class="keyword">in</span> remain_links[:<span class="number">20</span>]:</span><br><span class="line">    result = pool.apply_async(get_links,</span><br><span class="line">                                (link, root_website, exception_dict, pdf_dict, pdf_errors, lock, ip_path),</span><br><span class="line">                                callback=update)</span><br><span class="line">    result_list.append(result)</span><br><span class="line"></span><br><span class="line">pool.close()</span><br><span class="line">pool.join()</span><br><span class="line">result_list = [i.get() <span class="keyword">for</span> i <span class="keyword">in</span> result_list]</span><br></pre></td></tr></table></figure>
+<h3 id="map-和-map_async"><a class="markdownIt-Anchor" href="#map-和-map_async"></a> map() 和 map_async()</h3>
+<p><code>apply()</code> 可以指定不同的函数，而 <code>map()</code> 将相同的函数应用于许多参数，但是这个方法很耗内存，推荐使用 <code>imap()</code>.</p>
+<p>和 python 内置的 map 函数使用方法类似，参数为 ： <code>func, iterable[, chunksize=None]</code> ，即传递的参数是 iterable 类型，并且<code>pool.map</code>函数会依次将 iterable 中的每个元素分配给一个进程，进行执行。<br />
+<strong>apply the same function to each item in an iterable and wait for the results.</strong></p>
+<p>两个函数的区别在于，</p>
+<ul>
+<li><code>map()</code> 是阻塞主进程的，需要等待 <code>iterable</code> 所有元素处理过后，主进程才继续。<br />
+而 <code>map_async()</code> 不会阻塞主进程。</li>
+<li><code>map()</code> 直接返回更改后列表<br />
+<code>map_async()</code> 返回 <code>MapResult</code> 对象，需要调用 <code>.get()</code> 方法得到结果。</li>
+</ul>
+<p>从使用上来看，两个函数其实区别不大，因为已经将子进程的分配写入到方法中了，<code>map_async()</code>后面总是需要调用 <code>get()</code> 的，总是需要阻塞的，所以差不多的。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    p = Pool(<span class="number">3</span>)</span><br><span class="line">    t = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Main process start : &quot;</span>)</span><br><span class="line">    r = p.map_async(maxSubArray, iterable=((t)))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Sub-process assigned &quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 和主进程异步，需要阻塞主进程，map 好像不需要</span></span><br><span class="line">    p.close()</span><br><span class="line">    p.join()</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(r.get())</span><br></pre></td></tr></table></figure>
+<p><code>chunksize : int</code> 参数，会将原始的数据分成多个 task，每个 task_size 即为该参数，然后将 task 发送给每个子进程进行处理。<br />
+不会保证batch 一定是按照顺序依次传递给子进程的。</p>
+<p>为什么比设置为 1 效果更好？：不设置 chunksize 参数，那么 Python 将会默认<strong>将每个元素看作一个 task，从而创建一个进程</strong>（pool 仅仅是控制了同时有多少进程在跑，不是控制最多创建多少进程的），从而导致创建大量进程和频繁的进程间通信和<strong>调度</strong>。<br />
+创建进程和进程之间的切换调度是 multiprocessing 中的主要开销。</p>
+<ul>
+<li>如果 chunksize 设置过大，则进程数目会减少，但是每个进程需要处理更多的数据，可能会导致处理速度下降。</li>
+<li>如果 chunksize 设置过小，则会创建更多的进程，从而增加进程之间的通信和调度开销，也会降低程序的性能。</li>
+</ul>
+<p><code>imap</code>默认 <code>chunksize</code> 为1，表示不分割。<br />
+<code>map</code>/<code>starmap</code>默认大小为 <code>ceil( task_num /(len(self._pool) * 4) )</code><br />
+默认情况其实效果不会很差，如果需要自己设置，则可以通过一些实验来看查看最优的块大小，范围为 <code>[1, len(iterable) / len(pool._pool)]</code>，<a target="_blank" rel="noopener" href="https://superfastpython.com/multiprocessing-pool-map-chunksize/">指数形式递增(log scale)进行试验</a>。</p>
+<h2 id="startmap-和-starmap_async"><a class="markdownIt-Anchor" href="#startmap-和-starmap_async"></a> startmap() 和 starmap_async</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">maxSubArray</span>(<span class="params"><span class="built_in">id</span>, num</span>):</span><br><span class="line">    time.sleep(<span class="number">1</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;\t <span class="subst">&#123;<span class="built_in">id</span>&#125;</span> / <span class="subst">&#123;num&#125;</span>  -- process_id : <span class="subst">&#123;os.getpid()&#125;</span> finishing ....&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">id</span> * <span class="number">2</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    p = Pool(<span class="number">3</span>, maxtasksperchild=<span class="number">2</span>)</span><br><span class="line">    t = [(i, random.random()) <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">4</span>)]</span><br><span class="line">    <span class="built_in">print</span>(t)  <span class="comment"># [(0, 0.147), (1, 0.335), (2, 0.971), (3, 0.355)]</span></span><br><span class="line"></span><br><span class="line">    r = p.starmap_async(maxSubArray, iterable=t, chunksize=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 和主进程异步，需要阻塞主进程</span></span><br><span class="line">    p.close()</span><br><span class="line">    p.join()</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 得到返回值</span></span><br><span class="line">    <span class="built_in">print</span>(r) <span class="comment"># &lt;multiprocessing.pool.MapResult object at 0x7f995ced6040&gt;</span></span><br><span class="line">    <span class="built_in">print</span>(r.get())  <span class="comment"># [0, 2, 4, 6]</span></span><br></pre></td></tr></table></figure>
+<p>区别仅仅在于可以传递参数</p>
+<p>当使用 map 时候，方法只能有一个输入参数，然后会把 <code>(0, 0.147)</code> 这一整个元组作为一个元素，穿入对应函数中，所以其实区别也就是要额外取出一次。</p>
+<h2 id="imap-和-imap_unordered"><a class="markdownIt-Anchor" href="#imap-和-imap_unordered"></a> imap() 和 imap_unordered()</h2>
+<p>首先两个函数都不支持元组式输入参数，输入形式和 map 一样。</p>
+<ul>
+<li>输出方法不是 <code>get()</code> 了，而是使用 <code>for</code> 循环的形式：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">for i in result: print(i)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>返回顺序：
+<ul>
+<li><code>imap()</code>,<code>map()</code>,<code>map_async()</code>的返回输出结果顺序和输入相同</li>
+<li>而<code>imap_unordered()</code>则为不保证顺序，哪个进程更快结束，就先返回哪个进程的结果</li>
+</ul>
+</li>
+<li>进程开始：
+<ul>
+<li><code>iter = pool.imap(fn, data)</code> 一旦生成，无论使不使用结果 <code>iter</code>，多进程计算都会并行开始。<br />
+计算结果会缓存在内存中，所以要注意内存用尽的问题。</li>
+<li><code>imap()</code> 和 <code>imap_unordered()</code> 都是不阻塞主进程的，而<code>map()</code> 是阻塞主进程的。</li>
+</ul>
+</li>
+<li>返回效果：
+<ul>
+<li>列表级别阻塞：<code>map()</code>/<code>map_async()</code>一定是需要所有元素全都都处理好之后，才能调用返回值。换言之，主进程是一直阻塞(<code>.get()</code>也是一种阻塞)到所有元素都得到返回值之后，才继续进行。</li>
+<li>元素级别阻塞：而 <code>imap()</code>/<code>imap_unordered()</code>则是用了一种队列的方法，只要这一次 <code>for</code> 拿出的元素已经就位了，即对应线程已经提交答案了，就不会阻塞，而是拿出元素。如果该答案元素还没有被提交，则会阻塞等待该线程。
+<ul>
+<li>imap 是按照顺序拿出，进程阻塞</li>
+<li>imap_unordered 则哪个好了就使用哪个，更快，所以也不强调顺序</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">def maxSubArray(id):</span><br><span class="line">    # time.sleep((10 - id)/2)</span><br><span class="line">    print(f&quot;\t &#123;id&#125; / -- process_id : &#123;os.getpid()&#125; finishing ....&quot;)</span><br><span class="line">    return id</span><br><span class="line"></span><br><span class="line">if __name__ == &quot;__main__&quot;:</span><br><span class="line">    p = Pool(3, maxtasksperchild=2)</span><br><span class="line">    t = list(range(10))</span><br><span class="line"></span><br><span class="line">    print(&quot;Main process start : &quot;)</span><br><span class="line">    r = p.imap_unordered(maxSubArray, iterable=t, chunksize=2)</span><br><span class="line">    print(&quot;Sub-process assigned &quot;)</span><br><span class="line"></span><br><span class="line">    # 和主进程异步，需要阻塞主进程，但是这样就无法根据元素阻塞了</span><br><span class="line">    # p.close()</span><br><span class="line">    # p.join()</span><br><span class="line"></span><br><span class="line">    # 得到返回值</span><br><span class="line">    for i in r: print(&quot;print -- &quot;, i)</span><br><span class="line">    p.close()</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Main process start :</span><br><span class="line">Sub-process assigned</span><br><span class="line">	 0 / -- process_id : 12932 finishing ....</span><br><span class="line">	 1 / -- process_id : 12932 finishing ....</span><br><span class="line">	 2 / -- process_id : 12931 finishing ....</span><br><span class="line">	 3 / -- process_id : 12931 finishing ....</span><br><span class="line">	 4 / -- process_id : 12932 finishing ....</span><br><span class="line">	 5 / -- process_id : 12932 finishing ....</span><br><span class="line">	 6 / -- process_id : 12931 finishing ....</span><br><span class="line">	 7 / -- process_id : 12931 finishing ....</span><br><span class="line">print --  0</span><br><span class="line">print --  1</span><br><span class="line">print --  4</span><br><span class="line">print --  5</span><br><span class="line">print --  2</span><br><span class="line">print --  3</span><br><span class="line">print --  6</span><br><span class="line">print --  7</span><br><span class="line">	 8 / -- process_id : 12933 finishing ....</span><br><span class="line">	 9 / -- process_id : 12933 finishing ....</span><br><span class="line">print --  8</span><br><span class="line">print --  9</span><br></pre></td></tr></table></figure>
+<p>可以看到，</p>
+<ol>
+<li>首先是非阻塞的，不是等全都处理完再 for 循环输出的。</li>
+<li><code>imap_unordered</code> 返回不按照顺序的 / <code>map</code> 就是按照顺序的。</li>
+</ol>
+<h3 id="报错信息"><a class="markdownIt-Anchor" href="#报错信息"></a> 报错信息</h3>
+<ul>
+<li><code>Reason: 'error(&quot;'i' format requires -2147483648 &lt;= number &lt;= 2147483647&quot;)'</code><br />
+多进程时候，进程间数据交换是通过pickling，因为处理的文本都比较大，当数据pickled时候超过了<code>istruct</code> 的限制，<code>-2147483648 &lt;= number &lt;= 2147483647</code><br />
+所以子进程返回的数据无法交换给主进程，直接在子进程内部保存了，就不 merge 了。</li>
+</ul>
+<h2 id="进程间通信"><a class="markdownIt-Anchor" href="#进程间通信"></a> 进程间通信</h2>
+<p>与线程不同，进程没有任何共享状态，进程修改的数据，改动仅限于该进程内。<br />
+每个子进程享有独立的内存空间，接收进程产生的数据不能马上同步到转发进程中。</p>
+<p>数据共享：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/46798399">https://zhuanlan.zhihu.com/p/46798399</a><br />
+pool lock：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/22223656">https://zhuanlan.zhihu.com/p/22223656</a></p>
+<p>update_num = Manager().Value(“i”, 0, lock=True)</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/08/Coding/Pandas/pandas%E5%BA%93%E7%9A%84%E7%AE%80%E5%8D%95%E8%AE%B2%E8%A7%A3/" rel="prev" title="pandas库的简单讲解">
+      <i class="fa fa-chevron-left"></i> pandas库的简单讲解
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/02/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/py2neo%E4%BB%8B%E7%BB%8D/" rel="next" title="py2neo介绍">
+      py2neo介绍 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E4%BE%8B%E5%8C%96%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text"> 实例化进程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8"><span class="nav-number">2.</span> <span class="nav-text"> 进程启动</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E8%AE%BE%E7%BD%AE-target-%E5%8F%82%E6%95%B0"><span class="nav-number">2.1.</span> <span class="nav-text"> 初始化设置 target 参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E5%86%99-run-%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.</span> <span class="nav-text"> 重写 run() 方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%BB%E5%A1%9E%E4%B8%BB%E8%BF%9B%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text"> 阻塞主进程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pool-%E6%96%B9%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text"> Pool() 方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#apply-%E4%B8%8E-apply_async"><span class="nav-number">4.1.</span> <span class="nav-text"> apply() 与 apply_async()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#map-%E5%92%8C-map_async"><span class="nav-number">4.2.</span> <span class="nav-text"> map() 和 map_async()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#startmap-%E5%92%8C-starmap_async"><span class="nav-number">5.</span> <span class="nav-text"> startmap() 和 starmap_async</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#imap-%E5%92%8C-imap_unordered"><span class="nav-number">6.</span> <span class="nav-text"> imap() 和 imap_unordered()</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E9%94%99%E4%BF%A1%E6%81%AF"><span class="nav-number">6.1.</span> <span class="nav-text"> 报错信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1"><span class="nav-number">7.</span> <span class="nav-text"> 进程间通信</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Bidirectional Encoder Representatons from Transformers ELMo和GPT都是单向语言模型，不适合应用于依靠上下文的任务。   结构 Bert的基础架构是Transformer的 encoder 部分（embedding+attention+feed forward）。 是由这样的encoder堆叠，形成了一个多层双向Transformer的en">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Bert">
+<meta property="og:url" content="http://example.com/2021/06/20/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/Bert/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Bidirectional Encoder Representatons from Transformers ELMo和GPT都是单向语言模型，不适合应用于依靠上下文的任务。   结构 Bert的基础架构是Transformer的 encoder 部分（embedding+attention+feed forward）。 是由这样的encoder堆叠，形成了一个多层双向Transformer的en">
+<meta property="og:locale">
+<meta property="og:image" content="https://i.loli.net/2021/06/20/d4AEYmKRLBN1sJI.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/20/QxMNtk5eDGCJ1WZ.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/20/eRQvtbDl42Wcq95.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/06/20/uTC63txOwsVqyZL.jpg">
+<meta property="article:published_time" content="2021-06-20T15:57:08.000Z">
+<meta property="article:modified_time" content="2024-03-13T23:01:58.464Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2021/06/20/d4AEYmKRLBN1sJI.png">
+
+<link rel="canonical" href="http://example.com/2021/06/20/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/Bert/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>Bert | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/06/20/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/Bert/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Bert
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-06-20 08:57:08" itemprop="dateCreated datePublished" datetime="2021-06-20T08:57:08-07:00">2021-06-20</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Language-Model/" itemprop="url" rel="index"><span itemprop="name">Language Model</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.7k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>9 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Bidirectional Encoder Representatons from Transformers<br />
+ELMo和GPT都是单向语言模型，不适合应用于依靠上下文的任务。</p>
+<p><img src="https://i.loli.net/2021/06/20/d4AEYmKRLBN1sJI.png" alt="" /></p>
+<h3 id="结构"><a class="markdownIt-Anchor" href="#结构"></a> 结构</h3>
+<p>Bert的基础架构是Transformer的 <strong>encoder</strong> 部分（embedding+attention+feed forward）。<br />
+是由这样的encoder堆叠，形成了一个多层双向Transformer的encoder（a multi-layer bi-directional Transformer encoder）。<br />
+官方给出了两个版本：L表示的是 <strong>encoder</strong> 的层数，H表示输出的维度，A表示multi-head attention的个数。<br />
+<img src="https://i.loli.net/2021/06/20/QxMNtk5eDGCJ1WZ.png" alt="" /></p>
+<h3 id="输入encoder之前的处理"><a class="markdownIt-Anchor" href="#输入encoder之前的处理"></a> 输入Encoder之前的处理</h3>
+<p>输出的序列既可以表示单句也可以表示一对句子。<br />
+输入的词向量和Transformer相同，可以是w2v，也可以是随机初始化的向量。<br />
+但是位置编码部分则不同，变为：<strong>Input = token emb + segment emb + position emb</strong>。</p>
+<p><img src="https://i.loli.net/2021/06/20/eRQvtbDl42Wcq95.jpg" alt="" /></p>
+<ol>
+<li><strong>Token embedding</strong><br />
+除了正常词汇之外，还有两种特殊符号，和下文提到的NSP任务有关。</li>
+</ol>
+<ul>
+<li>特殊符号：
+<ul>
+<li><code>[CLS]</code>：表示句子分类问题的结果，这个向量后续会接一个二分类器来进行二分类任务。<br />
+注意：第一个字符总是<code>[CLS]</code>，<code>[CLS]</code>的输出向量不代表整个句子的语义信息。<br />
+但是分类时使用<code>[cls]</code>。无偏性：不偏向任何词，更加公平融合所有词的信息。</li>
+<li><code>[SEP]</code>：分割句子。</li>
+</ul>
+</li>
+<li>过程：对所有的输入词汇和标签做正常的embedding。</li>
+</ul>
+<ol start="2">
+<li>
+<p><strong>Segment embedding</strong><br />
+因为处理的是两个句子，所以我们需要对两个句子进行区分。第一个句子全部用0表示，第二个句子都用1来表示。</p>
+</li>
+<li>
+<p><strong>position embedding</strong><br />
+和 Transformer 不同，Bert 使用随机初始化的方式，然后让模型不断学习更新出来。<br />
+两种位置编码的方式：</p>
+<ul>
+<li>position Embedding：学习式，不必刻意设计，直接让模型去学就好。缺点是不可扩展，不能处理超长的句子。</li>
+<li>position Encoding：固定式，通常通过三角函数公式计算出来，通常函数内部使用周期函数表示位置。</li>
+</ul>
+</li>
+</ol>
+<h3 id="预训练"><a class="markdownIt-Anchor" href="#预训练"></a> 预训练</h3>
+<p>两个任务 MLM + NSP<br />
+Bert选择的是大量的 <strong>无标注</strong> 的语料，所以属于 <strong>无监督/自监督学习</strong> 。</p>
+<ul>
+<li>采用了自编码模型 auto encoding（AE）：使用上下文的信息从损坏的输入数据中重建原始数据。<br />
+即最大化P(我爱吃饭｜我爱mask饭)=P(mask=吃｜我爱饭)的概率。<br />
+模型缺陷：在存在多个mask时，模型会认为这些mask是相互独立的，其实不是。eg.p(我爱mask mask)=P(吃｜我爱)p(饭｜mask)</li>
+</ul>
+<h4 id="mlmmasked-language-model"><a class="markdownIt-Anchor" href="#mlmmasked-language-model"></a> MLM：masked language model</h4>
+<ul>
+<li>问题：因为fine-tuning和实际任务中没有<code>[mask]</code>这个单词，所以可能存在 <strong>误匹配(mismatching)</strong> 的问题。</li>
+<li>解决：随机选择 15%的单词，对于这部分单词
+<ol>
+<li>10% 替换成为其他单词</li>
+<li>10% 原封不动</li>
+<li>80% 替换成为mask<br />
+根据paper中实验可见，有利于各个实验的平衡。<br />
+这里的1：1：8是利用随机数来实现了，也就是说这个百分比不是严格不变的。<br />
+预测一个词汇时，模型并不知道输入对应位置的词汇是否为正确的词汇（ 10% 概率），这就迫使模型更多地依赖于上下文信息去预测词汇，并且赋予了模型一定的纠错能力。</li>
+</ol>
+</li>
+</ul>
+<blockquote>
+<p>为什么用15%，word2vec里面的文本窗口大小一般为7，1/7就是15%。</p>
+</blockquote>
+<ul>
+<li>代码实例：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># mask_indices为已经选定的15%的单词</span><br><span class="line">for index in mask_indices:</span><br><span class="line">    if random.randim()&lt;0.8:</span><br><span class="line">        masked_token = &quot;[MASK]&quot;</span><br><span class="line">    else:</span><br><span class="line">        if random.random() &lt; 0.5:</span><br><span class="line">            masked_token = &quot;tokens[index]&quot;</span><br><span class="line">        else:</span><br><span class="line">            mask_token = random.choice(vocab_list)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>细节：动态mask，n-gram mask</li>
+<li>最后使用预测值和实际值的交叉熵损失函数来训练模型。</li>
+</ul>
+<h4 id="nspnext-sentence-prediction"><a class="markdownIt-Anchor" href="#nspnext-sentence-prediction"></a> NSP：next sentence prediction</h4>
+<p>使用<code>[cls]</code>标签标识表示是否为上下句关系</p>
+<ul>
+<li>目的：描述两个句子之间的关系。</li>
+<li>进步：先前的技术中，都只能利用句向量来判断句子之间的关系，而Bert可以利用词向量。</li>
+<li>不同的样本：
+<ul>
+<li>从训练预料库中取出两个 <strong>连续</strong> 的段落作为 <strong>正样本</strong></li>
+<li>从 <strong>不同的文档</strong> 中随机抽取一对段落作为 <strong>负样本</strong></li>
+</ul>
+</li>
+<li>缺点：将主题预测（来源相同）和连贯性预测（连续的两个句子）合并成为了一个单项任务。通常主题预测是简单很多的，非常容易去学习，所以导致没有效果。</li>
+</ul>
+<h3 id="微调"><a class="markdownIt-Anchor" href="#微调"></a> 微调</h3>
+<p>使用<strong>下游任务</strong>中的<strong>有标注</strong>的数据。<br />
+针对不同的任务，需要根据<strong>相同的预训练模型</strong>，通过<strong>相同的结构</strong>来训练得到<strong>不同的微调模型</strong>。<br />
+分为四种情况：<br />
+<img src="https://i.loli.net/2021/06/20/uTC63txOwsVqyZL.jpg" alt="" /></p>
+<ol>
+<li>句对分类任务 Sentence Pair Classification Tasks</li>
+<li>单句分类任务 Single Sentence Classification Tasks</li>
+<li>问答任务 Question Answering Tasks</li>
+<li>序列标注任务 Single Sentence Tagging Tasks</li>
+</ol>
+<h3 id="提升bert的下游任务表现"><a class="markdownIt-Anchor" href="#提升bert的下游任务表现"></a> 提升BERT的下游任务表现</h3>
+<ul>
+<li>
+<p>常见做法：</p>
+<ul>
+<li>首先得到公开的bert数据集</li>
+<li>基于任务数据进行微调</li>
+</ul>
+</li>
+<li>
+<p>优化方法：拿微博文本情感分析为例</p>
+<ol>
+<li>Pre-train：得到训练好的bert模型（中文谷歌）</li>
+<li>Domain transfer：在相同领域上继续训练LM，即在大量微博文本上继续训练。</li>
+<li>Task transfer：在任务相关的小数据上继续训练LM，即在微博情感文本上继续训练。</li>
+<li>Fine-tune：在具体任务相关的数据上做具体任务。</li>
+</ol>
+</li>
+</ul>
+<p>即：先领域，在任务，最后微调。</p>
+<ul>
+<li>参数推荐：
+<ul>
+<li>Batch size：16， 32</li>
+<li>Lr：5e-5, 3e-5, 2e-5 小一点，避免遗忘太多</li>
+<li>Number of epochs：3，4</li>
+<li>Weighted decay修改后的adam，使用warmup，搭配线性衰减。</li>
+</ul>
+</li>
+</ul>
+<p><strong>BERT训练时使用的学习率 warm-up 策略是怎样的？为什么要这么做？</strong></p>
+<p>warmup 需要在 <strong>训练最初使用较小的学习率</strong> 来启动，并很快切换到 <strong>大学习率</strong> 而后进行常见的 decay。</p>
+<ol>
+<li>刚开始模型对数据的“分布”理解为零，或者是说“均匀分布”（当然这取决于你的初始化）；训练初期，模型会很快地进行数据分布修正，如果这时候学习率就很大，极有可能导致开始的时候就对该数据“过拟合”，后面要通过多轮训练才能拉回来，浪费时间。</li>
+<li>当训练了一段时间（比如两轮、三轮）后，模型已经对每个数据点看过几遍了，或者说对当前的batch而言有了一些 <strong>正确的先验</strong> ，较大的学习率就不那么容易会使模型学偏，所以可以适当调大学习率。</li>
+<li>这个过程就可以看做是warmup。那么为什么之后还要decay呢？当模型训到一定阶段后（比如十个epoch），模型的分布就已经比较固定了，或者说能学到的新东西就比较少了。如果还沿用较大的学习率，就会破坏这种稳定性，用我们通常的话说，就是已经接近loss的local optimal了，为了靠近这个point，我们就要慢慢来。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/18/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/ELMo/" rel="prev" title="ELMo">
+      <i class="fa fa-chevron-left"></i> ELMo
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/06/23/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/LSTM-CRF/" rel="next" title="LSTM+CRF">
+      LSTM+CRF <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text"> 结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BE%93%E5%85%A5encoder%E4%B9%8B%E5%89%8D%E7%9A%84%E5%A4%84%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text"> 输入Encoder之前的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">3.</span> <span class="nav-text"> 预训练</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#mlmmasked-language-model"><span class="nav-number">3.1.</span> <span class="nav-text"> MLM：masked language model</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#nspnext-sentence-prediction"><span class="nav-number">3.2.</span> <span class="nav-text"> NSP：next sentence prediction</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BE%AE%E8%B0%83"><span class="nav-number">4.</span> <span class="nav-text"> 微调</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%90%E5%8D%87bert%E7%9A%84%E4%B8%8B%E6%B8%B8%E4%BB%BB%E5%8A%A1%E8%A1%A8%E7%8E%B0"><span class="nav-number">5.</span> <span class="nav-text"> 提升BERT的下游任务表现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

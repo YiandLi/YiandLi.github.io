@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Coding 层面加速解码 投机采样（Speculative Decoding），另一个提高LLM推理速度的神器（三） memory bound的模型做投机采样才会有优势，RTX 1050Ti和P100计算能力都太弱了">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Coding 层面加速解码">
+<meta property="og:url" content="http://example.com/2023/11/09/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Coding 层面加速解码 投机采样（Speculative Decoding），另一个提高LLM推理速度的神器（三） memory bound的模型做投机采样才会有优势，RTX 1050Ti和P100计算能力都太弱了">
+<meta property="og:locale">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled1.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled2.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled3.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled4.png">
+<meta property="article:published_time" content="2023-11-10T07:12:07.000Z">
+<meta property="article:modified_time" content="2024-03-12T21:09:56.438Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled.png">
+
+<link rel="canonical" href="http://example.com/2023/11/09/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>Coding 层面加速解码 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/11/09/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Coding 层面加速解码
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-09 23:12:07" itemprop="dateCreated datePublished" datetime="2023-11-09T23:12:07-08:00">2023-11-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Inference/" itemprop="url" rel="index"><span itemprop="name">LLM Inference</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.5k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>13 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="coding-层面加速解码"><a class="markdownIt-Anchor" href="#coding-层面加速解码"></a> Coding 层面加速解码</h1>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/681401656">投机采样（Speculative Decoding），另一个提高LLM推理速度的神器（三）</a></p>
+<p>memory bound的模型做投机采样才会有优势，RTX 1050Ti和P100计算能力都太弱了</p>
+<span id="more"></span>
+<h2 id="并行解码思想的源头block-wise-parallel-decoding"><a class="markdownIt-Anchor" href="#并行解码思想的源头block-wise-parallel-decoding"></a> 并行解码思想的源头：Block-wise Parallel Decoding</h2>
+<p>文章的作者之一是大名鼎鼎的 <em>Attention is all you need</em> 论文的第二作者 Noam Shazeer，也是 Multi-query attention 的作者</p>
+<p>Blockwise Parallel decoding只适用于贪心解码；<br />
+而Speculative Sampling可以适配Beam Search（Google论文的Appendix A.4)；<br />
+最新的工作Medusa开始支持topk采样，可以打破贪心解码限制了。</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/658298728"><em>方佳瑞：LLM推理加速的文艺复兴：Noam Shazeer和Blockwise Parallel Decoding</em></a></p>
+<p>如何打破模型必须串行生成token的魔咒，并行产生后k个token？<br />
+我们可以训练 k 个辅助模型，直接额预测 prompt 后面 2 到 k 个位置的token。那么，辅助模型和原始模型可以独立运行，从而并行生成后 k 个token。</p>
+<p><img src="/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled.png" alt="alt text" /></p>
+<p>while True：</p>
+<ol>
+<li>predict : 使用 base model 预测下一个token，其他的辅助模型预测下 2-k 个token （ 并行计算一步，一次forward时间</li>
+<li>verify ：使用 base model 计算生成 token 的 logits（ 并行计算一步，一次forward时间</li>
+<li>accept ：验证结果的token和Predict阶段预测的token相同则保留。如果不同，则后面的token预测都错误。</li>
+</ol>
+<p>predict 和 verify 各自需要1次 forward 的时间，所以 forward 的调用次数从 m 减少到 2m/k 。</p>
+<p>于是进一步优化，在 Verify 时顺便做了下一个token的预测。<br />
+这样 Predict 和 Verify 阶段可以合并，验证同时也获得了后 k 个 token 的候选。<br />
+这使得除了第一次迭代，每次迭代只需调用一次模型 forward ，而不是两次，从而将解码所需的模型调用次数减半。<br />
+进一步将模型调用次数从 2m/k 减少到 m/k + 1 。</p>
+<p><img src="/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled1.png" alt="alt text" /></p>
+<ol>
+<li>
+<p>predict ：还是一样的，并行计算出下面 k 个token。（ 仅仅在开始并行计算一步，一次forward时间</p>
+<p>这里生成的 k 个 token，并不一定最准确。一般随着 k 增大，越往后被生成的 token 越不准确，所以才需要下面的 verify 。</p>
+</li>
+</ol>
+<p>while True：</p>
+<ol>
+<li>
+<p>verify ：并行对所有生成的 token 进行verify，在 verify 的同时会生成后面 k 个候选 token 。</p>
+<p>这里作者通过修改模型结构，让模型能够同时完成 verify 和 next  predict 的过程</p>
+</li>
+<li>
+<p>如果存在 token logits 不一致，则直接放弃这个 token ( bus )，直接使用上面已经生成的token作为确定的 答案，使用其生成的候选 token 作为下一步骤 verify 的对象。</p>
+</li>
+</ol>
+<p>模型架构：</p>
+<p><img src="/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled2.png" alt="alt text" /></p>
+<p>在原始模型的 the decoder output 和 the final projection layer 之间插入一个FFN，将输入  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>[batch_s, seq, hidden_s]</mtext></mrow><annotation encoding="application/x-tex">\text{[batch\_s, seq, hidden\_s]}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mord text"><span class="mord">[batch_s, seq, hidden_s]</span></span></span></span></span> 转化为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>[batch_s, seq, k* hidden_s]</mtext></mrow><annotation encoding="application/x-tex">\text{[batch\_s, seq, k*   hidden\_s]}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mord text"><span class="mord">[batch_s, seq, k* hidden_s]</span></span></span></span></span> ，然后分割为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>[batch_s, seq, k, hidden_s]</mtext></mrow><annotation encoding="application/x-tex">\text{[batch\_s, seq, k,   hidden\_s]}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mord text"><span class="mord">[batch_s, seq, k, hidden_s]</span></span></span></span></span> 表示输出 k 个 next token 。最后加一个残差连接。</p>
+<p>近似推理 ：</p>
+<p>按道理说，Verify 阶段保留更多 token，速度越快</p>
+<p>所以可以考虑放宽 accept 的条件，不一定是严格按照 greedy 的方法（token概率最大）。</p>
+<p>作者也提供了一些优化技巧，它们可以加速推理速度，但是会导致结果和自回归采样不一致。</p>
+<ol>
+<li>**Top-**k <strong>Selection：只要 token 概率值为 top-k 内，则接受</strong></li>
+<li><strong>Distance-Based Selection：和最优token的距离在超参数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϵ</mi></mrow><annotation encoding="application/x-tex">\epsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">ϵ</span></span></span></span> 内</strong></li>
+<li><strong>Minimum Block Size：在模型的 predict token 中，第一个 token 肯定是可以被接受，但是后面的token，往往会被删除。有时候会出现每一次仅仅保留一个 token 的情况。所以设置最短保留长度  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>≤</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">l\le k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83041em;vertical-align:-0.13597em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span></span> 。</strong></li>
+</ol>
+<p>训练 FFN ：</p>
+<ol>
+<li>Frozen Parameters：将原始模型参数冻结，只更新新加入的FFN层参数。</li>
+<li>Finetuning：以原始参数为初始化值对全部参数进行微调，但在最终性能上可能会有所损失。</li>
+<li>Distillation：蒸馏很适合并行解码，蒸馏数据是原始模型用相同的超参数但不同的随机种子进行beam search产生的。</li>
+</ol>
+<h2 id="投机采样-speculative-decoding"><a class="markdownIt-Anchor" href="#投机采样-speculative-decoding"></a> 投机采样 speculative decoding</h2>
+<ol>
+<li>就是使用一个小模型来做草稿，然后使用大模型做纠正检查。</li>
+<li>小模型的参数量要远小于原模型参数量一个级别才效果明显。</li>
+<li>小模型和原模型的tokenizer最好一模一样，不然会增加额外的解码、编码时间。</li>
+</ol>
+<p><strong>过程：</strong></p>
+<p><img src="/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled3.png" alt="alt text" /></p>
+<p>给定原始输入 prompt token 序列（蓝色序列</p>
+<ol>
+<li>首先使用小模型/辅助模型生成 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">\gamma = 5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.05556em;">γ</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">5</span></span></span></span> 个新的token（红色序列</li>
+<li>将蓝色序列和红色序列拼接在一起，放入原始模型中，然后在红色的对应位置，通过并行计算，一步计算所有结果（绿色序列</li>
+<li>然后从前向后对比红色和绿色序列，只要有一个错了，那后面就不能要了。于是从这个位置开始使用原始大模型进行序列生成。</li>
+</ol>
+<p><strong>原文中的复杂版本，伪代码：</strong></p>
+<p><img src="/images/NLP/LLM/Coding%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81/Untitled4.png" alt="alt text" /></p>
+<p>The next token probability distribution of the draft model is <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi mathvariant="normal">.</mi><mo>∣</mo><mi mathvariant="normal">.</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(.∣.)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord">.</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">.</span><span class="mclose">)</span></span></span></span> ；</p>
+<p>The next token probability distribution of the target model is  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi mathvariant="normal">.</mi><mo>∣</mo><mi mathvariant="normal">.</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(.∣.)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord">.</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">.</span><span class="mclose">)</span></span></span></span> ；</p>
+<ol>
+<li>
+<p>draft model 采样  K 个 draft token： <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mtext> </mtext><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mtext> </mtext><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>K</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_{n+1}\ ...\ x_{n+K}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.638891em;vertical-align:-0.208331em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace"> </span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mspace"> </span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.328331em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span></span></span></span></p>
+</li>
+<li>
+<p>target model 通过 并行 one-pass 计算得到每一个 draft token 的 logits 分数：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mi>n</mi></msub><mo fence="true">)</mo></mrow><mo separator="true">,</mo><mo>…</mo><mo separator="true">,</mo><mi>q</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>K</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>K</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">q\left(x_{n+1}\mid x_1 \ldots x_n\right), \ldots, q\left(x_{n+K}\mid x_1 \ldots x_{n+K-1}\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.328331em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.328331em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span></p>
+</li>
+<li>
+<p>然后遍历每一个  draft token：</p>
+<p>根据概率 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub></msub><mo>=</mo><mi>min</mi><mo>⁡</mo><mrow><mo fence="true">(</mo><mn>1</mn><mo separator="true">,</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mrow><mi>q</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow><mrow><mi>p</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow></mfrac></mstyle><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">r_{x_{n+k}}=\min \left(1, \dfrac{q\left(x_{n+k} \mid x_1 \ldots x_{n+k-1}\right)}{p\left(x_{n+k} \mid x_1 \ldots x_{n+k-1}\right)}\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7280849999999999em;vertical-align:-0.29752499999999993em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139199999999997em;"><span style="top:-2.5500000000000003em;margin-left:-0.02778em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.34480000000000005em;"><span style="top:-2.3487714285714287em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.21074999999999994em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29752499999999993em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="mop">min</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span></span></span></span> 进行采样，公式表达的是， 「target model 计算 draft token 概率」/「draft model 计算 draft token 概率」</p>
+<ol>
+<li>
+<p>如果老大的打分比小弟的打分还要高，那么就可以直接 accept 了。</p>
+</li>
+<li>
+<p>如果老大的打分比小弟的打分低，那么就根据概率 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi>q</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow><mrow><mi>p</mi><mrow><mo fence="true">(</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow></mfrac></mrow><annotation encoding="application/x-tex">\frac{q\left(x_{n+k} \mid x_1 \ldots x_{n+k-1}\right)}{p\left(x_{n+k} \mid x_1 \ldots x_{n+k-1}\right)}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.53em;vertical-align:-0.52em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.01em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">p</span><span class="minner mtight"><span class="mopen mtight delimcenter" style="top:0em;"><span class="mtight">(</span></span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.34480000000000005em;"><span style="top:-2.3487714285714287em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.21074999999999994em;"><span></span></span></span></span></span></span><span class="mrel mtight">∣</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31731428571428577em;"><span style="top:-2.357em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="minner mtight">…</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.34480000000000005em;"><span style="top:-2.3487714285714287em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.21074999999999994em;"><span></span></span></span></span></span></span><span class="mclose mtight delimcenter" style="top:0em;"><span class="mtight">)</span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.485em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">q</span><span class="minner mtight"><span class="mopen mtight delimcenter" style="top:0em;"><span class="mtight">(</span></span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.34480000000000005em;"><span style="top:-2.3487714285714287em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.21074999999999994em;"><span></span></span></span></span></span></span><span class="mrel mtight">∣</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31731428571428577em;"><span style="top:-2.357em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="minner mtight">…</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.34480000000000005em;"><span style="top:-2.3487714285714287em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.21074999999999994em;"><span></span></span></span></span></span></span><span class="mclose mtight delimcenter" style="top:0em;"><span class="mtight">)</span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.52em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> 来决定是否 accept。</p>
+<p>也就是小弟对这个 draft token 更有把握，但老大觉得不行，那么则进行概率采样。</p>
+</li>
+</ol>
+</li>
+<li>
+<p>如果 reject 这个 draft token，则重新进行采样，token i 被重新计算的采样概率为：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mn>1</mn><mi>Z</mi></mfrac></mstyle><mi>max</mi><mo>⁡</mo><mrow><mo fence="true">(</mo><mn>0</mn><mo separator="true">,</mo><mi>q</mi><mrow><mo fence="true">(</mo><mi>i</mi><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow><mo>−</mo><mi>p</mi><mrow><mo fence="true">(</mo><mi>i</mi><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">s_i=\dfrac{1}{Z} \max \left(0, q\left(i \mid x_1 \ldots x_{n+k-1}\right)-p\left(i \mid x_1 \ldots x_{n+k-1}\right)\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.00744em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop">max</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord mathnormal">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord mathnormal">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span></p>
+<p>对于小模型有把握，大模型没把握的 draft token，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo><mo>&lt;</mo><mi>p</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(i|\cdot)\lt p(i|\cdot)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span></span></span></span> ，因为上一步已经决定了不采样这个token，所以概率直接为 0 。</p>
+<p>对于小模型没把握，大模型有把握的 draft token，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo><mo>&gt;</mo><mi>p</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(i|\cdot)\gt p(i|\cdot)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span></span></span></span> ，则采样该 token i 的概率为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="true" scriptlevel="0"><mfrac><mrow><mi>q</mi><mrow><mo fence="true">(</mo><mi>i</mi><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow><mo>−</mo><mi>p</mi><mrow><mo fence="true">(</mo><mi>i</mi><mo>∣</mo><msub><mi>x</mi><mn>1</mn></msub><mo>…</mo><msub><mi>x</mi><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true">)</mo></mrow></mrow><mi>Z</mi></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\dfrac{q\left(i \mid x_1 \ldots x_{n+k-1}\right)-p\left(i \mid x_1 \ldots x_{n+k-1}\right)}{Z}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.113em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord mathnormal">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord mathnormal">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span>，这里大模型和小模型分数差距（<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo><mo>−</mo><mi>p</mi><mo stretchy="false">(</mo><mi>i</mi><mi mathvariant="normal">∣</mi><mo>⋅</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(i|\cdot)-p(i|\cdot)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mord">∣</span><span class="mord">⋅</span><span class="mclose">)</span></span></span></span>）越大，该 token被采样到的概率越大。</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span></span> 是一个 normalization 系数 ，可以看作 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="true" scriptlevel="0"><mfrac><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><mrow><msub><mo>∑</mo><mi>x</mi></msub><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\dfrac{\max (0, f(x))}{\sum_x \max (0, f(x))}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.41271em;vertical-align:-0.9857100000000001em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.0016819999999999613em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop">max</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop">max</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9857100000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> 。</p>
+<blockquote>
+<p>解释 ：因为接收的概率更偏向大模型给打分更大的位置（step3），重新采样的概率应该更偏向小模型打分更大的位置（step4）。</p>
+</blockquote>
+</li>
+<li>
+<p>如果「draft token 被 reject，并且预测了新的 token 来替换 draft token」，或「draft token 全部被接受，会再额外由大模型生成一个token : step5」，则重新回到 step 1 。</p>
+</li>
+</ol>
+<p><strong>分析：</strong></p>
+<p>对于自回归序列模型，一步错，步步错。因此，虽然后面的小模型预测了一个340（红色）和大模型预测的340（绿色是一样的），但是因为前面的 token 不一致，所以后面的 token 完全不能用。</p>
+<p>虽然小模型预测了5步，全都错了，但是也不亏。因为小模型的5步的计算时间，远远小于大模型一次预测的时间。</p>
+<p>大模型直接利用原始token（蓝色序列），要预测新的5个token，计算起码需要跑5次。先使用小模型预测5个试一试，然后大模型借助矩阵计算的并行特性，一次性就可以验证这5个中，前几个都是对的。如果有对的，那节约的时间可不是一点点（因为小模型远小于大模型，所以小模型消耗的时间基本可以忽略不记）。</p>
+<p>数学推导：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/655188750">投机采样等价于原始大模型生成</a></p>
+<p><strong>代码：</strong></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/huggingface/transformers/blob/4b796978656e461177a83d58ec3c2b06152c63db/src/transformers/generation/utils.py#L4269">https://github.com/huggingface/transformers/blob/4b796978656e461177a83d58ec3c2b06152c63db/src/transformers/generation/utils.py#L4269</a></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformersimport (</span><br><span class="line">    AutoTokenizer,</span><br><span class="line">    AutoModelForCausalLM,</span><br><span class="line">    LogitsProcessorList,</span><br><span class="line">    MinLengthLogitsProcessor,</span><br><span class="line">    StoppingCriteriaList,</span><br><span class="line">    MaxLengthCriteria,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">tokenizer= AutoTokenizer.from_pretrained(<span class="string">&quot;gpt2&quot;</span>)</span><br><span class="line">model= AutoModelForCausalLM.from_pretrained(<span class="string">&quot;gpt2&quot;</span>)</span><br><span class="line">assistant_model= AutoModelForCausalLM.from_pretrained(<span class="string">&quot;distilgpt2&quot;</span>)</span><br><span class="line"><span class="comment"># set pad_token_id to eos_token_id because GPT2 does not have a PAD tokenmodel.generation_config.pad_token_id= model.generation_config.eos_token_id</span></span><br><span class="line">input_prompt= <span class="string">&quot;It might be possible to&quot;</span></span><br><span class="line">input_ids= tokenizer(input_prompt, return_tensors=<span class="string">&quot;pt&quot;</span>).input_ids</span><br><span class="line"><span class="comment"># instantiate logits processorslogits_processor= LogitsProcessorList(</span></span><br><span class="line">    [</span><br><span class="line">        MinLengthLogitsProcessor(<span class="number">10</span>, eos_token_id=model.generation_config.eos_token_id),</span><br><span class="line">    ]</span><br><span class="line">)</span><br><span class="line">stopping_criteria= StoppingCriteriaList([MaxLengthCriteria(max_length=<span class="number">20</span>)])</span><br><span class="line">outputs= model.assisted_decoding(</span><br><span class="line">    input_ids,</span><br><span class="line">    assistant_model=assistant_model,</span><br><span class="line">    logits_processor=logits_processor,</span><br><span class="line">    stopping_criteria=stopping_criteria,</span><br><span class="line">)</span><br><span class="line">tokenizer.batch_decode(outputs, skip_special_tokens=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+<p>进阶版本：<strong>Threshold decoding?</strong></p>
+<p><a target="_blank" rel="noopener" href="https://vgel.me/posts/faster-inference/?continueFlag=dc32042695bb7e31fb9280e21ab25f8c#Threshold_decoding">https://vgel.me/posts/faster-inference/?continueFlag=dc32042695bb7e31fb9280e21ab25f8c#Threshold_decoding</a>?</p>
+<p>设定一个 threshold ，然后让 draft model 不断生成新的 token ，累乘每一个 draft token 的 probability ；直到小于等于这个 threshold ；target model 才开始复盘是否保留。</p>
+<h2 id="staged-speculative-decoding"><a class="markdownIt-Anchor" href="#staged-speculative-decoding"></a> <strong>Staged Speculative Decoding</strong></h2>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.04623">https://arxiv.org/abs/2308.04623</a></p>
+<h2 id="medusa"><a class="markdownIt-Anchor" href="#medusa"></a> <strong>Medusa</strong></h2>
+<p><strong><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/655809033"><em>LLM推理加速-Medusa , 代码</em></a></strong></p>
+<p><strong><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/658544279"><em>LLM推理加速之Medusa：Blockwise Parallel Decoding的继承与发展</em></a></strong></p>
+<h2 id="osd"><a class="markdownIt-Anchor" href="#osd"></a> OSD</h2>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/abs//2310.07177">https://arxiv.org/abs//2310.07177</a></p>
+<h2 id="lookahead-decoding"><a class="markdownIt-Anchor" href="#lookahead-decoding"></a> <strong>Lookahead Decoding</strong></h2>
+<p>paper：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2402.02057.pdf">https://arxiv.org/pdf/2402.02057.pdf</a></p>
+<p>代码解析：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/670702129">https://zhuanlan.zhihu.com/p/670702129</a></p>
+<blockquote>
+<p>不是算力冗余的话，用不到 <strong>Lookahead Decoding</strong></p>
+</blockquote>
+<p><a target="_blank" rel="noopener" href="https://lmsys.org/blog/2023-11-21-lookahead-decoding/">Break the Sequential Dependency of LLM Inference Using Lookahead Decoding | LMSYS Org</a></p>
+<p>和投机采样比，最大的优势是 <strong>不需要draft model</strong> ，减少了依赖。</p>
+<p>每一 decoding step 包含了两个并行的步骤：the <strong>lookahead branch &amp;</strong> the <strong>verification branch</strong></p>
+<ol>
+<li>
+<p><strong>The Lookahead branch :</strong> maintains a fixed-sized, 2D window to generate n-grams</p>
+<p>两个超参数维护这个 2D 窗口</p>
+<p><em>window size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">W</span></span></span></span></em> 控制窗口的长度，即多少个 Guess Token 稍后进行 parallel decoding</p>
+<p><em>N-gram size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span></em>  控制在生成 n-gram 轨迹时，需要看多少个历史的 step</p>
+<p>对于每一个token，根据包含自己的 N-1 个前缀去生成下一个 token，以此组成了 N-gram</p>
+</li>
+<li>
+<p><strong>T</strong>he <strong>verification branch :</strong> selects and verifies promising n-gram candidates</p>
+</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/11/09/NLP/LLM/FlashAttention/" rel="prev" title="Flash Attention">
+      <i class="fa fa-chevron-left"></i> Flash Attention
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/11/12/NLP/LLM/DPO/" rel="next" title="DPO">
+      DPO <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#coding-%E5%B1%82%E9%9D%A2%E5%8A%A0%E9%80%9F%E8%A7%A3%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text"> Coding 层面加速解码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B9%B6%E8%A1%8C%E8%A7%A3%E7%A0%81%E6%80%9D%E6%83%B3%E7%9A%84%E6%BA%90%E5%A4%B4block-wise-parallel-decoding"><span class="nav-number">1.1.</span> <span class="nav-text"> 并行解码思想的源头：Block-wise Parallel Decoding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%95%E6%9C%BA%E9%87%87%E6%A0%B7-speculative-decoding"><span class="nav-number">1.2.</span> <span class="nav-text"> 投机采样 speculative decoding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#staged-speculative-decoding"><span class="nav-number">1.3.</span> <span class="nav-text"> Staged Speculative Decoding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#medusa"><span class="nav-number">1.4.</span> <span class="nav-text"> Medusa</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#osd"><span class="nav-number">1.5.</span> <span class="nav-text"> OSD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lookahead-decoding"><span class="nav-number">1.6.</span> <span class="nav-text"> Lookahead Decoding</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

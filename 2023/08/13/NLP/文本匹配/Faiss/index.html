@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="向量数据库入坑指南：聊聊来自元宇宙大厂 Meta 的相似度检索技术 Faiss 搜索召回 | Facebook: 亿级向量相似度检索库Faiss原理+应用 ANN召回算法之IVFPQ （推荐）  暴力搜索 根据聚类的「分区优化+分区内搜索」 ; Inverted File System, 简称 IVF. 量化 ; Product Quantizer, 简称 PQ. IVF-PQ  autofais">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Faiss">
+<meta property="og:url" content="http://example.com/2023/08/13/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/Faiss/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="向量数据库入坑指南：聊聊来自元宇宙大厂 Meta 的相似度检索技术 Faiss 搜索召回 | Facebook: 亿级向量相似度检索库Faiss原理+应用 ANN召回算法之IVFPQ （推荐）  暴力搜索 根据聚类的「分区优化+分区内搜索」 ; Inverted File System, 简称 IVF. 量化 ; Product Quantizer, 简称 PQ. IVF-PQ  autofais">
+<meta property="og:locale">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-cac33270a9f12e505ee05a2b06a1caa1_1440w.webp">
+<meta property="og:image" content="https://pic3.zhimg.com/v2-0228d02bd404e9420f8f86b791c27572_b.jpg">
+<meta property="og:image" content="https://pic2.zhimg.com/v2-01b79349101f9d96e98f9a075e2302fd_b.jpg">
+<meta property="og:image" content="https://pic4.zhimg.com/v2-a2228c854105134900f55c52d9b3ffdb_b.jpg">
+<meta property="article:published_time" content="2023-08-13T21:26:05.000Z">
+<meta property="article:modified_time" content="2024-03-20T03:23:44.654Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic2.zhimg.com/80/v2-cac33270a9f12e505ee05a2b06a1caa1_1440w.webp">
+
+<link rel="canonical" href="http://example.com/2023/08/13/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/Faiss/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>Faiss | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/08/13/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/Faiss/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Faiss
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-08-13 14:26:05" itemprop="dateCreated datePublished" datetime="2023-08-13T14:26:05-07:00">2023-08-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Text-Retrieval/" itemprop="url" rel="index"><span itemprop="name">Text Retrieval</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.9k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>19 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/560981386">向量数据库入坑指南：聊聊来自元宇宙大厂 Meta 的相似度检索技术 Faiss</a><br />
+<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/432317877">搜索召回 | Facebook: 亿级向量相似度检索库Faiss原理+应用</a><br />
+<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/378725270">ANN召回算法之IVFPQ （推荐）</a></p>
+<ol>
+<li>暴力搜索</li>
+<li>根据聚类的「分区优化+分区内搜索」 ; <strong>Inverted File System, 简称 IVF.</strong></li>
+<li>量化 ; <strong>Product Quantizer, 简称 PQ.</strong></li>
+<li><strong>IVF-PQ</strong></li>
+</ol>
+<p>autofaiss ： <a target="_blank" rel="noopener" href="https://github.com/criteo/autofaiss">https://github.com/criteo/autofaiss</a> 二次封装，可以自动求最优超参数！</p>
+<h1 id="暴力搜索"><a class="markdownIt-Anchor" href="#暴力搜索"></a> 暴力搜索</h1>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> faiss</span><br><span class="line"></span><br><span class="line"><span class="comment"># sentence_embeddings : instance_num , hidden_size</span></span><br><span class="line"></span><br><span class="line">dimension = sentence_embeddings.shape[<span class="number">1</span>]  <span class="comment"># get hidden_size</span></span><br><span class="line">index = faiss.IndexFlatL2(dimension) <span class="comment"># initialize an Index Container based on hidden_size</span></span><br><span class="line">index.add(sentence_embeddings) <span class="comment"># add all the instance embedding</span></span><br><span class="line"></span><br><span class="line">topK = <span class="number">5</span></span><br><span class="line">search = model.encode([<span class="string">&quot;哈利波特猛然睡醒&quot;</span>])  <span class="comment"># get query embedding  of size [ query_instance_num, hidden_sizee ]</span></span><br><span class="line">D, I = index.search(search, topK)  <span class="comment"># do query ( brute search )</span></span><br><span class="line">df[<span class="string">&#x27;sentence&#x27;</span>].iloc[I[<span class="number">0</span>]]  <span class="comment"># based on the result, back and get instance</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span> (D)</span><br><span class="line"><span class="comment"># &gt;&gt;&gt; [[206.22675 206.22675 212.70087 219.73259 221.30847]]</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span> (I)</span><br><span class="line"><span class="comment"># &gt;&gt;&gt; [[38216 37890  8009 13996 45306]]</span></span><br></pre></td></tr></table></figure>
+<p>这里 D 表示分数， I 表示在 Index Container 中的 instance index ，两者的形状都是 <code>[ query_instance_num, topK ]</code> 。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>index.reconstruct(<span class="number">38216</span>)</span><br><span class="line">array([ <span class="number">5.07521369e-02</span>, -<span class="number">3.93364072e-01</span>, -<span class="number">1.19723105e+00</span>, -<span class="number">3.36433440e-01</span>,</span><br><span class="line">        <span class="number">1.06395984e+00</span>,  <span class="number">3.83257926e-01</span>,  <span class="number">1.24985963e-01</span>,  <span class="number">2.79548287e-01</span>,</span><br><span class="line">       -<span class="number">7.02445269e-01</span>,  <span class="number">7.59876966e-01</span>, -<span class="number">5.09731807e-02</span>, -<span class="number">5.78854322e-01</span>,</span><br><span class="line">       -<span class="number">2.41243094e-01</span>, -<span class="number">6.83130026e-01</span>,  <span class="number">2.50904560e-01</span>, -<span class="number">3.06654796e-02</span>,</span><br><span class="line">        <span class="number">1.09606862e+00</span>,  <span class="number">1.76596511e-02</span>,  <span class="number">4.99801673e-02</span>, -<span class="number">1.00713462e-01</span>,</span><br><span class="line">...</span><br><span class="line">...</span><br><span class="line">        <span class="number">7.15905130e-01</span>,  <span class="number">2.10034728e-01</span>,  <span class="number">2.63317943e-01</span>,  <span class="number">7.68652320e-01</span>],</span><br><span class="line">      dtype=float32)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="built_in">len</span>(index.reconstruct(<span class="number">38216</span>))</span><br><span class="line"><span class="number">768</span></span><br></pre></td></tr></table></figure>
+<p>reconstruct 方法，可以得到 目标index 对应实例的向量 。</p>
+<h1 id="为向量索引进行分区优化-ivf"><a class="markdownIt-Anchor" href="#为向量索引进行分区优化-ivf"></a> 为向量索引进行分区优化 IVF</h1>
+<ul>
+<li>暴力搜索很慢，但是不需要训练 ；IVF 这里很快，但是需要预先训练，即 K-means 聚类。</li>
+<li>暴力搜索在添加 instance 时，直接 add 即可 ； IVF 如果只是少量数据（相对原始训练集）的话，可以直接 add ，但是在面对大量数据时，整个空间会被改变，则需要重新进行训练 。</li>
+</ul>
+<p>流程：</p>
+<ul>
+<li>构造/训练：将整个样本空间划分为多个小的样本空间：使用 K-means 进行聚类，然后得到每个字空间的中心点，来代表整个空间。</li>
+<li>检索时：针对向量数据和每个中心点进行计算，求出它们之间的距离，然后得到最近的几个子空间。然后，将我们的搜索范围限定在这几个子空间内，在这几个子空间内进行暴力搜索。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> faiss</span><br><span class="line"></span><br><span class="line">dimension = sentence_embeddings.shape[<span class="number">1</span>]</span><br><span class="line">quantizer = faiss.IndexFlatL2(dimension) <span class="comment"># get Index Container</span></span><br><span class="line"></span><br><span class="line">nlist = <span class="number">50</span> <span class="comment"># K</span></span><br><span class="line">index = faiss.IndexIVFFlat(quantizer, dimension, nlist) <span class="comment"># Build IVF based on Index Container</span></span><br><span class="line"></span><br><span class="line">index.train(sentence_embeddings) <span class="comment"># train / find center of sub-space</span></span><br><span class="line">index.add(sentence_embeddings) <span class="comment"># add instance embedding</span></span><br><span class="line"><span class="built_in">print</span> (index.ntotal)</span><br><span class="line"></span><br><span class="line">topK = <span class="number">5</span></span><br><span class="line">index.nprobe = <span class="number">10</span></span><br><span class="line">query_emb = model.encode([<span class="string">&quot;哈利波特猛然睡醒&quot;</span>])</span><br><span class="line">D, I = index.search(query_emb, topK)</span><br></pre></td></tr></table></figure>
+<p>在构造 <code>IndexIVFFlat</code> 时，需要传入三个参数：<br />
+<code>quantizer</code> index container<br />
+<code>dimension</code> hidden size<br />
+<code>nlist</code> the hyperparameter K of K-means / the number of sub-space</p>
+<p>检索时：<br />
+<code>topK</code> 为最终返回的数量<br />
+<code>index.nprobe</code> 表示选择多少个子空间，数量越多，查询时间越长吗，精度相应变好（存在边际效益）。</p>
+<br>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">index.make_direct_map()</span><br><span class="line">index.reconstruct(38216)</span><br></pre></td></tr></table></figure>
+<p>为了追求更快的查询性能，IndexIVF 和向量 ID IndexBinaryIVF 都存储在倒排列表中。<br />
+我们无法通过向量 ID 来反查索引中的内容，如果我们想要得到某个数据的内容，需要手动重建索引。</p>
+<h1 id="乘积量化-product-quantizer"><a class="markdownIt-Anchor" href="#乘积量化-product-quantizer"></a> 乘积量化 Product Quantizer</h1>
+<p><strong>动机</strong><br />
+我们还是需要存储很多向量的，消耗了大量的内存。有没有什么办法，可以降低这个夸张的向量数据的内存资源占用呢？<br />
+在海量数据、以及数据快速增长的场景中，业务所使用的服务器资源的内存完全装不下我们的向量数据。无法支撑我们采用分区索引或者平面索引这种相对精确的相似性检索，我们需要想办法大幅降低内存占用。<br />
+同时，因为数据量极大，即使采用能够性能提升非常明显的分区索引，也无法满足低延时的计算结果返回。</p>
+<p><strong>优势</strong><br />
+即能通过分片压缩来降低索引内存，也可以减少计算量，加快推理。</p>
+<p><strong>描述</strong><br />
+矢量量化方法，即 vector quantization ，其具体定义为: 将向量空间的点用一个有限子集来进行编码的过程。</p>
+<p>在 ANN(Approximate Nearest Neighbor,近似最近邻) 搜索问题中，向量量化方法又以乘积量化 (PQ, Product Quantization) 最为典型。</p>
+<h2 id="train"><a class="markdownIt-Anchor" href="#train"></a> Train</h2>
+<ol>
+<li>将原始向量数据拆分为一些子向量 （ 根据超参数切片 ）</li>
+<li>对于每组子向量，分别进行聚类操作 （ 根据超参数得到聚类数量 ），获得每组向量的质心 。</li>
+<li>在向量中的子向量进行替换，使用距离它最近的向量集合的 ID。</li>
+</ol>
+<p><strong>训练过程</strong></p>
+<p>假设输入为 N (instance_num) 个 128 维度向量 。</p>
+<p>设置超参数：「 <strong>切片数量 M</strong> 」，「 <strong>聚类数量 K</strong> 」</p>
+<p><img src="https://pic2.zhimg.com/80/v2-cac33270a9f12e505ee05a2b06a1caa1_1440w.webp" alt="" /></p>
+<ol>
+<li>
+<p><strong>切分：</strong> 首先将原始向量 128 划分为 M 个片段，这里假设 M=4 ，于是每个向量就由 4 个 32d 的子向量组成，即输入变为 [ N * 4 * 32 ]。</p>
+</li>
+<li>
+<p><strong>训练：</strong> 转换下维度就是 [ 4 * N * 32 ] ，根据每一段 [ N * 32 ]，进行聚类，假设聚类数量为 K = 256 。<br />
+则得到 4 组不同空间的聚类，每一个空间中有256 个簇心，于是得到了 [ 4 * 256 ] 个簇心，每个簇心为 32 维度向量，则总簇心的向量为 [ 4 * 256 * 32 ] 。</p>
+</li>
+<li>
+<p><strong>向量压缩：</strong> 对于一个向量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">x</span></span></span></span> ，可以被切分为 [ 4 * 32 ] 的子向量： <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mi>x</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>x</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>x</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>x</mi><mn>4</mn></msub><mo stretchy="false">]</mo><mo separator="true">,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>∈</mo><msup><mi mathvariant="double-struck">R</mi><mn>32</mn></msup></mrow><annotation encoding="application/x-tex">[ x_1, x_2, x_3, x_4 ] , x_i \in \mathbb R ^ {32}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">3</span><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> ，将每一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">x_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 对应到距离最近的簇心上，使用簇心的 id 进行表示，则为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mi>k</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>4</mn></msub><mo stretchy="false">]</mo><mo>∈</mo><msup><mi mathvariant="double-struck">R</mi><mn>4</mn></msup></mrow><annotation encoding="application/x-tex">[k_1,k_2,k_3,k_4]\in \mathbb R^4</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span> 。</p>
+</li>
+</ol>
+<p>意义：</p>
+<ol>
+<li>
+<p>通过 vector segmentation 压缩向量维度，然后原本的 float 变成现在的 index int<br />
+这里的id 仅仅是看做index，用于标记簇团，即当前点属于哪一个簇团，不会被用来计算距离。</p>
+</li>
+<li>
+<p>可以将理解为：向量被划分为多个子空间，然后子片段的连续向量变成了这个空间内簇团的 id 。</p>
+</li>
+<li>
+<p>子空间被唯一一个 id 标识，大大降低内存。</p>
+</li>
+<li>
+<p><strong>如果两个向量足够接近，是会存在压缩后向量一致的情况，这个点不知道如何处理呢？有没有人讲一讲</strong></p>
+</li>
+<li>
+<p>压缩肯定会降低精度，这部分精度来源于，我们用一个 index id 来代替了原始的 32d float 的向量。</p>
+</li>
+</ol>
+<h2 id="inference"><a class="markdownIt-Anchor" href="#inference"></a> Inference</h2>
+<p>query 向量的维度还是 128 ， 这里使用相同的思路，切分为 [ 4 * 32 ]</p>
+<ul>
+<li>
+<p>Step1: 对于每一个 32d 的片段，去计算对应空间的簇心的距离，得到对应的簇心的距离，这里就可以得到 [ 4 * 256 ] 个距离 。</p>
+</li>
+<li>
+<p>Step2: 然后就是计算当前向量和某一个 candidate 向量的距离，这个 candidate 向量已经在上一步被表示为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mi>k</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>4</mn></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[k_1,k_2,k_3,k_4]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span></span></span></span> ，而这里我们也计算出了当前向量对应这四个簇心的距离 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mn>1</mn><mo separator="true">,</mo><mi>d</mi><mn>2</mn><mo separator="true">,</mo><mi>d</mi><mn>3</mn><mo separator="true">,</mo><mi>d</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">d1,d2,d3,d4</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">d</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">3</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">4</span></span></span></span> ，那么直接查表相加即可: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∑</mo><mo stretchy="false">(</mo><mi>d</mi><mn>1</mn><mo separator="true">,</mo><mi>d</mi><mn>2</mn><mo separator="true">,</mo><mi>d</mi><mn>3</mn><mo separator="true">,</mo><mi>d</mi><mn>4</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sum(d1,d2,d3,d4)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.00001em;vertical-align:-0.25001em;"></span><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">3</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mord">4</span><span class="mclose">)</span></span></span></span> 。</p>
+</li>
+</ul>
+<p>总体看下来，计算复杂度为：<br />
+step 1 : 计算 4×256 次 128/4维向量距离<br />
+step 2 : 4×N 次查表，N 次相加操作</p>
+<br>
+<p>其实这里有两种计算方式，分别是 <strong>[ SDC / symmetric distance computing ]</strong> 以及  <strong>[ ADC / asymmetric distance computing ]</strong> 。<br />
+<img src="https://pic3.zhimg.com/v2-0228d02bd404e9420f8f86b791c27572_b.jpg" alt="" /></p>
+<p>如图， x 为 128d 查询向量 ，y 为某一个 128d 库内向量； <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 表示寻找到点 y 所属的聚类中心的过程，即上面训练部分的将其压缩为 4 个簇心 id 的过程 ： <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mi>k</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>4</mn></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[k_1,k_2,k_3,k_4]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span></span></span></span> 。</p>
+<p>先看图片右边 <strong>[ ADC / asymmetric distance computing ]</strong> ，y 用簇心 id 表示，对应上面我们讲的 <em>&quot; 这个 candidate 向量已经在上一步被表示为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">[</mo><msub><mi>k</mi><mn>1</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>2</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>3</mn></msub><mo separator="true">,</mo><msub><mi>k</mi><mn>4</mn></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">q(y)=[k_1,k_2,k_3,k_4]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03148em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">]</span></span></span></span> &quot;</em> ，然后 query 向量去计算和这个簇心表征向量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 距离，对应上面讲的直接查表 ，即可得到最终的距离。<br />
+此所谓非对称，即 query x 不变，还是自己的向量，而 candidate y 是被压缩过的，即 “原始向量 查 压缩向量”。</p>
+<p>而相应的，对称版本 <strong>[ SDC / symmetric distance computing ]</strong> 则是将两个向量都进行压缩 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">x</span></span></span></span> 到 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> ， <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span> 到 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> ，然后计算 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 之间的距离。所以这里 symmetric 就是：都用对应的聚类中心来计算距离，所以是对称的。</p>
+<p>SDC有一个很大的优点，两两聚类中心之间的距离，是我们在构建向量库的时候就可以知道的，完全可以离线就计算好，在线要计算q(x)和q(y)的距离的时候，直接查表，提升了在线query的效率。但是，他的误差也比ADC来的大，因为有x和q(x)，y和q(y)两个量化误差。</p>
+<h2 id="讨论"><a class="markdownIt-Anchor" href="#讨论"></a> 讨论</h2>
+<p>本质：使用到聚类的一种计算相似性的方法， <strong>本质上还是去计算相似度</strong> ，还是输入候选样本空间和query，输出最近的几个候选样本点。<br />
+缺点：PQ 乘积量化计算距离的时候，距离虽然已经预先算好了，但是对于每个样本到查询样本的距离，还是得老老实实挨个去求和相加计算距离。</p>
+<h1 id="inverted-file-system"><a class="markdownIt-Anchor" href="#inverted-file-system"></a> Inverted File System</h1>
+<p>PQ优化了向量距离计算的过程，但是假如库里面的向量特别多，依然逃不了一个遍历整个库的过程，效率依旧还是不够高，所以这时就有了 Faiss 用到的另外一个关键技术 —— <strong>Inverted File System / 倒排</strong> 。</p>
+<p>本质：快速锁定在某一（几）子空间，然后在该（几个）子空间里做遍历。</p>
+<p>做法也很简单：直接对库中向量做聚类（原始维度下）。在索引时，给淡定 query 向量，和簇心计算相似度，选择 topK 个簇心，然后将对应簇下所有点看做 candidate set，只计算查询向量与这几个簇底下的向量的距离。这个就是 IVF 。</p>
+<p>使用了IVF过后，需要计算距离的向量个数就少了几个数量级，最终向量检索就变成一个很快的操作。至于剩下的如何计算，是直接 L2 相似度，还是选择上面讨论的 DQ 相似度，就自行选择了。</p>
+<h2 id="residual-vector-残差向量"><a class="markdownIt-Anchor" href="#residual-vector-残差向量"></a> Residual Vector 残差向量</h2>
+<p>Fiss具体实现有一个小细节，就是在计算查询向量和一个簇底下的向量的距离的时候，所有向量都会被转化成与簇心的残差，这应该就是类似于归一化的操作，使得后面用PQ计算距离更准确一点。</p>
+<p>在经过第一步聚类后，库内的每一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span> 点都有其对应的一个簇，和簇中心点 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> （非DQ）。我们不会在样本 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span> 上直接做PQ量化，而是对 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 的残差向量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>−</mo><mi>c</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y-c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7777700000000001em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 做量化。</p>
+<blockquote>
+<p>笔者这里使用 c(y) 表示粗聚类得到的中心点，并不是 PQ 算法中的 d(y) ，感觉还是不是一个东西的。</p>
+</blockquote>
+<p><strong>合理性</strong></p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mi>Y</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mi>K</mi><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mtext> residual </mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{dist}(X, Y)=\operatorname{dist}(X, K)+\operatorname{dist}(X, \text { residual })
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord text"><span class="mord"> residual </span></span><span class="mclose">)</span></span></span></span></span></p>
+<p>最开始，我们是直接对点 y 做量化（就是整个库 set of y ），然后 PQ 计算距离，计算距离最理想的情况是计算 x 到 y 的相似度，这是肯定没有误差的。</p>
+<p>但是这里用到了PQ压缩，算的是 x 到 q(y) 的距离，可以说 <strong>q(y) 代表了 y</strong> ，这部分产生了误差；并且由于数量级的关系，如果原始的向量各个元素比较大，那么可以看作整个空间的分布都比较大，这样一个簇团的方差就很大。</p>
+<p>而如果单独看 q(y) 的残差，那么数量级就会小很多。比如说样本向量Y是 [2.4, 2.1] ， 聚类中心K是 [2.3, 2.0] ，那么残差为 [0.1, 0.1 ] 。</p>
+<p>这时候就可以先计算 query x 到簇心 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mi>c</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">K=c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 的距离 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mi>K</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{dist}(X, K)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mclose">)</span></span></span></span> （没有误差），再计算残差的部分 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mtext> residual </mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{dist}(X, \text { residual })</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord text"><span class="mord"> residual </span></span><span class="mclose">)</span></span></span></span> （误差变小很多）。</p>
+<p><strong>计算流程</strong><br />
+训练：</p>
+<ol>
+<li>使用 IVF 进行聚类，计算出每个候选 y 对应的中心点 id: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>c</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span></li>
+<li>然后计算他们的残差 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mi>y</mi><mo>−</mo><msub><mi>q</mi><mi>c</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r(y)=y-q_c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.7777700000000001em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span></li>
+<li>然后使用所有的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> 去训练一个 PQ 表格，得到对应的 PQ code <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>p</mi></msub><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_p(r(y))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span></li>
+<li>这个时候每个 y 就有两个东西，一个是对应的IVF-kernel <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>c</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span> ，一个是 PQ code 表示的残差 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>p</mi></msub><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_p(r(y))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span> 。</li>
+</ol>
+<p><img src="https://pic2.zhimg.com/v2-01b79349101f9d96e98f9a075e2302fd_b.jpg" alt="" /></p>
+<p><img src="https://pic4.zhimg.com/v2-a2228c854105134900f55c52d9b3ffdb_b.jpg" alt="" /></p>
+<p>每个 y 就被两个东西表示：</p>
+<ul>
+<li>对应的 IVF-kernel <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>c</mi></msub><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_c(y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span></span></span></span></li>
+<li>PQ 表示的残差</li>
+</ul>
+<p>在检索时：</p>
+<ol>
+<li>
+<p>还是用类似的表示方式表示query x，得到 对应的 IVF-kernel <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>c</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_c(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 和残差 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 。<br />
+注意这里是残差，而不是残差 code，和 PQ 一样，query 用真实值 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> ，去和 PQ 中的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi>p</mi></msub><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_p(r(y))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span> 计算相似度。</p>
+</li>
+<li>
+<p>然后就是使用 SDC / ADS 来计算点到点的相似度了</p>
+<ul>
+<li>
+<p>图为「同一个簇内 ADC」的情况，使用 query 真实值，所以没有计算  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">dist</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo separator="true">,</mo><mi>K</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{dist}(X, K)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">d</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">t</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="mclose">)</span></span></span></span> ，因为簇内部的这一部分全部相同。</p>
+</li>
+<li>
+<p>记住 PQ 只是计算相似度的一种手段，上面也只是去找，同一个簇内部，谁的残差和自己的比较接近而已。</p>
+</li>
+<li>
+<p>个人理解：因为我们可以选择多个候选簇，然后遍历内部的样本。在属于不同的簇时，则需要计算的是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mi>K</mi><mi>x</mi></msub><mo separator="true">,</mo><msub><mi>K</mi><mi>y</mi></msub><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><msub><mi>R</mi><mi>x</mi></msub><mo separator="true">,</mo><msub><mi>R</mi><mi>y</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(K_x,K_y) + (R_x, R_y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07153em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.07153em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.00773em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.00773em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> ，前者 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mi>K</mi><mi>x</mi></msub><mo separator="true">,</mo><msub><mi>K</mi><mi>y</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(K_x,K_y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07153em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">K</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.07153em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> 可以直接计算精确值 ，后者因为在训练 PQ 时，所有的 course cluster 中的 residue 都是 一起训练的，所以也可以直接去求，其实就是上面的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo separator="true">,</mo><msub><mi>q</mi><mi>p</mi></msub><mo stretchy="false">(</mo><mi>r</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">d(r(x), q_p(r(y)))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord mathnormal">d</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span> 。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h1 id="代码"><a class="markdownIt-Anchor" href="#代码"></a> 代码</h1>
+<p>建议关于 Faiss  的所有索引的构建，都统一使用 <code>faiss.index_factory</code> ，基本所有的index都支持这种构建索引方法。</p>
+<p>比如构建 <code>IndexFlatL2</code> 时，可以改成：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dim, measure = 64, faiss.METRIC_L2</span><br><span class="line">param = &#x27;Flat&#x27;</span><br><span class="line">index = faiss.index_factory(dim, param, measure)</span><br></pre></td></tr></table></figure>
+<h2 id="构建"><a class="markdownIt-Anchor" href="#构建"></a> 构建</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">outputs = np.zeros((<span class="built_in">len</span>(dataset), embedding_size), dtype=np.float16)</span><br><span class="line"><span class="keyword">with</span> torch.inference_mode():</span><br><span class="line">    <span class="keyword">for</span> i, batch <span class="keyword">in</span> tqdm(<span class="built_in">enumerate</span>(dataloader), leave=<span class="literal">False</span>, total=<span class="built_in">len</span>(dataloader)):</span><br><span class="line">        embeddings = model(**batch).pooler_output</span><br><span class="line">        embeddings = F.normalize(embeddings, p=<span class="number">2</span>, dim=<span class="number">1</span>)</span><br><span class="line">        outputs[batch_size*i:batch_size*(i+<span class="number">1</span>)] = embeddings.detach().cpu().numpy()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Create faiss index, it will use the same index as wikipedia_index (not the &quot;id&quot;, but the row index)</span></span><br><span class="line">faiss_index = faiss.IndexFlatL2(embedding_size)</span><br><span class="line"><span class="comment"># Add embeddings to faiss index (it will use the same index as wiki_2023_index.parquet)</span></span><br><span class="line">faiss_index.add(outputs)</span><br><span class="line">faiss.write_index(faiss_index, <span class="string">&quot;faiss_index.index&quot;</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="调用"><a class="markdownIt-Anchor" href="#调用"></a> 调用</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 首先得到 query embedding</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">SentenceTransformer</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, checkpoint, device=<span class="string">&quot;cuda:0&quot;</span></span>):</span><br><span class="line">        self.device = device</span><br><span class="line">        self.checkpoint = checkpoint</span><br><span class="line">        self.model = AutoModel.from_pretrained(checkpoint).to(self.device).half()</span><br><span class="line">        self.tokenizer = AutoTokenizer.from_pretrained(checkpoint)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">transform</span>(<span class="params">self, batch</span>):</span><br><span class="line">        tokens = self.tokenizer(batch[<span class="string">&quot;text&quot;</span>], truncation=<span class="literal">True</span>, padding=<span class="literal">True</span>, return_tensors=<span class="string">&quot;pt&quot;</span>, max_length=MAX_SEQ_LEN)</span><br><span class="line">        <span class="keyword">return</span> tokens.to(self.device)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">get_dataloader</span>(<span class="params">self, sentences, batch_size=<span class="number">32</span></span>):</span><br><span class="line">        sentences = [<span class="string">&quot;Represent this sentence for searching relevant passages: &quot;</span> + x <span class="keyword">for</span> x <span class="keyword">in</span> sentences]</span><br><span class="line">        dataset = Dataset.from_dict(&#123;<span class="string">&quot;text&quot;</span>: sentences&#125;)</span><br><span class="line">        dataset.set_transform(self.transform)</span><br><span class="line">        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=<span class="literal">False</span>)</span><br><span class="line">        <span class="keyword">return</span> dataloader</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">encode</span>(<span class="params">self, sentences, show_progress_bar=<span class="literal">False</span>, batch_size=<span class="number">32</span></span>):</span><br><span class="line">        dataloader = self.get_dataloader(sentences, batch_size=batch_size)</span><br><span class="line">        pbar = tqdm(dataloader) <span class="keyword">if</span> show_progress_bar <span class="keyword">else</span> dataloader</span><br><span class="line">        embeddings = []</span><br><span class="line">        <span class="keyword">for</span> batch <span class="keyword">in</span> pbar:</span><br><span class="line">            <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">                e = self.model(**batch).pooler_output</span><br><span class="line">                e = F.normalize(e, p=<span class="number">2</span>, dim=<span class="number">1</span>)</span><br><span class="line">                embeddings.append(e.detach().cpu().numpy())</span><br><span class="line">        embeddings = np.concatenate(embeddings, axis=<span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> embeddings</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> gc</span><br><span class="line"><span class="keyword">import</span> ctypes</span><br><span class="line"><span class="comment"># Function to clean RAM &amp; vRAM</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">clean_memory</span>():</span><br><span class="line">    gc.collect()</span><br><span class="line">    ctypes.CDLL(<span class="string">&quot;libc.so.6&quot;</span>).malloc_trim(<span class="number">0</span>)</span><br><span class="line">    torch.cuda.empty_cache()</span><br><span class="line"></span><br><span class="line"><span class="comment"># ------------</span></span><br><span class="line"><span class="comment"># Load embedding model</span></span><br><span class="line">start = time()</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Starting prompt embedding, t=<span class="subst">&#123;time() - start :<span class="number">.1</span>f&#125;</span>s&quot;</span>)</span><br><span class="line">model = SentenceTransformer(MODEL_PATH, device=<span class="string">&quot;cuda:0&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># DIY : Get embeddings of prompts</span></span><br><span class="line">f = <span class="keyword">lambda</span> row : <span class="string">&quot; &quot;</span>.join([row[<span class="string">&quot;prompt&quot;</span>], row[<span class="string">&quot;A&quot;</span>], row[<span class="string">&quot;B&quot;</span>], row[<span class="string">&quot;C&quot;</span>], row[<span class="string">&quot;D&quot;</span>], row[<span class="string">&quot;E&quot;</span>]])</span><br><span class="line">inputs = df.apply(f, axis=<span class="number">1</span>).values <span class="comment"># better results than prompt only</span></span><br><span class="line">prompt_embeddings = model.encode(inputs, show_progress_bar=<span class="literal">False</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Search closest sentences in the wikipedia index </span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Loading faiss index, t=<span class="subst">&#123;time() - start :<span class="number">.1</span>f&#125;</span>s&quot;</span>)</span><br><span class="line">faiss_index = faiss.read_index(MODEL_PATH + <span class="string">&#x27;/faiss.index&#x27;</span>)</span><br><span class="line"><span class="comment"># faiss_index = faiss.index_cpu_to_all_gpus(faiss_index) # causes OOM, and not that long on CPU</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Starting text search, t=<span class="subst">&#123;time() - start :<span class="number">.1</span>f&#125;</span>s&quot;</span>)</span><br><span class="line">search_index = faiss_index.search(np.float32(prompt_embeddings), NUM_TITLES)[<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Starting context extraction, t=<span class="subst">&#123;time() - start :<span class="number">.1</span>f&#125;</span>s&quot;</span>)</span><br><span class="line">dataset = load_from_disk(<span class="string">&quot;/kaggle/input/all-paraphs-parsed-expanded&quot;</span>)</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(df)):</span><br><span class="line">    df.loc[i, <span class="string">&quot;context&quot;</span>] = <span class="string">&quot;-&quot;</span> + <span class="string">&quot;\n-&quot;</span>.join([dataset[<span class="built_in">int</span>(j)][<span class="string">&quot;text&quot;</span>] <span class="keyword">for</span> j <span class="keyword">in</span> search_index[i]])</span><br><span class="line"></span><br><span class="line"><span class="comment"># Free memory</span></span><br><span class="line">faiss_index.reset()</span><br><span class="line"><span class="keyword">del</span> faiss_index, prompt_embeddings, model, dataset</span><br><span class="line">clean_memory()</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Context added, t=<span class="subst">&#123;time() - start :<span class="number">.1</span>f&#125;</span>s&quot;</span>)</span><br></pre></td></tr></table></figure>
+<p>其他方法的调用方式见：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/357414033">Faiss入门及应用经验记录</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/facebookresearch/faiss/wiki/The-index-factory">FB : The index factory</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/davidullua/article/details/127739293">Faiss 在工业界的应用和常见问题解决</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/08/10/%E5%A4%9A%E6%A8%A1%E6%80%81/VQA/PNP-VQA/" rel="prev" title="PNP_VQA">
+      <i class="fa fa-chevron-left"></i> PNP_VQA
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/08/18/NLP/tricks/Kaggle_LLM_competition2024/" rel="next" title="Kaggle_LLM_competition2024">
+      Kaggle_LLM_competition2024 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9A%B4%E5%8A%9B%E6%90%9C%E7%B4%A2"><span class="nav-number">1.</span> <span class="nav-text"> 暴力搜索</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E5%90%91%E9%87%8F%E7%B4%A2%E5%BC%95%E8%BF%9B%E8%A1%8C%E5%88%86%E5%8C%BA%E4%BC%98%E5%8C%96-ivf"><span class="nav-number">2.</span> <span class="nav-text"> 为向量索引进行分区优化 IVF</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B9%98%E7%A7%AF%E9%87%8F%E5%8C%96-product-quantizer"><span class="nav-number">3.</span> <span class="nav-text"> 乘积量化 Product Quantizer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#train"><span class="nav-number">3.1.</span> <span class="nav-text"> Train</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#inference"><span class="nav-number">3.2.</span> <span class="nav-text"> Inference</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%A8%E8%AE%BA"><span class="nav-number">3.3.</span> <span class="nav-text"> 讨论</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#inverted-file-system"><span class="nav-number">4.</span> <span class="nav-text"> Inverted File System</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#residual-vector-%E6%AE%8B%E5%B7%AE%E5%90%91%E9%87%8F"><span class="nav-number">4.1.</span> <span class="nav-text"> Residual Vector 残差向量</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">5.</span> <span class="nav-text"> 代码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%84%E5%BB%BA"><span class="nav-number">5.1.</span> <span class="nav-text"> 构建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E7%94%A8"><span class="nav-number">5.2.</span> <span class="nav-text"> 调用</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

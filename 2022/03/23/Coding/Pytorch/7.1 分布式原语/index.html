@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Pytorch - 分布式通信原语（附源码） Torch 分布式训练依赖于 torch.distributed 模式，提供两种通信方式：  point 2 point communication: send,recv collective communication: scatter, broadcast, gather, reduce, all_reduce, all_gather  API-C">
+<meta property="og:type" content="article">
+<meta property="og:title" content="7.1 分布式原语">
+<meta property="og:url" content="http://example.com/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Pytorch - 分布式通信原语（附源码） Torch 分布式训练依赖于 torch.distributed 模式，提供两种通信方式：  point 2 point communication: send,recv collective communication: scatter, broadcast, gather, reduce, all_reduce, all_gather  API-C">
+<meta property="og:locale">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-57d0fbac0d5bf0091d20f34339768d3f_720w.webp">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-c70a767109c9054e96c390498c06bef1_720w.webp">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-3221610be4ec9f0bbffe2cb70ecd4191_720w.webp">
+<meta property="og:image" content="https://pic1.zhimg.com/80/v2-49c58e602f1790231b2146f67af843f0_720w.webp">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-a68cdf9a51ee8689969e752b4fa3d107_720w.webp">
+<meta property="og:image" content="https://pic1.zhimg.com/80/v2-2d5a12cc360ef9b4a1d9d5f0ce687288_720w.webp">
+<meta property="article:published_time" content="2022-03-24T00:53:26.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:16.083Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic4.zhimg.com/80/v2-57d0fbac0d5bf0091d20f34339768d3f_720w.webp">
+
+<link rel="canonical" href="http://example.com/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>7.1 分布式原语 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          7.1 分布式原语
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-23 17:53:26" itemprop="dateCreated datePublished" datetime="2022-03-23T17:53:26-07:00">2022-03-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>677</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/478953028">Pytorch - 分布式通信原语（附源码）</a></p>
+<p>Torch 分布式训练依赖于 <code>torch.distributed</code> 模式，提供两种通信方式：</p>
+<ol>
+<li><code>point 2 point communication</code>: <code>send</code>,<code>recv</code></li>
+<li><code>collective communication</code>: <code>scatter</code>, <code>broadcast</code>, <code>gather</code>, <code>reduce</code>, <code>all_reduce</code>, <code>all_gather</code></li>
+</ol>
+<p>API-Collective functions: <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#collective-functions">https://pytorch.org/docs/stable/distributed.html#collective-functions</a><br />
+API-Point-to-point communication: <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#point-to-point-communication">https://pytorch.org/docs/stable/distributed.html#point-to-point-communication</a></p>
+<h2 id="broadcast"><a class="markdownIt-Anchor" href="#broadcast"></a> broadcast</h2>
+<p><img src="https://pic4.zhimg.com/80/v2-57d0fbac0d5bf0091d20f34339768d3f_720w.webp" alt="" /></p>
+<p>将某一个 tensor 从 source rank 广播到其他 rank 。</p>
+<p><code>dist.broadcast(tensor, src = 0)</code> ，这是一个 in-place 方法，没有返回值，参数 <code>src</code> 设置哪个 rank 进行 broadcast，默认为 rank 0 。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before broadcast&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line">dist.broadcast(tensor, src = <span class="number">0</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;after broadcast&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<p>首先创建一个张量，广播后这个张量被覆盖。</p>
+<h2 id="scatter"><a class="markdownIt-Anchor" href="#scatter"></a> Scatter</h2>
+<p><img src="https://pic2.zhimg.com/80/v2-c70a767109c9054e96c390498c06bef1_720w.webp" alt="" /></p>
+<p>将一个 tensor 切分并且均匀分布到其他 rank  上。</p>
+<p><code>torch.distributed.scatter(tensor, scatter_list=None, src=0, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：除 src rank 外，其他 rank 获取并且存储 output tensor 的参数</li>
+<li><code>scatter_list</code>：需要进行 scatter 的 tensor list，只有 src rank 才能设置 scatter_list 的值。这个值需要和 dest rank 数量相同。</li>
+<li><code>src</code>：设置哪个 rank 进行 scatter，默认为 rank 0</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before scatter&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line"><span class="keyword">if</span> rank_id == <span class="number">0</span>:</span><br><span class="line">    scatter_list = [torch.tensor([<span class="number">0</span>,<span class="number">0</span>]), torch.tensor([<span class="number">1</span>,<span class="number">1</span>]), torch.tensor([<span class="number">2</span>,<span class="number">2</span>]), torch.tensor([<span class="number">3</span>,<span class="number">3</span>])]</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;scater list:&#x27;</span>, scatter_list)</span><br><span class="line">    dist.scatter(tensor, src = <span class="number">0</span>, scatter_list=scatter_list)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    dist.scatter(tensor, src = <span class="number">0</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;after scatter&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<p>注意上述代码中，<code>scatter_list</code> 类型为 <code>list</code> 。<br />
+一共有4个rank参与了scatter计算，<br />
+计算之前：scatter list为 <code>[0,0], [1,1], [2,2], [3,3]</code>;<br />
+计算之后：rank 按顺序被分配 scatter list 的每一个 tensor，rank0 为 <code>[0,0]</code>，rank1 为 <code>[1, 1]</code>，rank2 为 <code>[2, 2]</code>，rank3 为 <code>[3, 3]</code>;</p>
+<h2 id="gather"><a class="markdownIt-Anchor" href="#gather"></a> gather</h2>
+<p><img src="https://pic2.zhimg.com/80/v2-3221610be4ec9f0bbffe2cb70ecd4191_720w.webp" alt="" /></p>
+<p>和 scatter 相反，将多个元素汇总到同一个rank上。</p>
+<p><code>torch.distributed.gather(tensor, gather_list=None, dst=0, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：所有rank的input tensor</li>
+<li><code>gather_list</code>：dst rank 的 output 结果；只有 dst rank 需要设置；长度需要和 src node 数量一致。</li>
+<li><code>dst</code>：汇总数据的 node id</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line"><span class="keyword">if</span> rank_id == <span class="number">0</span>:</span><br><span class="line">    gather_list = [torch.zeros(<span class="number">2</span>, dtype=torch.int64) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">4</span>)]</span><br><span class="line">    dist.gather(tensor, dst = <span class="number">0</span>, gather_list=gather_list)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;after gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;gather_list:&#x27;</span>, gather_list)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    dist.gather(tensor, dst = <span class="number">0</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;after gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<h2 id="reduce"><a class="markdownIt-Anchor" href="#reduce"></a> reduce</h2>
+<p><img src="https://pic1.zhimg.com/80/v2-49c58e602f1790231b2146f67af843f0_720w.webp" alt="" /></p>
+<p>可以看成是对 gather 的结果求和 。</p>
+<p><code>torch.distributed.reduce(tensor, dst, op=&lt;ReduceOp.SUM: 0&gt;, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：需要进行reduce计算的数据，对于dst rank来说，tensor为最终reduce的结果</li>
+<li><code>dist</code>：接收答案的 rank id</li>
+<li><code>op</code>：聚合算子 ，包含 SUM, PRODUCT, MIN, MAX, BAND, BOR, BXOR 。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(2, dtype=torch.int64) + 1 + 2 * rank_id</span><br><span class="line">print(&#x27;before reudce&#x27;,&#x27; Rank &#x27;, rank_id, &#x27; has data &#x27;, tensor)</span><br><span class="line">dist.reduce(tensor, dst = 3, op=dist.ReduceOp.SUM,)</span><br><span class="line">print(&#x27;after reudce&#x27;,&#x27; Rank &#x27;, rank_id, &#x27; has data &#x27;, tensor)</span><br></pre></td></tr></table></figure>
+<p>注意，这里有个副作用，就是其他 source rank 的 tensor 也会被修改。</p>
+<h2 id="all-gather"><a class="markdownIt-Anchor" href="#all-gather"></a> all-gather</h2>
+<p><img src="https://pic4.zhimg.com/80/v2-a68cdf9a51ee8689969e752b4fa3d107_720w.webp" alt="" /></p>
+<p><code>torch.distributed.all_gather(tensor_list, tensor, group=None, async_op=False)</code> ，每个 rank 都要指定 gather_list 。</p>
+<h2 id="all-reduce"><a class="markdownIt-Anchor" href="#all-reduce"></a> all-reduce</h2>
+<p><img src="https://pic1.zhimg.com/80/v2-2d5a12cc360ef9b4a1d9d5f0ce687288_720w.webp" alt="" /></p>
+<p><code>torch.distributed.all_reduce(tensor, op=&lt;ReduceOp.SUM: 0&gt;, group=None, async_op=False) </code></p>
+<h2 id="ddp-数据并行训练"><a class="markdownIt-Anchor" href="#ddp-数据并行训练"></a> DDP 数据并行训练</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/482557067">https://zhuanlan.zhihu.com/p/482557067</a></p>
+<h2 id="pipeline-并行训练"><a class="markdownIt-Anchor" href="#pipeline-并行训练"></a> pipeline 并行训练</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/483640235">https://zhuanlan.zhihu.com/p/483640235</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/03/23/Coding/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/" rel="prev" title="7. 分布式训练">
+      <i class="fa fa-chevron-left"></i> 7. 分布式训练
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/03/23/Coding/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/" rel="next" title="8. CUDA">
+      8. CUDA <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#broadcast"><span class="nav-number">1.</span> <span class="nav-text"> broadcast</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scatter"><span class="nav-number">2.</span> <span class="nav-text"> Scatter</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gather"><span class="nav-number">3.</span> <span class="nav-text"> gather</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reduce"><span class="nav-number">4.</span> <span class="nav-text"> reduce</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#all-gather"><span class="nav-number">5.</span> <span class="nav-text"> all-gather</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#all-reduce"><span class="nav-number">6.</span> <span class="nav-text"> all-reduce</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ddp-%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83"><span class="nav-number">7.</span> <span class="nav-text"> DDP 数据并行训练</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pipeline-%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%83"><span class="nav-number">8.</span> <span class="nav-text"> pipeline 并行训练</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

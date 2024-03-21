@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Huggingface 整合了 Bitsandbytes ，来提供模型量化功能 。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Quantization—二阶泰勒展开和黑塞矩阵">
+<meta property="og:url" content="http://example.com/2023/10/15/NLP/%E9%87%8F%E5%8C%96/Quantization/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Huggingface 整合了 Bitsandbytes ，来提供模型量化功能 。">
+<meta property="og:locale">
+<meta property="og:image" content="https://huggingface.co/blog/assets/96_hf_bitsandbytes_integration/tf32-Mantissa-chart-hi-res-FINAL.png">
+<meta property="og:image" content="https://pic4.zhimg.com/v2-6f905bb60c96753b5dd82820db5a65d7_b.jpg">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-1ce8aece0beba9dae4e7aaf6a64d4f6d_720w.webp">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-54dfb7c5026181021c031ab2945b4f07_720w.webp">
+<meta property="article:published_time" content="2023-10-15T10:55:58.000Z">
+<meta property="article:modified_time" content="2024-03-11T01:57:18.182Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://huggingface.co/blog/assets/96_hf_bitsandbytes_integration/tf32-Mantissa-chart-hi-res-FINAL.png">
+
+<link rel="canonical" href="http://example.com/2023/10/15/NLP/%E9%87%8F%E5%8C%96/Quantization/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>Quantization—二阶泰勒展开和黑塞矩阵 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/10/15/NLP/%E9%87%8F%E5%8C%96/Quantization/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Quantization—二阶泰勒展开和黑塞矩阵
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-10-15 03:55:58" itemprop="dateCreated datePublished" datetime="2023-10-15T03:55:58-07:00">2023-10-15</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Quantization/" itemprop="url" rel="index"><span itemprop="name">Quantization</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>11 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Huggingface 整合了 <code>Bitsandbytes</code> ，来提供模型量化功能 。</p>
+<span id="more"></span>
+<h1 id="real-numbers-representation"><a class="markdownIt-Anchor" href="#real-numbers-representation"></a> Real numbers representation</h1>
+<p>The two main ways of representing real numbers are:</p>
+<ol>
+<li>Fixed-point: there are fixed number of digits reserved for representing the integer part and the fractional part.</li>
+<li>Floating-point: the number of digits for representing the integer and the fractional parts can vary.<br />
+can represent bigger ranges of values ; most commonly used .<br />
+There are three components in the floating-point representation:
+<ol>
+<li>The sign bit 符号</li>
+<li>The exponent part 指数: 通常是一个整数值，用于指定数的指数部分。</li>
+<li>The mantissa 尾数: 通常是一个小数点后面的二进制数。</li>
+</ol>
+</li>
+</ol>
+<p><code>x = sign x mantissa x (2^exponent)</code></p>
+<h1 id="principle"><a class="markdownIt-Anchor" href="#principle"></a> principle</h1>
+<p>4-byte/32-bit floating point (float32)</p>
+<ul>
+<li><strong>-&gt;</strong> 2-byte/16-bits floating point (float32)</li>
+<li><strong>-&gt;</strong> 8-bit integer (int8)、4-bit integer (int4)、2-bit integer (int2)</li>
+</ul>
+<p><img src="https://huggingface.co/blog/assets/96_hf_bitsandbytes_integration/tf32-Mantissa-chart-hi-res-FINAL.png" alt="" /></p>
+<hr />
+<p>本质上是一种 lossy compression 的方式</p>
+<p>量化的对象 ：模型参数（weight）、激活值（activation）或者梯度（gradient）</p>
+<p>量化方案 ：</p>
+<ul>
+<li><strong>QAT（Quant-Aware Training） 量化感知训练</strong> ，也可以称为在线量化（On Quantization）。<br />
+利用额外的训练数据，在量化的同时结合反向传播对模型权重进行调整，意在确保量化模型的精度不掉点。</li>
+<li><strong>PTQ（Post Training Quantization）训练后量化</strong> ，也可以称为离线量化（Off Quantization）。<br />
+在已训练的模型上，使用少量或不使用额外数据，对模型量化过程进行校准，可能伴有模型权重的缩放。
+<ul>
+<li>训练后动态量化（Post Dynamic Quantization）不使用校准数据集，直接对每一层 layer 通过量化公式进行转换。QLoRA 就是采用这种方法。</li>
+<li>训练后校正量化（Post Calibration Quantization）需要输入有代表性的数据集，根据模型每一层 layer 的输入输出调整量化权重。GPTQ 就是采用这种方法。</li>
+</ul>
+</li>
+</ul>
+<p>根据量化公式的不同，可以分为 <strong>「线性量化」和「非线性量化」</strong> ，<br />
+也可以分为 <strong>「对称量化」和「非对称量化」</strong> 。<br />
+<img src="https://pic4.zhimg.com/v2-6f905bb60c96753b5dd82820db5a65d7_b.jpg" alt="" /></p>
+<p><strong>「饱和量化」</strong> 和 <strong>「非饱和量化」</strong> ：<br />
+一般而言，待量化 Op 的权重采用非饱和量化方法，待量化 Op 的激活（输入和输出）采用饱和量化方法</p>
+<ul>
+<li>非饱和量化：最本质也是最暴力的方法，即通过统计网络模型中每一个层中权重或激活值的绝对最大值，将其映射到127，来计算出缩放因子scale。</li>
+<li>饱和量化：模型数据（一般是激活数据）分布可能是不均匀的，直接使用非饱和量化会使得量化后的值都挤在一个很小的范围从而浪费了INT8范围内的其他空间，也就是说没有充分利用INT8（-128 ~ 127）的值域。因此我们在量化时，不是直接将数据的最大值映射到127，而是使用 KL 散度计算一个合适的阈值，将其映射为127。这样使得映射后的 -128 ~ 127范围内分布相对均匀，也相当于去掉了一些不重要的因素，保留了主要成分。</li>
+</ul>
+<h2 id="to-float16"><a class="markdownIt-Anchor" href="#to-float16"></a> to float16</h2>
+<p>Computation in a forward and backward pass are done for FP16/BF16 to enhance training speed.<br />
+The FP16/BF16 gradients are then used to update the FP32 main weights.</p>
+<p>problems causing error:</p>
+<ol>
+<li>optimizers have <code>float16</code>  implementation</li>
+<li>hardware support <code>float16</code></li>
+<li>sensitive to lower precision : For instance the value of epsilon in <code>LayerNorm</code> is usually very small (~ 1e-12), but the smallest representable value in float16 is ~ 6e-5, this can cause <code>NaN</code> issues.</li>
+</ol>
+<h2 id="to-int8"><a class="markdownIt-Anchor" href="#to-int8"></a> to int8</h2>
+<h3 id="the-affine-quantization-scheme"><a class="markdownIt-Anchor" href="#the-affine-quantization-scheme"></a> the affine quantization scheme</h3>
+<p>Only 256 values can be represented in int8 : <code>[-127, 127]</code></p>
+<p>Question : find the best way to map our <code>float32</code> range <code>[a, b]</code> into <code>int8</code> range of 256 valid numbers.</p>
+<p>suppose a variable <code>x : float32</code> is mapped to <code>x_q : int8</code> : <code>x = S * (x_q - z)</code> with an affine operation.</p>
+<ul>
+<li><code>S</code>: the scale 缩放因子, a positive <code>float32</code>，需要单独求，为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi mathvariant="normal">/</mi><mi>s</mi></mrow><annotation encoding="application/x-tex">c/s</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">c</span><span class="mord">/</span><span class="mord mathnormal">s</span></span></span></span> ，c 为float的数值范围（[-c,c]），s为  int 范围，比如 127  。</li>
+<li><code>Z</code>:  the zero-point 零点, a <code>int8</code> value corresponding to the value 0 in the <code>float32</code> realm.<br />
+Finally, <code>S : float32</code> * <code>(x_q - Z) : int8</code> -&gt; <code>x : float32</code> 。</li>
+</ul>
+<p>So:</p>
+<ul>
+<li><code>x_q = round(x/S + z)</code></li>
+<li><code>x_q = clip(round(x/S + Z), round(a/S + Z), round(b/S + Z))</code><br />
+all <code>x : float32</code>  that exceed <code>[a, b]</code> are clipped<br />
+<code>round(a/S + Z)</code> corresponds to the smallest representable value in the considered data type, and <code>round(b/S + Z)</code> to the biggest one.</li>
+</ul>
+<p>也就是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>I</mi></msub><mo>=</mo><mi>i</mi><mi>n</mi><mi>t</mi><mo stretchy="false">(</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>s</mi><mi>c</mi></mfrac></mstyle><msub><mi>A</mi><mi>F</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A_I = int(\dfrac s c A_F)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.07847em;">I</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.7935600000000003em;vertical-align:-0.686em;"></span><span class="mord mathnormal">i</span><span class="mord mathnormal">n</span><span class="mord mathnormal">t</span><span class="mopen">(</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.10756em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">c</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">s</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">F</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> ，将浮点数区间 $ [−c_1,\ c_1]$ 里的数字等比例映射到整数区间 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mtext>−</mtext><mi>s</mi><mo separator="true">,</mo><mi>s</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[−s,s]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord mathnormal">s</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">s</span><span class="mclose">]</span></span></span></span> ，然后向最近的整数取整。于是  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>F</mi></msub><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>c</mi><mi>s</mi></mfrac></mstyle><msub><mi>A</mi><mi>I</mi></msub></mrow><annotation encoding="application/x-tex">A_F = \dfrac c s A_I</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">F</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.7935600000000003em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.10756em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">s</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">c</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.07847em;">I</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 。</p>
+<h3 id="the-symmetric-quantization-scheme"><a class="markdownIt-Anchor" href="#the-symmetric-quantization-scheme"></a> the symmetric quantization scheme</h3>
+<p>a symmetric float range <code>[-a, a]</code> is mapped to a symmetric int range <code>[-127, 127]</code> .</p>
+<p>Due to symmetric ,  <code>Z = 0</code>, then reduce much calculations . 所以我</p>
+<p>步骤：</p>
+<ol>
+<li>对称量化中，零点 Z = 0，一般不记录，我们只需要关心如何求解 Scale。<br />
+由于 weight 几乎不存在异常值，因此我们可以直接取 Scale 为一个 layer 或 block 内所有参数的最大绝对值，于是所有的参数都在 [-1, 1] 的区间内。</li>
+<li>这些参数将找到最近的量化格点（ <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>×</mo><mn>127</mn></mrow><annotation encoding="application/x-tex">\times 127</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">×</span><span class="mord">1</span><span class="mord">2</span><span class="mord">7</span></span></span></span> ），并转化成定点数。</li>
+</ol>
+<p><img src="https://pic2.zhimg.com/80/v2-1ce8aece0beba9dae4e7aaf6a64d4f6d_720w.webp" alt="" /></p>
+<h3 id="block-wise-quantization"><a class="markdownIt-Anchor" href="#block-wise-quantization"></a> Block-wise quantization</h3>
+<p>在整个  tensor  上进行量化时，很可能出现 outlier，比如其他全都是小于 10 的 ，突然出现一个 1000 。</p>
+<p>为了避免 outlier，可以将输入的 tensor 分割为一个一个 block ，每一个 block 单独进行量化 ，即每一行/列/通道… 有单独的 scale 和 zero ，因此能使量化的精度损失减少（橙色），详见 <code>DeepSpeed/Zero++</code> 。<br />
+<img src="https://pic4.zhimg.com/80/v2-54dfb7c5026181021c031ab2945b4f07_720w.webp" alt="" /></p>
+<h3 id="calibration-校准"><a class="markdownIt-Anchor" href="#calibration-校准"></a> Calibration 校准</h3>
+<p>It is the step during quantization where the float32 ranges <code>[a, b]</code> are computed .</p>
+<ul>
+<li>
+<p>For weights it is quite easy since the actual range is known at quantization-time.</p>
+</li>
+<li>
+<p>But it is less clear for activations, and different approaches exist:</p>
+<ol>
+<li><strong>Post training dynamic quantization</strong>: the range for each activation is computed on the fly <strong>at inference runtime</strong>.</li>
+<li><strong>Post training static quantization</strong>: the range for each activation is computed <strong>in advance at quantization-time</strong>, typically by passing <strong>representative data</strong> through the model and recording the activation values.<br />
+使用一批校准数据，让模型进行推理，然后统计 activation value ，进而得到 range 。</li>
+<li><strong>Quantization aware training</strong>: the range for each activation is computed <strong>at training-time</strong>.<br />
+<strong>“Fake quantize”</strong> operators are used instead of observers: they record values just as observers do, but they also simulate the error induced by quantization to let the model adapt to it.</li>
+</ol>
+</li>
+</ul>
+<h1 id="整数矩阵乘法"><a class="markdownIt-Anchor" href="#整数矩阵乘法"></a> 整数矩阵乘法</h1>
+<p>只有线性int量化才能够在量化的基础上进行计算。</p>
+<p>回顾量化过程：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>I</mi></msub><mo>=</mo><mtext>int</mtext><mo stretchy="false">(</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>s</mi><mi>c</mi></mfrac></mstyle><msub><mi>A</mi><mi>F</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A_I = \text{int}(\dfrac s c A_F)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.07847em;">I</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.7935600000000003em;vertical-align:-0.686em;"></span><span class="mord text"><span class="mord">int</span></span><span class="mopen">(</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.10756em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">c</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">s</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">F</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> ，将浮点数区间 $ [−c_1,\ c_1]$ 里的数字等比例映射到整数区间 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mtext>−</mtext><mi>s</mi><mo separator="true">,</mo><mi>s</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[−s,s]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord mathnormal">s</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">s</span><span class="mclose">]</span></span></span></span> ，然后向最近的整数取整。于是  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>F</mi></msub><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>c</mi><mi>s</mi></mfrac></mstyle><msub><mi>A</mi><mi>I</mi></msub></mrow><annotation encoding="application/x-tex">A_F = \dfrac c s A_I</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">F</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.7935600000000003em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.10756em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">s</span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">c</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.07847em;">I</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 。</p>
+<p>则矩阵乘法  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">C=AB</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span> 被改写为 $\text{int}(\dfrac  {c_1} {s} A_I \dfrac  {c_2} {s} B_) = \dfrac  {c_1 c_2} {s} A_I B_I $</p>
+<p>那么就可以先计算整数矩阵乘法 ，得到整数的输出矩阵之后，乘上系数 $\dfrac  {c_1 c_2} {s} $ 还原为浮点数矩阵。</p>
+<h1 id="code"><a class="markdownIt-Anchor" href="#code"></a> Code</h1>
+<h2 id="load-model"><a class="markdownIt-Anchor" href="#load-model"></a> load model</h2>
+<ol>
+<li>load models in 4-bit / 8-bit quantization ： <code>.from_pretrained(load_in_4bit=True)</code> / <code>.from_pretrained(load_in_8bit=True)</code></li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> AutoModelForCausalLM</span><br><span class="line"></span><br><span class="line">model = AutoModelForCausalLM.from_pretrained(<span class="string">&quot;bigscience/bloom-1b7&quot;</span>,device_map=<span class="string">&quot;auto&quot;</span>,</span><br><span class="line">                                             load_in_4bit=<span class="literal">True</span></span><br><span class="line">                                            )</span><br></pre></td></tr></table></figure>
+<pre><code>- 只能将 `torch.nn.Linear` 量化到 4bit ，其他 tensor 默认为 `torch.float16` ，但是同样可以通过 `torch_dtype` 进行设置。
+- [Refer to this Google Colab notebook for advanced usage of 4-bit quantization with all the possible options.](https://colab.research.google.com/drive/1ge2F1QSK8Q7h0hn3YKuBCOAS0bK8E0wf)
+- Faster inference with `batch_size=1` : Since the 0.40.0 release of bitsandbytes, for `batch_size=1` you can benefit from fast inference. Check out [these release notes](https://github.com/TimDettmers/bitsandbytes/releases/tag/0.40.0) and make sure to have a version that is greater than 0.40.0 to benefit from this feature out of the box.
+- 4-bit/8-bit  模型暂时不支持训练，但是可以根据这个模型来训练 Lora 组件，完成微调
+</code></pre>
+<ol start="2">
+<li>
+<p>check the memory footprint of your model : <code>print(modelc)</code></p>
+</li>
+<li>
+<p>Changing the Compute Data Type : setting the <code>bnb_4bit_compute_dtype</code> to a different value</p>
+</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> BitsAndBytesConfig</span><br><span class="line"></span><br><span class="line">quantization_config = BitsAndBytesConfig(load_in_4bit=<span class="literal">True</span>, bnb_4bit_compute_dtype=torch.bfloat16)</span><br><span class="line"><span class="comment"># or</span></span><br><span class="line">nf4_config = BitsAndBytesConfig(load_in_4bit=<span class="literal">True</span>, bnb_4bit_quant_type=<span class="string">&quot;nf4&quot;</span>)</span><br><span class="line"></span><br><span class="line">model_nf4 = AutoModelForCausalLM.from_pretrained(model_id,</span><br><span class="line">                                                quantization_config=nf4_config)</span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li>check the memory footprint of your model: <code>print(model.get_memory_footprint())</code></li>
+<li>Nested Quantization : <code>bnb_4bit_use_double_quant=True</code></li>
+<li>other parameters : <code>llm_int8_skip_modules</code> ; <code>llm_int8_threshold</code></li>
+</ol>
+<h2 id="gptq"><a class="markdownIt-Anchor" href="#gptq"></a> GPTQ</h2>
+<p><strong>Config:</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">model_id = <span class="string">&quot;facebook/opt-125m&quot;</span></span><br><span class="line">tokenizer = AutoTokenizer.from_pretrained(model_id)</span><br><span class="line">gptq_config = GPTQConfig(bits=<span class="number">4</span>, dataset = <span class="string">&quot;c4&quot;</span>, tokenizer=tokenizer)</span><br></pre></td></tr></table></figure>
+<p>传入目标比特位，校准数据集名称，tokenizer ，<code>dataset</code> 也可以是 <code>str list</code> 。</p>
+<p><strong>quantize:</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> AutoModelForCausalLM</span><br><span class="line">model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=gptq_config, device_map=<span class="string">&quot;auto&quot;</span>)</span><br></pre></td></tr></table></figure>
+<p>If you want to maximize your gpus usage while using cpu offload, you can set <code>device_map = &quot;auto&quot;</code> .</p>
+<p><strong>save:</strong><br />
+if you have quantized your model with a device_map, make sure to <strong>move the entire model to one of your gpus or the cpu</strong> before saving it.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">quantized_model.to(<span class="string">&quot;cpu&quot;</span>)</span><br><span class="line">quantized_model.save_pretrained(<span class="string">&quot;opt-125m-gptq&quot;</span>)</span><br></pre></td></tr></table></figure>
+<p><strong>Fine-tune a quantized model:</strong><br />
+you can fine-tune models that have been quantized with GPT-Q. -&gt; <a target="_blank" rel="noopener" href="https://colab.research.google.com/drive/1_TIrmuKOFhuRRiTWN94iLKUFu6ZX4ceb?usp=sharing">peft</a></p>
+<h2 id=""><a class="markdownIt-Anchor" href="#"></a> </h2>
+<h2 id="量化指标"><a class="markdownIt-Anchor" href="#量化指标"></a> 量化指标</h2>
+<ul>
+<li>压缩比：一种量化方法能减少多少内存/显存占用？<br />
+当我们确定了量化精度（例如 int4），确定了量化方法，以及需要量化模型的哪些 layer，其内存和显存占用就基本确定下来了。<br />
+大部分情况下，我们都只去量化 nn.Linear 层，目前几乎所有量化策略都是这么做的，而且量化模型的显存占用较少，因此我们几乎不会去考虑怎么进一步减少量化模型的体积。</li>
+<li>压缩/解压缩的速度：这影响量化模型推理的速度，也是我们需要重点优化之处。<br />
+着重于模型 forward、backward 计算过程的解压缩速度。<br />
+由于这些计算基本都在 GPU 上进行，所以我们就需要去优化 GPU 的 op 了。</li>
+</ul>
+<h1 id="good-material"><a class="markdownIt-Anchor" href="#good-material"></a> Good material</h1>
+<p><a target="_blank" rel="noopener" href="https://pytorch.org/blog/introduction-to-quantization-on-pytorch/">Introduction to Quantization on PyTorch</a><br />
+<a target="_blank" rel="noopener" href="https://leimao.github.io/article/Neural-Networks-Quantization/#Quantized-Deep-Learning-Layers">Quantization for Neural Networks</a><br />
+[QLoRA、GPTQ：模型量化概述](<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/646210009">https://zhuanlan.zhihu.com/p/646210009</a><br />
+<a target="_blank" rel="noopener" href="https://laiye.com/news/post/2391.html">量化综述</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/10/15/NLP/%E9%87%8F%E5%8C%96/Quantization%E2%80%94%E4%BA%8C%E9%98%B6%E6%B3%B0%E5%8B%92%E5%B1%95%E5%BC%80%E5%92%8C%E9%BB%91%E5%A1%9E%E7%9F%A9%E9%98%B5/" rel="prev" title="Quantization—二阶泰勒展开和黑塞矩阵">
+      <i class="fa fa-chevron-left"></i> Quantization—二阶泰勒展开和黑塞矩阵
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/10/15/NLP/%E9%87%8F%E5%8C%96/Quantization%E2%80%94OBD/" rel="next" title="Quantization — OBD->GPT-Q">
+      Quantization — OBD->GPT-Q <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#real-numbers-representation"><span class="nav-number">1.</span> <span class="nav-text"> Real numbers representation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#principle"><span class="nav-number">2.</span> <span class="nav-text"> principle</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#to-float16"><span class="nav-number">2.1.</span> <span class="nav-text"> to float16</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#to-int8"><span class="nav-number">2.2.</span> <span class="nav-text"> to int8</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#the-affine-quantization-scheme"><span class="nav-number">2.2.1.</span> <span class="nav-text"> the affine quantization scheme</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#the-symmetric-quantization-scheme"><span class="nav-number">2.2.2.</span> <span class="nav-text"> the symmetric quantization scheme</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#block-wise-quantization"><span class="nav-number">2.2.3.</span> <span class="nav-text"> Block-wise quantization</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#calibration-%E6%A0%A1%E5%87%86"><span class="nav-number">2.2.4.</span> <span class="nav-text"> Calibration 校准</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B4%E6%95%B0%E7%9F%A9%E9%98%B5%E4%B9%98%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text"> 整数矩阵乘法</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#code"><span class="nav-number">4.</span> <span class="nav-text"> Code</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#load-model"><span class="nav-number">4.1.</span> <span class="nav-text"> load model</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gptq"><span class="nav-number">4.2.</span> <span class="nav-text"> GPTQ</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.3.</span> <span class="nav-text"> </span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8F%E5%8C%96%E6%8C%87%E6%A0%87"><span class="nav-number">4.4.</span> <span class="nav-text"> 量化指标</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#good-material"><span class="nav-number">5.</span> <span class="nav-text"> Good material</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

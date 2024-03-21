@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="有两个类可以实现并行计算：DataParallel(DP)和DistributedDataParallel(DDP) 原理都是通过提高 batch size 来增加并行度。 前者简单，后者代码量更大，但是更快。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="7. 分布式训练">
+<meta property="og:url" content="http://example.com/2022/03/23/Coding/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="有两个类可以实现并行计算：DataParallel(DP)和DistributedDataParallel(DDP) 原理都是通过提高 batch size 来增加并行度。 前者简单，后者代码量更大，但是更快。">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-03-24T00:53:24.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:16.090Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2022/03/23/Coding/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>7. 分布式训练 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          7. 分布式训练
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-23 17:53:24" itemprop="dateCreated datePublished" datetime="2022-03-23T17:53:24-07:00">2022-03-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>16 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>有两个类可以实现并行计算：<code>DataParallel(DP)</code>和<code>DistributedDataParallel(DDP)</code><br />
+原理都是通过提高 batch size 来增加并行度。<br />
+前者简单，后者代码量更大，但是更快。</p>
+<span id="more"></span>
+<h1 id="torchnndataparallel-类"><a class="markdownIt-Anchor" href="#torchnndataparallel-类"></a> torch.nn.DataParallel 类</h1>
+<ul>
+<li>特点：
+<ul>
+<li>适合单机多卡，并且代码量小（lowest）。</li>
+<li>每个 forward pass 开始时模型都会被复制，从而训练速度受阻，所以更推荐使用DDP。</li>
+</ul>
+</li>
+<li>工作机制：总共只有一个进程（GIL限制：一个 python进程只能使用一个 CPU 核心）
+<ul>
+<li>master 节点首先向其他节点（GPU）广播其模型参数（复制模型）</li>
+<li>每张卡都进行并行训练</li>
+<li>训练后，各个卡的梯度会返回 master 节点</li>
+<li>master 节点求得平均梯度，对模型进行参数更新。</li>
+<li>新参数/模型 再发送到其他节点（GPU）上进行训练</li>
+</ul>
+</li>
+</ul>
+<p>这种工作机制导致 master 节点的计算任务，通讯量很重，导致网络受阻，训练速度降低。</p>
+<ul>
+<li>教程：<a target="_blank" rel="noopener" href="https://pytorch.org/tutorials/beginner/blitz/data_parallel_tutorial.html">https://pytorch.org/tutorials/beginner/blitz/data_parallel_tutorial.html</a></li>
+<li>代码实现：将模型放入GPU后，只需要一行封装即可。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">model.to(device)</span><br><span class="line">net = torch.nn.DataParallel(model, device_ids=[0,1,2]</span><br></pre></td></tr></table></figure>
+<h1 id="torchnnparalleldistributeddataparallel-类"><a class="markdownIt-Anchor" href="#torchnnparalleldistributeddataparallel-类"></a> torch.nn.parallel.DistributedDataParallel 类</h1>
+<p>代码量更多，模型在构造 DDP 时被复制，让训练更快。</p>
+<p><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html">官方API：DISTRIBUTEDDATAPARALLEL</a><br />
+<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/notes/ddp.html">新手note：DISTRIBUTED DATA PARALLEL</a><br />
+<a target="_blank" rel="noopener" href="https://pytorch.org/tutorials/intermediate/ddp_tutorial.html">进阶：GETTING STARTED WITH DISTRIBUTED DATA PARALLEL</a></p>
+<ul>
+<li>工作机制：
+<ul>
+<li>数据/模型分配：在 batch 维度上对数据进行分组，将输入数据分配给 指定设备/GPU 上。但是每个 GPU 会复制一个模型的副本，负责处理分配到的数据。</li>
+<li>多进程并行（缓解GIL限制）：训练前，有 N 个进程被启动 ，每个进程在一张卡上加载一个模型，共享模型参数，但是训练样本数量不同。</li>
+<li>训练（Ring-Reduce加速）：各个进程交换梯度，都能得到所有进程的梯度。</li>
+<li>梯度下降（Data Parallelism）：对所有设备上的梯度求<strong>平均</strong>得到最终梯度，这导致每次更新参数后不同设备上的模型参数都一致。</li>
+</ul>
+</li>
+<li>batch size 应该大于 GPU 的数量</li>
+<li>为什么这么快？
+<ul>
+<li>每个进程有自己独有的 optimizer，同时进程间传递的是 <strong>梯度</strong>，这意味着不需要参数广播步骤，从而减少了在节点之间传输张量所花费的时间。</li>
+<li>Ring-Reduce 数据交换方法提高了通讯效率。避免 master 通讯阻塞现象，n个进程的耗时为 O(n) 。<br />
+原理：各个进程独立计算梯度，然后把上一个进程拿到的梯度传递给下一个进程，循环 n 次后，每个进程就得到了所有的梯度。<br />
+这样每<strong>个进程只跟自己上下游的两个进程进行通讯，缓解了通讯阻塞</strong>。同时这种 Ring-Reduce 算法的通信成本是恒定的，与系统中 gpu 的数量无关，完全由系统中 gpu 之间最慢的连接决定。</li>
+<li>DDP 中，每个进程都包含一个独立的Python解释器，使用多进程减缓 Python GIF 的限制。<br />
+Python GIF 表示一个 Python 进程只能利用一个 CPU 核心，不适合用于计算密集型任务。</li>
+</ul>
+</li>
+<li>使用模式：
+<ul>
+<li>每个进程/模型<strong>一张卡</strong>：最常见。</li>
+<li>每个进程/模型<strong>多张卡</strong>：Data parallel。一个模型复制在多张卡上，每个进程相当于使用了 DP 模型。</li>
+<li>每个进程/模型<strong>多张卡</strong>：Model parallel。一个模型的不同部分分布在不同的卡上，在模型太大时使用 （见 Reference 4）。</li>
+</ul>
+</li>
+</ul>
+<h2 id="一些分布式的概念"><a class="markdownIt-Anchor" href="#一些分布式的概念"></a> 一些分布式的概念</h2>
+<ul>
+<li>group：进程组，一般只有一个组。</li>
+<li>world size：全局并行的进程数量。<br />
+调用<code>torch.distributed.get_world_size()</code>方法得到，不同进程中调用得到的结果都是一样的。</li>
+<li>rank：当前进程的序号/优先级，用于<strong>进程间通讯</strong>。rank索引是从0开始，同时<code>rank=0</code>的进程为master进程。</li>
+<li>local_rank ：当前进程对应的GPU号，用于<strong>本地设备分配</strong>。</li>
+</ul>
+<blockquote>
+<p>举个栗子 ：4台机器(每台机器8张卡)进行分布式训练， 通过 init_process_group() 对进程组进行初始化。<br />
+初始化后，world size = 32，即有32个进程；其 rank 为 0-31 ；在每台机器上，local_rank 均为 0-8，local_rank 会对应到实际的 GPU ID上 (单机多任务的情况下注意CUDA_VISIBLE_DEVICES的使用，控制不同程序可见的GPU device)。</p>
+</blockquote>
+<!-- ## 先决条件
+DDP 依赖 ProcessGroup 进行设备间的交流，所以在定义 DDP 前必须调用方法 `torch.distributed.init_precess_group()`
+官方 API：https://pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group
+
+## 分配任务
+DDP 的构造函数需要指定本地的模型，并以此给不同的进程广播其 `state_dict()` ，保证所有设备都得到了相同的一个模型。
+首先生成 N 个DDP进程，然后让每个进程在目标的 N 个 GPU 上独占工作，GPU 为`torch.cuda.set_device(i)`。
+
+## 任务流程
+每个DDP进程都构造了本地 `Reducer`，负责反向传播时的**梯度共享**。 -->
+<h2 id="工作流程"><a class="markdownIt-Anchor" href="#工作流程"></a> 工作流程</h2>
+<ol>
+<li>根据 <code>local_rank</code> 指定使用哪块 GPU：<code>torch.cuda.set_device(local_rank)</code></li>
+<li>多进程初始化：<code>dist.init_precess_group()</code></li>
+<li>将模型放入单独的GPU上：<code>device=torch.device('cuda',local_rank)</code>, <code>model.to(device)</code>。</li>
+<li>初始化 DDP模型： <code>model=DDP(model, device_ids=[local_rank], output_device=local_rank)</code>，被封装后的模型参数的梯度才能进行 all reduce。</li>
+<li>创建对应的 <code>DistributedSampler</code>进行数据分配，确保进程读到的数据不重复。</li>
+<li>使用 <code>torch.distributed.launch</code> / <code>torch.multiprocessing</code> 或 <code>slurm</code> 在每个主机上执行一次脚本，开始训练。<br />
+在训练时，通过<code>if rank == 0</code>判断是否为 master ，然后只让 master 打印一些结果。在调用<code>backward</code>时，每个进程中的梯度都是一样的。</li>
+<li>保存参数：只需要在进程 0 上保存一个即可，避免多次重复保存。保存的是 <code>model.module</code> ，因为原始的 model 为<code>DDP(model)</code>。</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="keyword">from</span> torch.nn.parallel <span class="keyword">import</span> DistributedDataParallel <span class="keyword">as</span> DDP</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">build_dataloader</span>(<span class="params">tokenizer, data_fn, batch_size, shuffle, max_length=<span class="number">1024</span></span>):</span><br><span class="line">    dataset = BelleDataset(data_fn)</span><br><span class="line">    <span class="comment">############### DistributedSampler ###############</span></span><br><span class="line">    datasampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=shuffle)</span><br><span class="line">    dataloader = DataLoader(dataset, batch_size=batch_size,</span><br><span class="line">                            shuffle=<span class="literal">False</span>, <span class="comment"># 使用sampler时，shuffle设置为False</span></span><br><span class="line">                            sampler=datasampler,</span><br><span class="line">                            collate_fn=partial(BelleDataset.collate_fn, tokenizer=tokenizer, max_length=max_length))</span><br><span class="line">    <span class="keyword">return</span> dataloader</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">...</span>):</span><br><span class="line">    dist.init_process_group(<span class="string">&quot;nccl&quot;</span>, rank=..., world_size=...)</span><br><span class="line"></span><br><span class="line">    <span class="comment">############### 判断gpu or cpu ###############</span></span><br><span class="line">    local_rank = <span class="built_in">int</span>(os.environ[<span class="string">&quot;LOCAL_RANK&quot;</span>])</span><br><span class="line">    device = torch.device(<span class="string">f&#x27;cuda:<span class="subst">&#123;local_rank&#125;</span>&#x27;</span> <span class="keyword">if</span> torch.cuda.is_available() <span class="keyword">else</span> <span class="string">&#x27;cpu&#x27;</span>)</span><br><span class="line">    model = model.to(device)</span><br><span class="line"></span><br><span class="line">    <span class="comment">############### 使用apex/DDP ###############</span></span><br><span class="line">    model = DDP(model, device_ids=[local_rank])</span><br><span class="line">    optimizer = AdamW(model.parameters(), lr=<span class="number">1e-5</span>)</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> dist.get_rank() == <span class="number">0</span>:</span><br><span class="line">        torch.save(model.module, <span class="string">&quot;save_model.ckpt&quot;</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="数据分配"><a class="markdownIt-Anchor" href="#数据分配"></a> 数据分配</h2>
+<p>这些操作需要等到DDP初始化之后进行：<br />
+我们需要让各个进程之间的数据各不相同，共同组成一个 epoch 的数据。</p>
+<ol>
+<li>使用 <code>DistributedSampler</code>方法封装dataset，来得到一个 <code>sampler</code>。</li>
+<li>然后将这个 <code>sampler</code> 放入 <code>dataloader</code> 中，这里的 <code>batch_size</code> 指的是每个进程下的 <code>batch_size</code>，即<strong>总batch_size/word_size</strong>。</li>
+<li>在每一轮 epoch 最开始，需要设置这个 <code>sampler</code> 的 <code>set_epoch()</code> 方法来维持各个进程之间的相同随机种子。</li>
+</ol>
+<h2 id="ddp类初始化函数"><a class="markdownIt-Anchor" href="#ddp类初始化函数"></a> DDP类初始化函数</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">torch.nn.parallel.DistributedDataParallel(module, device_ids=None, output_device=None,</span><br><span class="line">                                          dim=0, broadcast_buffers=True, process_group=None, bucket_cap_mb=25,</span><br><span class="line">                                          find_unused_parameters=False, check_reduction=False,</span><br><span class="line">                                          gradient_as_bucket_view=False, static_graph=False)</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>module (Module)</code>：模型</li>
+<li><code>device_ids (list of python:int or torch.device)</code>：对于单机的模型，<code>device_ids</code>只能有一个device_id，即输入对应的线程id。对于多机模型，必须为 <code>None</code>。</li>
+<li><code>output_device (int or torch.device)</code>：单机模型的输出地址；同理多机模型，必须为 <code>None</code>。</li>
+</ul>
+<h1 id="torchdistributed-包"><a class="markdownIt-Anchor" href="#torchdistributed-包"></a> torch.distributed 包</h1>
+<p><a target="_blank" rel="noopener" href="https://pytorch.org/tutorials/beginner/dist_overview.html">PYTORCH DISTRIBUTED OVERVIEW</a><br />
+<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#distributed-communication-package-torch-distributed">API- TORCH.DISTRIBUTED NOTE</a></p>
+<p>支持<strong>一台或多台</strong>机器上运行的多个计算节点上的多进程并行运算<br />
+<code>torch.nn.parallel.DistributedDataParallel</code>类就是基于此构造的，包装 PyTorch模型来提供同步分布式训练。<br />
+和 <code>torch.multiprocessing</code> 和 <code>torch.nn.DataParallel</code> 不同，<code>torch.distributed</code> 支持<strong>联网</strong>的多机并行操作。同时，用户必须显示地为每个进程设置（launch）训练脚本的拷贝。</p>
+<h2 id="init_process_group-初始化方法"><a class="markdownIt-Anchor" href="#init_process_group-初始化方法"></a> init_process_group() 初始化方法</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">torch.distributed.init_process_group( backend,</span><br><span class="line">                                      init_method=None,</span><br><span class="line">                                      timeout=datetime.timedelta(seconds=1800),</span><br><span class="line">                                      world_size = -1,</span><br><span class="line">                                      rank = -1,</span><br><span class="line">                                      store = None,</span><br><span class="line">                                      group_name = &#x27;&#x27;,</span><br><span class="line">                                      pg_options = None )</span><br></pre></td></tr></table></figure>
+<ul>
+<li>参数：
+<ul>
+<li><code>backend (str or Backend)</code>：“mpi”, “gloo”, “nccl” ，指定当前进程要使用的<strong>进程通信后端</strong>。</li>
+<li><code>init_method (str, optional)</code>：指定当前进程组初始化方式，URL 字符串类型。<br />
+如果未指定 <code>init_method</code>和<code>store</code>参数，则默认 <code>init_method='env://'</code>，即每个进程从环境变量中获取当前节点和其他节点的信息。<br />
+该参数与 <code>store</code> 参数互斥。</li>
+<li><code>store (Store, optional)</code>：共享的 <code>key / value</code>，传入字典的键值对来指定节点的信息。与 <code>init_method</code> 互斥。</li>
+<li><code>world_size (int, optional)</code>：总进程数量。如果指定 <code>store</code> 参数，则必须指定该参数。</li>
+<li><code>rank (int, optional)</code>：当前进程的序号/优先级。如果指定 <code>store</code> 参数，则必须指定该参数。</li>
+</ul>
+</li>
+<li>作用：<strong>初始化</strong>进程组中的每个进程，需要在调用任何其他方法之前使用。</li>
+<li>需要保证：
+<ul>
+<li>不同进程的<code>rank</code>值不同，但是master的<code>rank</code>必须为0。</li>
+<li>并且使用<code>init_method()</code>的ip必须要和master的ip相同。</li>
+<li><code>world_size</code>要保证是所有进程数量，当进程没有达到这个数量时，程序会一直等待导致不运行。</li>
+</ul>
+</li>
+<li>一共有两种最主要的初始化方式：
+<ul>
+<li>显示地声明参数 <code>store</code>, <code>rank</code>, <code>world_size</code></li>
+<li>声明 url 字符串参数 <code>init_method</code> ，来隐式声明如何找到其他节点。可以选择在url中指定参数<code>rank</code>, <code>world_size</code>，或者将所有参数编到url中。</li>
+</ul>
+</li>
+</ul>
+<h2 id="初始化方式"><a class="markdownIt-Anchor" href="#初始化方式"></a> 初始化方式</h2>
+<p>三种初始化方式<code>init_method</code> 对应三种进程联系的方式。</p>
+<h3 id="tcp-initialization"><a class="markdownIt-Anchor" href="#tcp-initialization"></a> TCP initialization</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">dist.init_process_group( backend=&#x27;nccl&#x27;,</span><br><span class="line">                         init_method=args.init_method,</span><br><span class="line">                         rank=args.rank,</span><br><span class="line">                         world_size=args.word_size )</span><br><span class="line"></span><br><span class="line">---------------------------------------</span><br><span class="line"># Node 1 : ip 192.168.1.201  port : 12345</span><br><span class="line">python tcp_init.py --init_method tcp://192.168.1.201:12345 --rank 0 --word_size 3</span><br><span class="line"></span><br><span class="line"># Node 2 :</span><br><span class="line">python tcp_init.py --init_method tcp://192.168.1.201:12345 --rank 1 --word_size 3</span><br><span class="line"></span><br><span class="line"># Node 3 :</span><br><span class="line">python tcp_init.py --init_method tcp://192.168.1.201:12345 --rank 2 --word_size 3</span><br></pre></td></tr></table></figure>
+<ol>
+<li>在 TCP 方式中，在 <code>init_process_group</code> 中必须手动指定以下参数：
+<ul>
+<li><code>rank</code> 为当前进程的进程号</li>
+<li><code>word_size</code> 为当前 job 的总进程数</li>
+<li><code>init_method</code> 内指定 tcp 模式，且所有进程的 <code>ip:port</code> 必须一致，设定为主进程的 <code>ip:port</code></li>
+</ul>
+</li>
+<li>必须在 <code>rank==0</code> 的进程内保存参数</li>
+<li>若程序内未根据 rank 设定当前进程使用的 GPUs，则默认使用全部 GPU，且以数据并行的方式使用。</li>
+<li>每条命令表示一个进程。若已开启的进程未达到 word_size 的数量，则所有进程会一直等待</li>
+<li>每台主机上可以开启多个进程。但是，若未为每个进程分配合适的 GPU，则同机不同进程可能会共用 GPU，应该坚决避免这种情况。</li>
+</ol>
+<h3 id="shared-file-system-initialization"><a class="markdownIt-Anchor" href="#shared-file-system-initialization"></a> Shared file-system initialization</h3>
+<p>URL 以 <code>file://filename</code> 开始，应该是一个存在文件夹<code>file</code>中的非存在文件<code>filename</code>，这样系统会新建这个文件让进程间共享。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dist.init_process_group(backend, init_method=&#x27;file:///mnt/nfs/sharedfile&#x27;,</span><br><span class="line">                        world_size=4, rank=args.rank)</span><br></pre></td></tr></table></figure>
+<h3 id="environment-variable-initialization"><a class="markdownIt-Anchor" href="#environment-variable-initialization"></a> Environment variable initialization</h3>
+<p>从环境变量中拿到自定义的配置信息，环境变量为:</p>
+<ol>
+<li><code>MASTER_PORT</code> - required; master机器上的空闲端口</li>
+<li><code>MASTER_ADDR</code> - required (除了rank 0); master机器的地址</li>
+<li><code>WORLD_SIZE</code> - required; 这里和函数中都可以设定。</li>
+<li><code>RANK</code> - required; 这里和函数中都可以设定。</li>
+</ol>
+<p>是一种默认的方式，这种方式下可以不给 <code>init_method</code> 参数赋值，或者令<code>init_method = &quot;env://&quot;</code>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># 注意这个参数，必须要以这种形式指定，即使代码中不使用。因为 launch 工具默认传递该参数</span><br><span class="line">parser.add_argument(&quot;--local_rank&quot;, type=int)</span><br><span class="line"></span><br><span class="line">dist.init_process_group(backend=&#x27;nccl&#x27;, init_method=&#x27;env://&#x27;)</span><br><span class="line"></span><br><span class="line">---------------------------------------</span><br><span class="line">python -m torch.distributed.launch --nproc_per_node=2 --nnodes=3 --node_rank=0 --master_addr=&quot;192.168.1.201&quot; --master_port=23456 env_init.py</span><br><span class="line">python -m torch.distributed.launch --nproc_per_node=2 --nnodes=3 --node_rank=1 --master_addr=&quot;192.168.1.201&quot; --master_port=23456 env_init.py</span><br><span class="line">python -m torch.distributed.launch --nproc_per_node=2 --nnodes=3 --node_rank=2 --master_addr=&quot;192.168.1.201&quot; --master_port=23456 env_init.py</span><br></pre></td></tr></table></figure>
+<ol>
+<li>在 <code>init_process_group</code> 中，无需指定任何参数</li>
+<li>必须在 <code>rank==0</code> 的进程内保存参数。</li>
+<li>该方式下，使用 <code>torch.distributed.launch</code> 在每台主机上，为其创建多进程，其中:
+<ul>
+<li><code>nproc_per_node</code> 参数指定为当前主机创建的进程数。一般设定为当前主机的 GPU 数量。</li>
+<li><code>nnodes</code> 参数指定当前 job 包含多少个节点</li>
+<li><code>node_rank</code> 指定当前节点的优先级</li>
+<li><code>master_addr</code> 和 <code>master_port</code> 分别指定 master 节点的 ip:port</li>
+</ul>
+</li>
+<li>若没有为每个进程合理分配 GPU，则默认使用当前主机上所有的 GPU。即使一台主机上有多个进程，也会共用 GPU。</li>
+<li>使用 <code>torch.distributed.launch</code> 工具时，将会为当前主机创建 <code>nproc_per_node</code> 个进程，每个进程独立执行训练脚本。<br />
+同时，它还会自动为每个进程独立地分配一个 local_rank 参数，表示当前进程在当前主机上的编号。例如：<code>rank=2,  local_rank=0</code> 表示第 3 个节点上的第 1 个进程。</li>
+<li>需要合理利用 local_rank 参数，来合理分配本地的 GPU 资源</li>
+<li>每条命令表示一个进程。若已开启的进程未达到 word_size 的数量，则所有进程会一直等待</li>
+</ol>
+<h2 id="get-方法"><a class="markdownIt-Anchor" href="#get-方法"></a> get() 方法</h2>
+<ul>
+<li><code>torch.distributed.is_initialized()</code>：在前面开启进程组后，检查默认进程组是否被初始化。</li>
+<li><code>torch.distributed.get_backend(group=&lt;object&gt;)</code>：参数为<code>group</code>，要获取信息的进程组，返回 <code>lower-case string</code> 描述的 backend。</li>
+<li><code>torch.distributed.get_rank(group=&lt;object&gt;)</code>：参数为<code>group</code>，返回当前进程的 rank（索引从0开始）。</li>
+<li><code>torch.distributed.get_world_size(group=&lt;object&gt;)</code><br />
+支持 Linux, MacOS 和 Windows，需要设置环境变量 <code>USE_DISTRIBUTED=1</code>（Linux和Windows默认为1，Mac默认为0）。</li>
+<li><code>torch.distributed.is_mpi_available()</code>：检查 MPI 后端是否可用。</li>
+<li><code>torch.distributed.is_nccl_available()</code></li>
+</ul>
+<h2 id="distributed-key-value-store"><a class="markdownIt-Anchor" href="#distributed-key-value-store"></a> Distributed Key-Value Store</h2>
+<ul>
+<li>用于：
+<ul>
+<li>进程组内的进程共享信息</li>
+<li>在 <code>.init_process_group()</code> 方法中初始化 distributed package</li>
+</ul>
+</li>
+<li>三种方式：<code>TCPStore</code>，<code>FileStore</code>，<code>HashStore</code></li>
+</ul>
+<h1 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> Reference</h1>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/xixiaoyaoww/article/details/115436052">新手手册：Pytorch分布式训练</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/76638962">Pytorch 分布式训练</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/343951042">PyTorch 源码解读之 DP &amp; DDP：模型并行和分布式训练解析</a></li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/136372142">PyTorch的分布式</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/03/22/NLP/%E5%85%B3%E7%B3%BB%E6%8A%BD%E5%8F%96/SpERT/" rel="prev" title="SpERT">
+      <i class="fa fa-chevron-left"></i> SpERT
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/" rel="next" title="7.1 分布式原语">
+      7.1 分布式原语 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#torchnndataparallel-%E7%B1%BB"><span class="nav-number">1.</span> <span class="nav-text"> torch.nn.DataParallel 类</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#torchnnparalleldistributeddataparallel-%E7%B1%BB"><span class="nav-number">2.</span> <span class="nav-text"> torch.nn.parallel.DistributedDataParallel 类</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%BA%9B%E5%88%86%E5%B8%83%E5%BC%8F%E7%9A%84%E6%A6%82%E5%BF%B5"><span class="nav-number">2.1.</span> <span class="nav-text"> 一些分布式的概念</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text"> 工作流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%88%86%E9%85%8D"><span class="nav-number">2.3.</span> <span class="nav-text"> 数据分配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ddp%E7%B1%BB%E5%88%9D%E5%A7%8B%E5%8C%96%E5%87%BD%E6%95%B0"><span class="nav-number">2.4.</span> <span class="nav-text"> DDP类初始化函数</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#torchdistributed-%E5%8C%85"><span class="nav-number">3.</span> <span class="nav-text"> torch.distributed 包</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#init_process_group-%E5%88%9D%E5%A7%8B%E5%8C%96%E6%96%B9%E6%B3%95"><span class="nav-number">3.1.</span> <span class="nav-text"> init_process_group() 初始化方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%96%B9%E5%BC%8F"><span class="nav-number">3.2.</span> <span class="nav-text"> 初始化方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#tcp-initialization"><span class="nav-number">3.2.1.</span> <span class="nav-text"> TCP initialization</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#shared-file-system-initialization"><span class="nav-number">3.2.2.</span> <span class="nav-text"> Shared file-system initialization</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#environment-variable-initialization"><span class="nav-number">3.2.3.</span> <span class="nav-text"> Environment variable initialization</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#get-%E6%96%B9%E6%B3%95"><span class="nav-number">3.3.</span> <span class="nav-text"> get() 方法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#distributed-key-value-store"><span class="nav-number">3.4.</span> <span class="nav-text"> Distributed Key-Value Store</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text"> Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

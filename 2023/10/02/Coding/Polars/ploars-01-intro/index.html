@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="底层为 Rust ，支持 Lazy mode ，类似于 pyspark ，先编译操作的行为，最后统一内部处理，来节省操作复杂度 。  Into  Data types : https:&#x2F;&#x2F;pola-rs.github.io&#x2F;polars&#x2F;user-guide&#x2F;concepts&#x2F;data-types&#x2F; Data structure : No index  Series : 1-dimensional">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ploars_01_intro">
+<meta property="og:url" content="http://example.com/2023/10/02/Coding/Polars/ploars-01-intro/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="底层为 Rust ，支持 Lazy mode ，类似于 pyspark ，先编译操作的行为，最后统一内部处理，来节省操作复杂度 。  Into  Data types : https:&#x2F;&#x2F;pola-rs.github.io&#x2F;polars&#x2F;user-guide&#x2F;concepts&#x2F;data-types&#x2F; Data structure : No index  Series : 1-dimensional">
+<meta property="og:locale">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/MIk2xXm4aoDfBkKxBTokOvASdjS6r1MAD8A_scNGOZw.original.fullsize.png">
+<meta property="article:published_time" content="2023-10-03T06:23:42.000Z">
+<meta property="article:modified_time" content="2024-03-11T02:59:01.945Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.mathpix.com/snip/images/MIk2xXm4aoDfBkKxBTokOvASdjS6r1MAD8A_scNGOZw.original.fullsize.png">
+
+<link rel="canonical" href="http://example.com/2023/10/02/Coding/Polars/ploars-01-intro/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>ploars_01_intro | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/10/02/Coding/Polars/ploars-01-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ploars_01_intro
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-10-02 23:23:42" itemprop="dateCreated datePublished" datetime="2023-10-02T23:23:42-07:00">2023-10-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Data-Analysis-Package/" itemprop="url" rel="index"><span itemprop="name">Data Analysis Package</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Data-Analysis-Package/Ploars/" itemprop="url" rel="index"><span itemprop="name">Ploars</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.7k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>13 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>底层为 Rust ，支持 Lazy mode ，类似于 pyspark ，先编译操作的行为，最后统一内部处理，来节省操作复杂度 。</p>
+<h1 id="into"><a class="markdownIt-Anchor" href="#into"></a> Into</h1>
+<ul>
+<li>Data types : <a target="_blank" rel="noopener" href="https://pola-rs.github.io/polars/user-guide/concepts/data-types/">https://pola-rs.github.io/polars/user-guide/concepts/data-types/</a></li>
+<li>Data structure : <strong>No index</strong>
+<ul>
+<li>Series : 1-dimensional</li>
+<li>DataFrame : an abstraction of a collection (e.g. list) of Series</li>
+</ul>
+</li>
+</ul>
+<span id="more"></span>
+<h1 id="create"><a class="markdownIt-Anchor" href="#create"></a> Create</h1>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings_data = &#123;</span></span><br><span class="line">...      &quot;sqft&quot;: rng.exponential(scale=1000, size=num_rows),</span><br><span class="line">...      &quot;year&quot;: rng.integers(low=1995, high=2023, size=num_rows),</span><br><span class="line">...      &quot;building_type&quot;: rng.choice([&quot;A&quot;, &quot;B&quot;, &quot;C&quot;], size=num_rows),</span><br><span class="line">...  &#125;</span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings = pl.DataFrame(buildings_data)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings</span></span><br><span class="line">shape: (5_000, 3)</span><br><span class="line">┌─────────────┬──────┬───────────────┐</span><br><span class="line">│ sqft        ┆ year ┆ building_type │</span><br><span class="line">│ ---         ┆ ---  ┆ ---           │</span><br><span class="line">│ f64         ┆ i64  ┆ str           │</span><br><span class="line">╞═════════════╪══════╪═══════════════╡</span><br><span class="line">│ 707.529256  ┆ 1996 ┆ C             │</span><br><span class="line">│ 1025.203348 ┆ 2020 ┆ C             │</span><br><span class="line">│ 568.548657  ┆ 2012 ┆ A             │</span><br><span class="line">│ 895.109864  ┆ 2000 ┆ A             │</span><br><span class="line">│ …           ┆ …    ┆ …             │</span><br><span class="line">│ 408.872783  ┆ 2009 ┆ C             │</span><br><span class="line">│ 57.562059   ┆ 2019 ┆ C             │</span><br><span class="line">│ 3728.088949 ┆ 2020 ┆ C             │</span><br><span class="line">│ 686.678345  ┆ 2011 ┆ C             │</span><br><span class="line">└─────────────┴──────┴───────────────┘</span><br></pre></td></tr></table></figure>
+<h1 id="operation-domain-specific-language-dsl-context-and-expression"><a class="markdownIt-Anchor" href="#operation-domain-specific-language-dsl-context-and-expression"></a> Operation / Domain Specific Language (DSL) : Context and Expression</h1>
+<p>Two main operations : context – verbs &amp;&amp; expression – nouns</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://pola-rs.github.io/polars/user-guide/concepts/contexts/">Contexts</a>
+<ul>
+<li>Definition : determine the specific environment in which an <strong>expression</strong> is evaluated and executed.</li>
+<li>Three main contexts:
+<ul>
+<li><strong>Selection</strong> :<br />
+Apply expression over columns , the expression <strong>produce Series</strong> of the same length or of a length of 1 .<br />
+The 1-length result will be <strong>broadcasted</strong> to match the height of the DataFrame .<br />
+<code>select</code> <strong>drops</strong> the original columns ; <code>with_columns</code> <strong>retains</strong> the original columns .</li>
+<li><strong>Filtering</strong> : filter the existing dataframe based on <strong>expression that evaluates to Boolean data type</strong></li>
+<li><strong>Groupby/aggregation</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a target="_blank" rel="noopener" href="https://pola-rs.github.io/polars/user-guide/concepts/expressions/">Expressions</a> :
+<ul>
+<li>Definition : a map from a series too a series<br />
+computations or transformations performed on <strong>data columns</strong> , allowing to apply operations to derive new column results.</li>
+<li>Including : mathematical operations, aggregations, comparisons, string manipulations, etc.</li>
+<li>Features :
+<ul>
+<li>Can pipe different expression togethers</li>
+<li>Doesn’t always run in the specified order. Instead, Polars optimizes the order in which expressions are evaluated in a query.</li>
+<li>Run in parallel: the work is spread across available cores.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>For instance, <code>buildings.select(pl.col(&quot;sqft&quot;))</code> : <code>pl.col(&quot;sqft&quot;)</code> is the expression that passed to the <code>buildings.select()</code> context .</p>
+<p>More:</p>
+<ul>
+<li>select : <code>buildings.select(pl.col(&quot;sqft&quot;).sort() / 1000)</code></li>
+<li>filter + select : <code>buildings.filter(pl.col(&quot;year&quot;) &gt; 2015).select(pl.col(&quot;year&quot;).min())</code>: put <code>select()</code> after <code>filter()</code></li>
+<li>groupby + agg :  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings.groupby(<span class="string">&quot;building_type&quot;</span>).agg(</span></span><br><span class="line">...      [</span><br><span class="line">...          pl.mean(&quot;sqft&quot;).alias(&quot;mean_sqft&quot;),</span><br><span class="line">...          pl.median(&quot;year&quot;).alias(&quot;median_year&quot;),</span><br><span class="line">...          pl.count(),</span><br><span class="line">...      ]</span><br><span class="line">...  )</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="lazy-api"><a class="markdownIt-Anchor" href="#lazy-api"></a> Lazy API</h1>
+<p><a target="_blank" rel="noopener" href="https://pola-rs.github.io/polars/user-guide/lazy/using/">Lazy API</a> : <strong>Evaluate sophisticated expressions</strong> on large datasets while <strong>keeping memory efficiency</strong> in mind.</p>
+<ul>
+<li>The object is <strong>LazyFrame</strong></li>
+<li>Allow to specify a sequence of operations <strong>without immediately running them</strong>.</li>
+<li>Operations are saved as <strong>a computation graph</strong> and run when necessary，allowing Polars <strong>optimize queries before execution</strong> and <strong>catch errors</strong>, and <strong>perform memory-efficient queries</strong> on datasets that don’t fit into memory.</li>
+</ul>
+<h2 id="create-2"><a class="markdownIt-Anchor" href="#create-2"></a> Create</h2>
+<ul>
+<li>create a LazyFrame from buildings : <code>pl.LazyFrame()</code>  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; import numpy as np</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; import polars as pl</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; num_rows = 5000</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; rng = np.random.default_rng(seed=7)</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings = &#123;</span></span><br><span class="line">...      &quot;sqft&quot;: rng.exponential(scale=1000, size=num_rows),</span><br><span class="line">...      &quot;price&quot;: rng.exponential(scale=100_000, size=num_rows),</span><br><span class="line">...      &quot;year&quot;: rng.integers(low=1995, high=2023, size=num_rows),</span><br><span class="line">...      &quot;building_type&quot;: rng.choice([&quot;A&quot;, &quot;B&quot;, &quot;C&quot;], size=num_rows),</span><br><span class="line">...   &#125;</span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings_lazy = pl.LazyFrame(buildings)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; buildings_lazy</span></span><br><span class="line">&lt;polars.LazyFrame object at 0x106D19950&gt;</span><br></pre></td></tr></table></figure>
+</li>
+<li>convert an existing DataFrame to a LazyFrame : <code>.lazy()</code></li>
+<li><strong>scan a file, rather than reading the entire file into memory</strong>, create a LazyFrame to refer the data  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; lazy_car_data = pl.scan_csv(local_file_path)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; lazy_car_data</span></span><br><span class="line">&lt;polars.LazyFrame object at 0x10292EC50&gt;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; lazy_car_data.schema</span></span><br><span class="line">&#123;&#x27;VIN (1-10)&#x27;: Utf8, &#x27;County&#x27;: Utf8, &#x27;City&#x27;: Utf8, &#x27;State&#x27;: Utf8,</span><br><span class="line">&#x27;Postal Code&#x27;: Int64, &#x27;Model Year&#x27;: Int64, &#x27;Make&#x27;: Utf8, &#x27;Model&#x27;: Utf8,</span><br><span class="line">&#x27;Electric Vehicle Type&#x27;: Utf8, &#x27;Clean Alternative Fuel Vehicle (CAFV) Eligibility&#x27;: Utf8,</span><br><span class="line">&#x27;Electric Range&#x27;: Int64, &#x27;Base MSRP&#x27;: Int64, &#x27;Legislative District&#x27;: Int64,</span><br><span class="line">&#x27;DOL Vehicle ID&#x27;: Int64, &#x27;Vehicle Location&#x27;: Utf8, &#x27;Electric Utility&#x27;: Utf8,</span><br><span class="line">&#x27;2020 Census Tract&#x27;: Int64&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="query-and-explain"><a class="markdownIt-Anchor" href="#query-and-explain"></a> Query and Explain</h2>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; lazy_query = (</span></span><br><span class="line">...     buildings_lazy</span><br><span class="line">...     .with_columns(</span><br><span class="line">...         (pl.col(&quot;price&quot;) / pl.col(&quot;sqft&quot;)).alias(&quot;price_per_sqft&quot;)</span><br><span class="line">...     )</span><br><span class="line">...     .filter(pl.col(&quot;price_per_sqft&quot;) &gt; 100)</span><br><span class="line">...     .filter(pl.col(&quot;year&quot;) &lt; 2010)</span><br><span class="line">...  )</span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; lazy_query</span></span><br><span class="line">&lt;polars.LazyFrame object at 0x10B6AF290&gt;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>show graph : <code>&gt;&gt;&gt; lazy_query.show_graph()</code> , read from bottom to the top .<br />
+<strong>Sigma (σ) and pi (π)</strong> are symbols from <strong>relational algebra</strong>, and they tell you the operation that you’re performing on the data.<br />
+<img src="https://cdn.mathpix.com/snip/images/MIk2xXm4aoDfBkKxBTokOvASdjS6r1MAD8A_scNGOZw.original.fullsize.png" alt="" />
+<ul>
+<li>Process:
+<ul>
+<li><code>π */4</code> : working with all four columns</li>
+<li><code>σ(col(“year”)) &lt; 2010</code> : only processing rows with a year less than 2010</li>
+<li>Create the price_per_sqft column</li>
+<li>Filter buildings_lazy to all rows where price_per_sqft is greater than 100</li>
+</ul>
+</li>
+<li>Note : 1st-ly filter <code>“year”</code>  -&gt; <a target="_blank" rel="noopener" href="https://pola-rs.github.io/polars/user-guide/lazy/optimizations/">predicate push down</a> , a Plolar optimization that <strong>makes queries more memory efficient</strong> by <strong>applying filters as early as possible</strong> and subsequently <strong>reducing the data size</strong> before further processing.</li>
+</ul>
+</li>
+<li>show more detailed full representation of the query plan , also read from bottom to the top: <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; <span class="built_in">print</span>(lazy_query.explain())</span></span><br><span class="line">FILTER [(col(&quot;price_per_sqft&quot;)) &gt; (100.0)] FROM WITH_COLUMNS:</span><br><span class="line">[[(col(&quot;price&quot;)) / (col(&quot;sqft&quot;))].alias(&quot;price_per_sqft&quot;)]</span><br><span class="line">DF [&quot;sqft&quot;, &quot;price&quot;, &quot;year&quot;, &quot;building_type&quot;];</span><br><span class="line">⮑ PROJECT */4 COLUMNS; SELECTION: &quot;[(col(\&quot;year\&quot;)) &lt; (2010)]&quot;</span><br></pre></td></tr></table></figure>
+</li>
+<li>get result : call <code>.collect()</code> on lazy query , return a regular Polars DataFrame</li>
+</ul>
+<h1 id="seamless-integration"><a class="markdownIt-Anchor" href="#seamless-integration"></a> Seamless Integration</h1>
+<ul>
+<li>write  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data.write_csv(<span class="string">&quot;data.csv&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data.write_ndjson(<span class="string">&quot;data.json&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data.write_parquet(<span class="string">&quot;data.parquet&quot;</span>)</span></span><br></pre></td></tr></table></figure>
+</li>
+<li>read / scan  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_csv = pl.read_csv(<span class="string">&quot;data.csv&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_csv_lazy = pl.scan_csv(<span class="string">&quot;data.csv&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_csv_lazy.schema</span></span><br><span class="line">&#123;&#x27;A&#x27;: Int64, &#x27;B&#x27;: Int64&#125;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_json = pl.read_ndjson(<span class="string">&quot;data.json&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_json_lazy = pl.scan_ndjson(<span class="string">&quot;data.json&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_json_lazy.schema</span></span><br><span class="line">&#123;&#x27;A&#x27;: Int64, &#x27;B&#x27;: Int64&#125;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_parquet = pl.read_parquet(<span class="string">&quot;data.parquet&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_parquet_lazy = pl.scan_parquet(<span class="string">&quot;data.parquet&quot;</span>)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; data_parquet_lazy.schema</span></span><br><span class="line">&#123;&#x27;A&#x27;: Int64, &#x27;B&#x27;: Int64&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li>load from a pandas / numpy data : do data process using Ploars, then convert the results to a NumPy array before feeding it to your model.  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; pl.from_pandas(pandas_data)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; polars_data.to_pandas()</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; pl.from_numpy(numpy_data, schema=&#123;<span class="string">&quot;A&quot;</span>: pl.Int64, <span class="string">&quot;B&quot;</span>: pl.Int64&#125;)</span></span><br><span class="line"><span class="meta prompt_">&gt;</span><span class="language-bash">&gt;&gt; polars_data.to_numpy()</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="test"><a class="markdownIt-Anchor" href="#test"></a> Test</h2>
+<ul>
+<li><code>.fetch()</code> : Collect a small number of rows for debugging purposes .
+<ul>
+<li><code>n_rows: int = 500</code> : Collect n_rows from the data sources.</li>
+</ul>
+</li>
+</ul>
+<h1 id="expressions"><a class="markdownIt-Anchor" href="#expressions"></a> Expressions</h1>
+<h2 id="select"><a class="markdownIt-Anchor" href="#select"></a> Select</h2>
+<ul>
+<li>select a column : <code>df.select( pl.col( 'column_name' ))</code></li>
+<li>select all columns : <code>df.select(pl.col(&quot;*&quot;))</code> / <code>df.select(pl.all())</code></li>
+<li>select all columns except some : <code>df.select(pl.col(&quot;*&quot;).exclude(&quot;logged_at&quot;, &quot;rn&quot;))</code></li>
+<li>select some columns : <code>df.select(pl.col(&quot;date&quot;, &quot;sales&quot;))</code></li>
+<li>specify multiple strings : <code>df.select(pl.col(&quot;date&quot;, &quot;logged_at&quot;).dt.to_string(&quot;%Y-%h-%d&quot;))</code> , noticed that the original format is suitable.</li>
+<li>By regular expressions : <code>df.select(pl.col(&quot;^.*(as|sa).*$&quot;))</code> 正则表达式</li>
+<li>By data type : <code>pl.col( pl.Int64,  pl.Boolean )</code></li>
+<li>Get Unique : <code>pl.col( 'col_num' ).unique()</code></li>
+<li>Count unique : <code>pl.col( df.n_unique() )</code> global table unique ; <code>df.select(pl.col('logged_at', 'date').n_unique())</code> unique per each columns</li>
+<li><strong>Selector</strong> : select based on columns name, dtype, or other properties. -&gt; <code>import polars.selectors as cs</code>
+<ul>
+<li>by dtype: <code>df.select( cs.integer(), cs.string() )</code></li>
+<li>except the 1st matched column: <code>df.select(cs.numeric() - cs.first())</code></li>
+<li>By patterns and substrings: <code>df.select( cs.contains('rn), cs.matches(&quot;.*_.*&quot;) )</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="numerical"><a class="markdownIt-Anchor" href="#numerical"></a> Numerical</h2>
+<p>= - * /</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">df_numerical = df.select(</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) + <span class="number">5</span>).alias(<span class="string">&quot;nrs + 5&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) - <span class="number">5</span>).alias(<span class="string">&quot;nrs - 5&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) * pl.col(<span class="string">&quot;random&quot;</span>)).alias(<span class="string">&quot;nrs * random&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) / pl.col(<span class="string">&quot;random&quot;</span>)).alias(<span class="string">&quot;nrs / random&quot;</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<h2 id="logic"><a class="markdownIt-Anchor" href="#logic"></a> Logic</h2>
+<p>&gt; , &lt; , == , &lt;= …  : return a <code>bool</code>-type series .</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">df_logical = df.select(</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) &gt; <span class="number">1</span>).alias(<span class="string">&quot;nrs &gt; 1&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;random&quot;</span>) &lt;= <span class="number">0.5</span>).alias(<span class="string">&quot;random &lt; .5&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) != <span class="number">1</span>).alias(<span class="string">&quot;nrs != 1&quot;</span>),</span><br><span class="line">    (pl.col(<span class="string">&quot;nrs&quot;</span>) == <span class="number">1</span>).alias(<span class="string">&quot;nrs == 1&quot;</span>),</span><br><span class="line">    ((pl.col(<span class="string">&quot;random&quot;</span>) &lt;= <span class="number">0.5</span>) &amp; (pl.col(<span class="string">&quot;nrs&quot;</span>) &gt; <span class="number">1</span>)).alias(<span class="string">&quot;and_expr&quot;</span>),  <span class="comment"># and</span></span><br><span class="line">    ((pl.col(<span class="string">&quot;random&quot;</span>) &lt;= <span class="number">0.5</span>) | (pl.col(<span class="string">&quot;nrs&quot;</span>) &gt; <span class="number">1</span>)).alias(<span class="string">&quot;or_expr&quot;</span>),  <span class="comment"># or</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<h2 id="function"><a class="markdownIt-Anchor" href="#function"></a> Function</h2>
+<ul>
+<li>
+<p>Alias : <code>alias()</code> ; <code>prefix()</code> ;  <code>suffix()</code> ; <code>map_alias()</code><br />
+can not use the same column multiple times -&gt; duplicate -&gt; <code>.alias(new_column_name)</code></p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    df_samename2 = df.select(pl.col(<span class="string">&quot;nrs&quot;</span>) + <span class="number">5</span>, pl.col(<span class="string">&quot;nrs&quot;</span>) - <span class="number">5</span>)</span><br><span class="line">    <span class="built_in">print</span>(df_samename2)</span><br><span class="line">excep   t Exception <span class="keyword">as</span> e:</span><br><span class="line">    <span class="built_in">print</span>(e)</span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">column with name &#x27;nrs&#x27; has more than one occurrences</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<p>Instead:</p>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">df_alias = df.select(</span><br><span class="line">    (pl.col(&quot;nrs&quot;) + 5).alias(&quot;nrs + 5&quot;),</span><br><span class="line">    (pl.col(&quot;nrs&quot;) - 5).alias(&quot;nrs - 5&quot;),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>Condition : when , then , otherwise</p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">df_conditional = df.select(</span><br><span class="line">    pl.col(<span class="string">&quot;nrs&quot;</span>),</span><br><span class="line">    pl.when(pl.col(<span class="string">&quot;nrs&quot;</span>) &gt; <span class="number">2</span>)</span><br><span class="line">    .then(pl.lit(<span class="literal">True</span>))</span><br><span class="line">    .otherwise(pl.lit(<span class="literal">False</span>))</span><br><span class="line">    .alias(<span class="string">&quot;conditional&quot;</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="difference"><a class="markdownIt-Anchor" href="#difference"></a> Difference</h2>
+<ul>
+<li><code>pl.col(var).diff( )</code> ： 计算和上面第 n 行的差值
+<ul>
+<li><code>n: int = 1</code>：Number of slots to shift</li>
+<li><code>null_behavior : &#123;‘ignore’, ‘drop’&#125;</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="casting"><a class="markdownIt-Anchor" href="#casting"></a> Casting</h2>
+<p>Goal: convert the DataType of a column  to a new one .</p>
+<p><code>cast()</code> function includes a parameter <code>strict=True</code> , when met a value that can not be converted , it will throw an  exception ;<br />
+otherwise, <code>strick=False</code> , it will convert that value to <code>null</code> .</p>
+<ul>
+<li>numeric -&gt; numeric : <code>.cast(pl.Float32)</code>, <code>.cast(pl.Int32)</code></li>
+<li>numeric -&gt; str : <code>.cast(pl.Utf8)</code></li>
+<li>boolean -&gt; numeric : <code>.cast(pl.Boolean)</code></li>
+<li>datatime -&gt; numerical : <code>.cast(pl.Float32)</code>, <code>.cast(pl.Int32)</code></li>
+<li>str &lt;-&gt; datatime : follow the <a target="_blank" rel="noopener" href="https://docs.rs/chrono/latest/chrono/format/strftime/index.html">chrono format syntax</a> for formatting  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">df = pl.DataFrame(</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="string">&quot;date&quot;</span>: pl.date_range(date(<span class="number">2022</span>, <span class="number">1</span>, <span class="number">1</span>), date(<span class="number">2022</span>, <span class="number">1</span>, <span class="number">5</span>), eager=<span class="literal">True</span>),</span><br><span class="line">        <span class="string">&quot;string&quot;</span>: [</span><br><span class="line">            <span class="string">&quot;2022-01-01&quot;</span>,</span><br><span class="line">            <span class="string">&quot;2022-01-02&quot;</span>,</span><br><span class="line">            <span class="string">&quot;2022-01-03&quot;</span>,</span><br><span class="line">            <span class="string">&quot;2022-01-04&quot;</span>,</span><br><span class="line">            <span class="string">&quot;2022-01-05&quot;</span>,</span><br><span class="line">        ],</span><br><span class="line">    &#125;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">out = df.select(</span><br><span class="line">    pl.col(<span class="string">&quot;date&quot;</span>).dt.to_string(<span class="string">&quot;%Y-%m-%d&quot;</span>),</span><br><span class="line">    pl.col(<span class="string">&quot;string&quot;</span>).<span class="built_in">str</span>.to_datetime(<span class="string">&quot;%Y-%m-%d&quot;</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="string"><a class="markdownIt-Anchor" href="#string"></a> String</h2>
+<p>For <code>Utf8</code> / <code>u32</code> datatype</p>
+<ul>
+<li>length : <code>pl.col(&quot;animal&quot;).str.lengths()</code>/  <code>pl.col(&quot;animal&quot;).str.n_chars()</code></li>
+<li>substring : <code>pl.col(&quot;animal&quot;).str.contains(&quot;cat|bit&quot;)</code> , <code>'|'</code> is ors</li>
+<li>starts_with / ends_with : <code>pl.col(&quot;animal&quot;).str.starts_with(&quot;rab&quot;)</code> , <code>pl.col(&quot;animal&quot;).str.ends_with(&quot;dog&quot;)</code></li>
+<li>extract a pattern :
+<ul>
+<li><code>pl.col(&quot;a&quot;).str.extract(r&quot;candidate=(\w+)&quot;</code> , get the str inside the `()``  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">df = pl.DataFrame(</span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">&quot;a&quot;</span>: [</span><br><span class="line">        <span class="string">&quot;http://vote.com/ballon_dor?candidate=messi&amp;ref=polars&quot;</span>,</span><br><span class="line">        <span class="string">&quot;http://vote.com/ballon_dor?candidat=jorginho&amp;ref=polars&quot;</span>,</span><br><span class="line">        <span class="string">&quot;http://vote.com/ballon_dor?candidate=ronaldo&amp;ref=polars&quot;</span>,</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br><span class="line">)</span><br><span class="line">out = df.select(</span><br><span class="line">    pl.col(<span class="string">&quot;a&quot;</span>).<span class="built_in">str</span>.extract(<span class="string">r&quot;candidate=(\w+)&quot;</span>, group_index=<span class="number">1</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li><code>pl.col(&quot;foo&quot;).str.extract_all(r&quot;(\d+)&quot;)</code></li>
+</ul>
+</li>
+<li>replace : <code>pl.col(&quot;text&quot;).str.replace(r&quot;abc\b&quot;, &quot;ABC&quot;),</code> , <code>pl.col(&quot;text&quot;).str.replace_all(&quot;a&quot;, &quot;-&quot;, literal=True)</code></li>
+</ul>
+<h2 id="aggregation"><a class="markdownIt-Anchor" href="#aggregation"></a> Aggregation</h2>
+<p><code>.groupby('column_name')</code> : get multiple groups corresponding to different column_name-s .<br />
+Then, call <code>agg()</code> function to get a statistic result per group , the final result would be the result in for each element in the agg() function .</p>
+<p><strong>Basic aggregations :</strong></p>
+<ul>
+<li>count of one colum : <code>pl.count(&quot;party&quot;)</code> , <code>pl.col(&quot;party&quot;).count()</code></li>
+<li>get list of one colum : <code>pl.col(&quot;gender&quot;)</code></li>
+<li>get the first value of one column : <code>pl.col(&quot;last_name&quot;).first()</code> , <code>pl.first(&quot;last_name&quot;)</code></li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">q = (</span><br><span class="line">    dataset.lazy()</span><br><span class="line">    .group_by(<span class="string">&quot;state&quot;</span>)</span><br><span class="line">    .agg(</span><br><span class="line">        (pl.col(<span class="string">&quot;party&quot;</span>) == <span class="string">&quot;Anti-Administration&quot;</span>).<span class="built_in">sum</span>().alias(<span class="string">&quot;anti&quot;</span>),</span><br><span class="line">        (pl.col(<span class="string">&quot;party&quot;</span>) == <span class="string">&quot;Pro-Administration&quot;</span>).<span class="built_in">sum</span>().alias(<span class="string">&quot;pro&quot;</span>),</span><br><span class="line">    )</span><br><span class="line">    .sort(<span class="string">&quot;pro&quot;</span>, descending=<span class="literal">True</span>)</span><br><span class="line">    .limit(<span class="number">5</span>)</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p><strong>Filtering :</strong></p>
+<p><strong>Sorting :</strong></p>
+<ul>
+<li><code>sort()</code> Method: sort DataFrame rows based on one or more column names.</li>
+<li><code>sort_by()</code> Method: sort DataFrame rows based on custom sorting criteria defined by a closure (Python function).  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># DIY function</span><br><span class="line">sorted_df = df.sort_by(lambda df: -(df[&#x27;A&#x27;] + df[&#x27;B&#x27;]))</span><br><span class="line"># Sort one column based on another columns&#x27; value</span><br><span class="line">pl.col(&quot;gender&quot;).sort_by(&quot;first_name&quot;).first().alias(&quot;gender&quot;),</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">dataset.lazy()</span><br><span class="line">.sort(<span class="string">&quot;birthday&quot;</span>, descending=<span class="literal">True</span>)</span><br><span class="line">.group_by(<span class="string">&quot;state&quot;</span>)</span><br><span class="line">.agg(</span><br><span class="line">    get_person().first().alias(<span class="string">&quot;youngest&quot;</span>),</span><br><span class="line">    get_person().last().alias(<span class="string">&quot;oldest&quot;</span>),</span><br><span class="line">    get_person().sort().first().alias(<span class="string">&quot;alphabetical_first&quot;</span>),</span><br><span class="line">    pl.col(<span class="string">&quot;gender&quot;</span>).sort_by(<span class="string">&quot;first_name&quot;</span>).first().alias(<span class="string">&quot;gender&quot;</span>),</span><br><span class="line">)</span><br><span class="line">.sort(<span class="string">&quot;state&quot;</span>)</span><br><span class="line">.limit(<span class="number">5</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="rolling"><a class="markdownIt-Anchor" href="#rolling"></a> Rolling</h2>
+<p>Specific for a Series : return a Series as well , and of the same size / length</p>
+<p>The window at a given row will include <strong>the row itself and the window_size - 1 elements before it</strong>.</p>
+<ul>
+<li><code>Series.rolling_max</code> :
+<ul>
+<li><code>window_size : int</code></li>
+<li><code>weights=None : list[float]</code></li>
+<li><code>min_periods=None : int</code>: The number of values in the window that should be non-null before computing a result. If None, it will be set equal to window size.</li>
+<li><code>center=False</code> : Set the labels at the center of the window</li>
+</ul>
+</li>
+<li><code>Series.rolling_mean</code></li>
+<li><code>Series.rolling_min</code></li>
+<li><code>Series.rolling_median</code></li>
+<li><code>Series.rolling_sum</code></li>
+<li><code>Series.rolling_quantile</code></li>
+<li><code>Series.rolling_apply</code> / <code>Series.rolling_map</code>  : bad performance , not recommend</li>
+</ul>
+<h2 id="missing-data"><a class="markdownIt-Anchor" href="#missing-data"></a> Missing data</h2>
+<ul>
+<li>Difference between <code>np.NaN</code> and <code>None</code> :
+<ul>
+<li>NaN values are considered to be a type of floating point data and are not considered to be missing data in Polars.</li>
+<li>NaN values are not counted with the <code>null_count</code> method<br />
+NaN values are filled when you use <code>fill_nan</code> method but are not filled with the <code>fill_null</code> method</li>
+<li>Calculate the mean / sum of a list , <code>None</code> will be excluded , but <code>NaN</code> will result in a <code>NaN</code>.</li>
+</ul>
+</li>
+<li>count : <code>df.null_count()</code></li>
+<li>check if it is null : <code>df.select( pl.col(&quot;value&quot;).is_null() )</code></li>
+<li><code>fill_null</code> function :
+<ul>
+<li><code>value: Any | None = None</code> : using a specific value <code>pl.lit()</code>:  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">df.with_columns(</span><br><span class="line">    pl.col(<span class="string">&quot;col2&quot;</span>).fill_null(</span><br><span class="line">        pl.lit(<span class="number">2</span>),</span><br><span class="line">    ),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li><code>strategy : &#123;None, ‘forward’, ‘backward’, ‘min’, ‘max’, ‘mean’, ‘zero’, ‘one’&#125;</code><br />
+replace the nulls with the previous non-null value: <code>strategy=&quot;forward&quot;</code>:  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">df.with_columns(</span><br><span class="line">    pl.col(<span class="string">&quot;col2&quot;</span>).fill_null(strategy=<span class="string">&quot;forward&quot;</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li>with an expression , like use the medium value of that column  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">df.with_columns(</span><br><span class="line">    pl.col(<span class="string">&quot;col2&quot;</span>).fill_null(pl.median(<span class="string">&quot;col2&quot;</span>)),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="window-function"><a class="markdownIt-Anchor" href="#window-function"></a> Window Function</h2>
+<p>Goal : group over different columns and perform an aggregation on them . Doing so allows us to use <strong>multiple group by operations in parallel</strong> in a single <code>select</code> call . A window function will almost always <strong>lead to a DataFrame with the same size</strong> as the original.</p>
+<p><strong>Difference:</strong><br />
+groupby + agg : marks that groups are aggregated and we expect a DataFrame of size n_groups.<br />
+over : marks computation within a group, and <strong>doesn’t modify</strong> the original size of the DataFrame.</p>
+<ul>
+<li>
+<p>Get statistic value over different group<br />
+使用  <code>.over()</code> 函数 ，在一个 select context 中计算多个 group 的统计信息。</p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">out = df.select(</span><br><span class="line">    <span class="string">&quot;Type 1&quot;</span>,</span><br><span class="line">    <span class="string">&quot;Type 2&quot;</span>,</span><br><span class="line">    <span class="comment"># groupby `Type` -&gt; mean</span></span><br><span class="line">    pl.col(<span class="string">&quot;Attack&quot;</span>).mean().over(<span class="string">&quot;Type 1&quot;</span>).alias(<span class="string">&quot;avg_attack_by_type&quot;</span>),</span><br><span class="line">    <span class="comment"># groupby [&quot;Type 1&quot;, &quot;Type 2&quot;] -&gt; mean</span></span><br><span class="line">    pl.col(<span class="string">&quot;Defense&quot;</span>).mean().over([<span class="string">&quot;Type 1&quot;</span>, <span class="string">&quot;Type 2&quot;</span>]).alias(<span class="string">&quot;avg_defense_by_type_combination&quot;</span>),</span><br><span class="line">    pl.col(<span class="string">&quot;Attack&quot;</span>).mean().alias(<span class="string">&quot;avg_attack&quot;</span>),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>Sort within different group</p>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">out = filtered.with_columns(</span><br><span class="line">    pl.col([&quot;Name&quot;, &quot;Speed&quot;]).sort_by(&quot;Speed&quot;, descending=True).over(&quot;Type 1&quot;),</span><br><span class="line">)</span><br><span class="line">print(out)</span><br><span class="line"></span><br><span class="line">shape: (7, 3)</span><br><span class="line">┌─────────────────────┬────────┬───────┐</span><br><span class="line">│ Name                ┆ Type 1 ┆ Speed │</span><br><span class="line">│ ---                 ┆ ---    ┆ ---   │</span><br><span class="line">│ str                 ┆ str    ┆ i64   │</span><br><span class="line">╞═════════════════════╪════════╪═══════╡</span><br><span class="line">│ Starmie             ┆ Water  ┆ 115   │</span><br><span class="line">│ Slowbro             ┆ Water  ┆ 30    │</span><br><span class="line">│ SlowbroMega Slowbro ┆ Water  ┆ 30    │</span><br><span class="line">│ Exeggutor           ┆ Grass  ┆ 55    │</span><br><span class="line">│ Exeggcute           ┆ Grass  ┆ 40    │</span><br><span class="line">│ Slowpoke            ┆ Water  ┆ 15    │</span><br><span class="line">│ Jynx                ┆ Ice    ┆ 95    │</span><br><span class="line">└─────────────────────┴────────┴───────┘</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>3  strategies to link the values back to df:</p>
+<ul>
+<li><code>mapping_strategy = 'group_to_rows'</code> : each value is assigned back to one row.</li>
+<li><code>mapping_strategy = 'join'</code> : the values are imploded in a list, and the list is repeated on all rows. This can be memory intensive.</li>
+<li><code>mapping_strategy = 'explode'</code> : the values are exploded to new rows. This operation changes the number of rows.<br />
+通过 head 保留了不同 sort 条件的结果，最后爆破 。</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">out = df.sort(&quot;Type 1&quot;).select(</span><br><span class="line">    pl.col(&quot;Type 1&quot;).head(3).over(&quot;Type 1&quot;, mapping_strategy=&quot;explode&quot;),</span><br><span class="line">    pl.col(&quot;Name&quot;)</span><br><span class="line">    .sort_by(pl.col(&quot;Speed&quot;), descending=True)</span><br><span class="line">    .head(3)</span><br><span class="line">    .over(&quot;Type 1&quot;, mapping_strategy=&quot;explode&quot;)</span><br><span class="line">    .alias(&quot;fastest/group&quot;),</span><br><span class="line">    pl.col(&quot;Name&quot;)</span><br><span class="line">    .sort_by(pl.col(&quot;Attack&quot;), descending=True)</span><br><span class="line">    .head(3)</span><br><span class="line">    .over(&quot;Type 1&quot;, mapping_strategy=&quot;explode&quot;)</span><br><span class="line">    .alias(&quot;strongest/group&quot;),</span><br><span class="line">    pl.col(&quot;Name&quot;)</span><br><span class="line">    .sort()</span><br><span class="line">    .head(3)</span><br><span class="line">    .over(&quot;Type 1&quot;, mapping_strategy=&quot;explode&quot;)</span><br><span class="line">    .alias(&quot;sorted_by_alphabet&quot;),</span><br><span class="line">)</span><br><span class="line">print(out)</span><br><span class="line"></span><br><span class="line">shape: (43, 4)</span><br><span class="line">┌────────┬───────────────────────┬───────────────────────┬─────────────────────────┐</span><br><span class="line">│ Type 1 ┆ fastest/group         ┆ strongest/group       ┆ sorted_by_alphabet      │</span><br><span class="line">│ ---    ┆ ---                   ┆ ---                   ┆ ---                     │</span><br><span class="line">│ str    ┆ str                   ┆ str                   ┆ str                     │</span><br><span class="line">╞════════╪═══════════════════════╪═══════════════════════╪═════════════════════════╡</span><br><span class="line">│ Bug    ┆ BeedrillMega Beedrill ┆ PinsirMega Pinsir     ┆ Beedrill                │</span><br><span class="line">│ Bug    ┆ Scyther               ┆ BeedrillMega Beedrill ┆ BeedrillMega Beedrill   │</span><br><span class="line">│ Bug    ┆ PinsirMega Pinsir     ┆ Pinsir                ┆ Butterfree              │</span><br><span class="line">│ Dragon ┆ Dragonite             ┆ Dragonite             ┆ Dragonair               │</span><br><span class="line">│ …      ┆ …                     ┆ …                     ┆ …                       │</span><br><span class="line">│ Rock   ┆ Kabutops              ┆ Kabutops              ┆ Geodude                 │</span><br><span class="line">│ Water  ┆ Starmie               ┆ GyaradosMega Gyarados ┆ Blastoise               │</span><br><span class="line">│ Water  ┆ Tentacruel            ┆ Kingler               ┆ BlastoiseMega Blastoise │</span><br><span class="line">│ Water  ┆ Poliwag               ┆ Gyarados              ┆ Cloyster                │</span><br><span class="line">└────────┴───────────────────────┴───────────────────────┴─────────────────────────┘</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="user-defined-functions"><a class="markdownIt-Anchor" href="#user-defined-functions"></a> User-defined functions</h2>
+<ul>
+<li><code>map</code>: passes the <code>Series</code> backend by the <code>expression</code> . <strong>NEVER use <code>map</code> in the <code>group_by</code> context</strong>.  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">df.with_columns([</span><br><span class="line">    pl.col(<span class="string">&quot;features&quot;</span>).<span class="built_in">map</span>(<span class="keyword">lambda</span> s: MyNeuralNetwork.forward(s.to_numpy())).alias(<span class="string">&quot;activations&quot;</span>)</span><br><span class="line">])</span><br></pre></td></tr></table></figure>
+</li>
+<li><code>apply</code>: works on the smallest logical elements -&gt; <code>map_elements()</code>
+<ul>
+<li><code>select</code> context -&gt; single elements</li>
+<li><code>group by</code> context -&gt; single groups</li>
+</ul>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">out = df.group_by(&quot;keys&quot;, maintain_order=True).agg(</span><br><span class="line">    pl.col(&quot;values&quot;).map_elements(lambda s: s.shift()).alias(&quot;shift_map&quot;),</span><br><span class="line">    pl.col(&quot;values&quot;).shift().alias(&quot;shift_expression&quot;),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="transformations"><a class="markdownIt-Anchor" href="#transformations"></a> Transformations</h1>
+<h2 id="time-series"><a class="markdownIt-Anchor" href="#time-series"></a> Time Series</h2>
+<p>datetime datatypes:</p>
+<ol>
+<li>Date: e.g. 2014-07-08. ;  a 32-bit signed integer.</li>
+<li>Datetime: e.g. 2014-07-08 07:00:00 ; a 64 bit integer</li>
+<li>Duration: <strong>A time delta type</strong> that is created when <strong>subtracting</strong> Date/Datetime</li>
+<li>Time: Time representation, internally represented as nanoseconds since midnight.</li>
+</ol>
+<p><strong>Parse:</strong></p>
+<ol>
+<li>When read from the csv, we could use <code>pl.read_csv(&quot;__.csv&quot;, try_parse_dates=True)</code> to encourage time parse .</li>
+<li>Cast from <code>str</code> column to <code>date</code> column with <code>pl.col(&quot;col&quot;).str.to_date(%Y-%m-%d)</code> / <code>pl.col(&quot;col&quot;).str.to_datetime()</code>.</li>
+</ol>
+<p><strong>Extract date feature</strong></p>
+<ul>
+<li><code>.dt.year()</code>: <code>df.with_columns(pl.col(&quot;Date&quot;).dt.year().alias(&quot;year&quot;))</code></li>
+<li><code>.dt.month()</code></li>
+<li><code>.dt.day()</code></li>
+<li><code>.dt.weekday()</code></li>
+<li><code>.dt.hour()</code></li>
+</ul>
+<h3 id="filtering"><a class="markdownIt-Anchor" href="#filtering"></a> Filtering</h3>
+<p>Polars use [Python’s native <code>datetime</code>, <code>date</code>, <code>timedelta</code>] for equality comparisons between the [<code>pl.Datetime</code>, <code>pl.Datetime</code>, <code>pl.Duration</code>] .</p>
+<ol>
+<li>Use Python datetime to compare</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">from datetime import datetime</span><br><span class="line">filtered_df = df.filter(</span><br><span class="line">    pl.col(&quot;Date&quot;) == datetime(1995, 10, 16),  # use the lowercase datetime method</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Use Python datetime to compare and <code>.is_between()</code> function</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">filtered_range_df = df.filter(</span><br><span class="line">    pl.col(&quot;Date&quot;).is_between(datetime(1995, 7, 1), datetime(1995, 11, 1)),</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>Filter with negative dates , use <code>.dt.year()</code> for comparison</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">negative_dates_filtered_df = negative_dates_df.filter(pl.col(&quot;ts&quot;).dt.year() &lt; -1300)</span><br></pre></td></tr></table></figure>
+<h3 id="grouping"><a class="markdownIt-Anchor" href="#grouping"></a> Grouping</h3>
+<p><u><span style="font-size: 20px;"><strong>Grouping by fixed windows</strong> </span></u><br />
+Group rows based into [ days / months / years ] . -&gt; <code>.group_by_dynamic()</code><br />
+In nature, it set a window based on the parameter and do aggregation based on the window.</p>
+<p>e.g. Annual average example:</p>
+<ol>
+<li>use <code>.group_by_dynamic()</code> func to group <code>Data</code> column on an <code>1y</code> basis .</li>
+<li>take the <code>mean()</code> values of the <code>Close</code> column by <code>agg()</code> func .</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">df.sort(<span class="string">&quot;Date&quot;</span>) <span class="comment"># date type</span></span><br><span class="line"><span class="built_in">print</span>(df)</span><br><span class="line">------</span><br><span class="line">shape: (<span class="number">100</span>, <span class="number">2</span>)</span><br><span class="line">┌────────────┬────────┐</span><br><span class="line">│ Date       ┆ Close  │</span><br><span class="line">│ ---        ┆ ---    │</span><br><span class="line">│ date       ┆ f64    │</span><br><span class="line">╞════════════╪════════╡</span><br><span class="line">│ <span class="number">1981</span>-02-<span class="number">23</span> ┆ <span class="number">24.62</span>  │</span><br><span class="line">│ <span class="number">1981</span>-09-<span class="number">25</span> ┆ <span class="number">14.25</span>  │</span><br><span class="line">│ …          ┆ …      │</span><br><span class="line">│ <span class="number">2013</span>-<span class="number">11</span>-07 ┆ <span class="number">512.49</span> │</span><br><span class="line">│ <span class="number">2014</span>-02-<span class="number">25</span> ┆ <span class="number">522.06</span> │</span><br><span class="line">└────────────┴────────┘</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">annual_average_df = df.group_by_dynamic(<span class="string">&quot;Date&quot;</span>, every=<span class="string">&quot;1y&quot;</span>).agg(pl.col(<span class="string">&quot;Close&quot;</span>).mean())</span><br><span class="line">df_with_year = annual_average_df.with_columns(pl.col(<span class="string">&quot;Date&quot;</span>).dt.year().alias(<span class="string">&quot;year&quot;</span>))</span><br><span class="line"><span class="built_in">print</span>(df_with_year)</span><br><span class="line">------</span><br><span class="line">shape: (<span class="number">34</span>, <span class="number">3</span>)</span><br><span class="line">┌────────────┬───────────┬──────┐</span><br><span class="line">│ Date       ┆ Close     ┆ year │</span><br><span class="line">│ ---        ┆ ---       ┆ ---  │</span><br><span class="line">│ date       ┆ f64       ┆ i32  │</span><br><span class="line">╞════════════╪═══════════╪══════╡</span><br><span class="line">│ <span class="number">1981</span>-01-01 ┆ <span class="number">23.5625</span>   ┆ <span class="number">1981</span> │</span><br><span class="line">│ …          ┆ …         ┆ …    │</span><br><span class="line">│ <span class="number">2014</span>-01-01 ┆ <span class="number">522.06</span>    ┆ <span class="number">2014</span> │</span><br><span class="line">└────────────┴───────────┴──────┘</span><br></pre></td></tr></table></figure>
+<p><strong>Parameter for <code>.group_by_dynamic()</code> :</strong></p>
+<ul>
+<li><code>every</code> : set group level ; <strong>how often</strong> the group starts ; e.g. <code>2y</code>, <code>1y6mo</code> …</li>
+<li><code>period</code> : the duration of the window ; <strong>how long</strong> the time period for each group ;
+<ul>
+<li>e.g. <code>every='1y', period='2y'</code>: get groups at one year intervals where each groups spans two years : <code>[2021, 2023], [2022, 2024], ...</code> .</li>
+<li>If not set, by  default <code>period</code> equals to <code>every</code> .</li>
+</ul>
+</li>
+<li><code>offset</code> : be used to offset the start of the windows</li>
+<li><code>truncate</code> :
+<ul>
+<li><code>truncate=True</code> ; by default , the date for the first year in the annual average is 1st January 1981 .</li>
+<li><code>truncate=False</code> : the date for the first year in the annual average is the date of the first data point .</li>
+</ul>
+</li>
+<li><code>closed</code></li>
+</ul>
+<p><u><span style="font-size: 20px;"><strong>Grouping by rolling windows</strong></span></u></p>
+<p>The location of the window is determined by <code>index_column</code> .</p>
+<p>…</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/10/01/NLP/LLM/KV_cache%E4%BC%98%E5%8C%96/" rel="prev" title="KV cache 显存优化">
+      <i class="fa fa-chevron-left"></i> KV cache 显存优化
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/10/09/NLP/LLM/LoRA/" rel="next" title="LoRA">
+      LoRA <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#into"><span class="nav-number">1.</span> <span class="nav-text"> Into</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#create"><span class="nav-number">2.</span> <span class="nav-text"> Create</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#operation-domain-specific-language-dsl-context-and-expression"><span class="nav-number">3.</span> <span class="nav-text"> Operation &#x2F; Domain Specific Language (DSL) : Context and Expression</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#lazy-api"><span class="nav-number">4.</span> <span class="nav-text"> Lazy API</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#create-2"><span class="nav-number">4.1.</span> <span class="nav-text"> Create</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#query-and-explain"><span class="nav-number">4.2.</span> <span class="nav-text"> Query and Explain</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#seamless-integration"><span class="nav-number">5.</span> <span class="nav-text"> Seamless Integration</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#test"><span class="nav-number">5.1.</span> <span class="nav-text"> Test</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#expressions"><span class="nav-number">6.</span> <span class="nav-text"> Expressions</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#select"><span class="nav-number">6.1.</span> <span class="nav-text"> Select</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#numerical"><span class="nav-number">6.2.</span> <span class="nav-text"> Numerical</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#logic"><span class="nav-number">6.3.</span> <span class="nav-text"> Logic</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#function"><span class="nav-number">6.4.</span> <span class="nav-text"> Function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#difference"><span class="nav-number">6.5.</span> <span class="nav-text"> Difference</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#casting"><span class="nav-number">6.6.</span> <span class="nav-text"> Casting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#string"><span class="nav-number">6.7.</span> <span class="nav-text"> String</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#aggregation"><span class="nav-number">6.8.</span> <span class="nav-text"> Aggregation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rolling"><span class="nav-number">6.9.</span> <span class="nav-text"> Rolling</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#missing-data"><span class="nav-number">6.10.</span> <span class="nav-text"> Missing data</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#window-function"><span class="nav-number">6.11.</span> <span class="nav-text"> Window Function</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#user-defined-functions"><span class="nav-number">6.12.</span> <span class="nav-text"> User-defined functions</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#transformations"><span class="nav-number">7.</span> <span class="nav-text"> Transformations</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#time-series"><span class="nav-number">7.1.</span> <span class="nav-text"> Time Series</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#filtering"><span class="nav-number">7.1.1.</span> <span class="nav-text"> Filtering</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#grouping"><span class="nav-number">7.1.2.</span> <span class="nav-text"> Grouping</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

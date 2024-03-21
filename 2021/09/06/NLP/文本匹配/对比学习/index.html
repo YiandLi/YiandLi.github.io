@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="介绍  自监督学习：在无监督学习下的自监督学习中，预训练使用的数据量越大，模型越复杂，模型学到的知识就越多，也就是效果更好。 表示学习模型：使用一个模型可以通过输出来表示输入，能够将输入映射到某个投影空间，即可以忽略表面因素，学习内在结构信息。 对比学习：自监督学习的一种，通过自动构造相似实例和不相似实例，习得一个表示学习模型，通过这个模型，使得相似的实例在投影空间中比较接近，而不相似的实例在投">
+<meta property="og:type" content="article">
+<meta property="og:title" content="对比学习">
+<meta property="og:url" content="http://example.com/2021/09/06/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="介绍  自监督学习：在无监督学习下的自监督学习中，预训练使用的数据量越大，模型越复杂，模型学到的知识就越多，也就是效果更好。 表示学习模型：使用一个模型可以通过输出来表示输入，能够将输入映射到某个投影空间，即可以忽略表面因素，学习内在结构信息。 对比学习：自监督学习的一种，通过自动构造相似实例和不相似实例，习得一个表示学习模型，通过这个模型，使得相似的实例在投影空间中比较接近，而不相似的实例在投">
+<meta property="og:locale">
+<meta property="og:image" content="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X3BuZy9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzh1YzIxZ0l5b0d5elFGcndpY0xtbnBSamxiaWM3c2lhS0kyY1pmYlZMTUkwZWs1WUZqSldVcmlid0VnLzY0MA?x-oss-process=image/format,png">
+<meta property="og:image" content="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X3BuZy9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzhHSElIMndpYTdNWHFnd1E3YndraFEwMXY4ZldVdENBd1hwc2ljN2NsZERiRk9pY2x6bk42azVIY0EvNjQw?x-oss-process=image/format,png">
+<meta property="og:image" content="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X2dpZi9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzhFZUxaT2FlR21QdzUwdDBpYlFNc1BXNmVjY3Zsb1hpY3QwZ05YUWFWWVpGaWJJdGljY2lhQ2F4MGg5QS82NDA?x-oss-process=image/format,png">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/img_convert/b67716bb09350b02c680bf0d0fc5e2c2.png">
+<meta property="og:image" content="https://pic3.zhimg.com/80/v2-0d7d0bfb87ebfd79653c4d6a66cd9fce_1440w.jpg">
+<meta property="og:image" content="https://i.loli.net/2021/09/09/93sNptk8rZQXxul.png">
+<meta property="og:image" content="https://i.loli.net/2021/09/09/gGhxpNqaHlLbsZv.png">
+<meta property="og:image" content="https://i.loli.net/2021/09/09/NFds2BOcx8UXIRK.png">
+<meta property="og:image" content="https://pic3.zhimg.com/80/v2-9706a5c25730d420dd8e6a51b5b0a006_1440w.jpg">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/img_convert/125a0ca970a877f0055b1a48f807be12.png">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/img_convert/ccf493aff20e9038502bdc6ba743be8f.png">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/img_convert/8d3673f55ad8d2f6a9080d35428ec256.png">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20210430153842722.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80NTgzOTY5Mw==,size_16,color_FFFFFF,t_70">
+<meta property="article:published_time" content="2021-09-06T23:09:30.000Z">
+<meta property="article:modified_time" content="2024-03-11T02:18:00.093Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X3BuZy9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzh1YzIxZ0l5b0d5elFGcndpY0xtbnBSamxiaWM3c2lhS0kyY1pmYlZMTUkwZWs1WUZqSldVcmlid0VnLzY0MA?x-oss-process=image/format,png">
+
+<link rel="canonical" href="http://example.com/2021/09/06/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>对比学习 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/06/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          对比学习
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-06 16:09:30" itemprop="dateCreated datePublished" datetime="2021-09-06T16:09:30-07:00">2021-09-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Text-Retrieval/" itemprop="url" rel="index"><span itemprop="name">Text Retrieval</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>11 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="介绍"><a class="markdownIt-Anchor" href="#介绍"></a> 介绍</h2>
+<ul>
+<li>自监督学习：在<strong>无监督学习</strong>下的<strong>自监督学习</strong>中，预训练使用的数据量越大，模型越复杂，模型学到的知识就越多，也就是效果更好。</li>
+<li>表示学习模型：使用一个模型可以通过<strong>输出</strong>来表示<strong>输入</strong>，能够将输入映射到某个投影空间，即可以忽略表面因素，学习内在结构信息。</li>
+<li><strong>对比学习</strong>：<strong>自监督学习</strong>的一种，通过自动构造<strong>相似实例</strong>和<strong>不相似实例</strong>，习得一个<strong>表示学习模型</strong>，通过这个模型，使得<strong>相似的实例</strong>在<strong>投影空间</strong>中比较<strong>接近</strong>，而<strong>不相似的实例</strong>在<strong>投影空间</strong>中距离比较<strong>远</strong>。</li>
+<li>关键点：
+<ul>
+<li>如何构造相似样本和不相似样本：数据增强</li>
+<li>如何构造表示学习模型结构</li>
+<li>如何防止模型坍塌（Model Collapse）（后面讲）</li>
+</ul>
+</li>
+<li>训练的关键点：
+<ul>
+<li>正例如何构造，负例如何构造 --&gt; 样本增强，同时基本上负例越多，效果越好。</li>
+<li>映射函数如何设计，（个人想法：减去基于token的统计分布，这样让模型刻意学习内部语义，而不是token分布</li>
+<li>损失函数如何设计，（不一定只能使用 infoNCE</li>
+</ul>
+</li>
+</ul>
+<h2 id="例子simclr"><a class="markdownIt-Anchor" href="#例子simclr"></a> 例子：SimCLR</h2>
+<h3 id="样本增强"><a class="markdownIt-Anchor" href="#样本增强"></a> 样本增强</h3>
+<p>正例构造方法：在其<strong>数据增强操作集合</strong> <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span></span> 中抽取两种，用 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>∼</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">t_1 \sim T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76508em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>t</mi><mn>2</mn></msub><mo>∼</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">t_2 \sim T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76508em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span></span> 表示。将这两个操作作用于原图向上，可以得到两张增强后的新图像，互为正例，和其他图像的增强结果样本互为反例。<br />
+<img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X3BuZy9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzh1YzIxZ0l5b0d5elFGcndpY0xtbnBSamxiaWM3c2lhS0kyY1pmYlZMTUkwZWs1WUZqSldVcmlid0VnLzY0MA?x-oss-process=image/format,png" alt="" /><br />
+SimCLR证明：如果能够同时融合多种图像增强操作，增加模型难度，那么模型的效果也会被增加。</p>
+<h3 id="整体过程"><a class="markdownIt-Anchor" href="#整体过程"></a> 整体过程</h3>
+<p><img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X3BuZy9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzhHSElIMndpYTdNWHFnd1E3YndraFEwMXY4ZldVdENBd1hwc2ljN2NsZERiRk9pY2x6bk42azVIY0EvNjQw?x-oss-process=image/format,png" alt="" /><br />
+一个双塔模型，在图像领域中每个图像增强方法分支被称为一个Branch。<br />
+<img src="https://imgconvert.csdnimg.cn/aHR0cHM6Ly9tbWJpei5xcGljLmNuL21tYml6X2dpZi9LWVNEVG1PVlp2ckFlSTlNbHFtdTNpYXk3UFh2YmtBRzhFZUxaT2FlR21QdzUwdDBpYlFNc1BXNmVjY3Zsb1hpY3QwZ05YUWFWWVpGaWJJdGljY2lhQ2F4MGg5QS82NDA?x-oss-process=image/format,png" alt="" /><br />
+在一个样本数量为N的Batch中，所有的样本都通过增强集合<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi></mrow><annotation encoding="application/x-tex">\gamma</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.05556em;">γ</span></span></span></span>中的两种增强操作形成对应的两个正例 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>u</mi><msub><mi>g</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">Aug_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8777699999999999em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">A</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>u</mi><msub><mi>g</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">Aug_j</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord mathnormal">A</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> ，于是整个Batch得到了2N个增强样本。<br />
+增强后的每个样本先经过编码器得到特征表示 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>h</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">h_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.84444em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">h</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> ，然后经过另一个非线性变换投影器，进一步表征为另一个空间中的向量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">z_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>。这个模型中的投影器由两层多层感知器(Multi-Layer Perceptron，MLP)构成。</p>
+<h3 id="模型调优"><a class="markdownIt-Anchor" href="#模型调优"></a> 模型调优</h3>
+<h4 id="距离度量函数"><a class="markdownIt-Anchor" href="#距离度量函数"></a> 距离度量函数</h4>
+<p>对于batch中的每个增强过的图像，我们得到其投影向量z_i。同一个样本的增强样本互为正例，与其余的2N-2个增强样本互为负例。于是我们的目标变为：<strong>在投影空间中，正例的距离较近，负例的距离较远。</strong><br />
+使用cosine相似度计算投影向量的相似度/距离远近: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo stretchy="false">(</mo><msub><mi>z</mi><mi>i</mi></msub><mo separator="true">,</mo><msub><mi>z</mi><mi>j</mi></msub><mo stretchy="false">)</mo><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mrow><msubsup><mi>z</mi><mi>i</mi><mi>T</mi></msubsup><msub><mi>z</mi><mi>j</mi></msub></mrow><mrow><mrow><mo fence="true">∥</mo><msub><mi>z</mi><mi>i</mi></msub><mo fence="true">∥</mo></mrow><mrow><mo fence="true">∥</mo><msub><mi>z</mi><mi>j</mi></msub><mo fence="true">∥</mo></mrow></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">S(z_i,z_j) = \dfrac{z_i^T z_j}{\left\|z_i\right\| \left\|z_j\right\|}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.490439em;vertical-align:-0.972108em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.5183309999999999em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="minner"><span class="mopen delimcenter" style="top:0em;">∥</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">∥</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">∥</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">∥</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8413309999999999em;"><span style="top:-2.441336em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.258664em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.972108em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span> ，S可以看作Simularity。<br />
+在理想情况下，增强后正例之间的相似度会很高，而负例之间的相似度会较低。</p>
+<h4 id="损失函数"><a class="markdownIt-Anchor" href="#损失函数"></a> 损失函数</h4>
+<ul>
+<li>NT-Xent (the normalized temperature-scaled cross entropy loss)/InfoNCE 归一温度度量交叉熵损失:<br />
+将得到的2N个样本逐对取出，使用softmax得到样本相似的概率。除了互为正例的样本，其余增强样本都被采样为负样本。<br />
+于是得到样本i的损失函数：</li>
+</ul>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mi>i</mi></msub><mo>=</mo><mo>−</mo><mi>l</mi><mi>o</mi><mi>g</mi><mfrac><msup><mi>e</mi><mrow><mi>S</mi><mo stretchy="false">(</mo><msub><mi>z</mi><mi>i</mi></msub><mo separator="true">,</mo><msubsup><mi>z</mi><mi>i</mi><mo>+</mo></msubsup><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mi>τ</mi></mrow></msup><mrow><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>0</mn></mrow><mi>K</mi></munderover><msup><mi>e</mi><mrow><mi>S</mi><mo stretchy="false">(</mo><msub><mi>z</mi><mi>i</mi></msub><mo separator="true">,</mo><msub><mi>z</mi><mi>j</mi></msub><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mi>τ</mi></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">L_i = -log \dfrac{e^{S(z_i,z_i^+)/τ}}{\sum_{j=0}^{K} e^{S(z_i,z_j)/τ}}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.9404139999999996em;vertical-align:-1.3070490000000001em;"></span><span class="mord">−</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.6333649999999997em;"><span style="top:-2.128769em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.981231em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span><span class="mrel mtight">=</span><span class="mord mtight">0</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.07153em;">K</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.43581800000000004em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8300699999999999em;"><span style="top:-3.0050700000000004em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05764em;">S</span><span class="mopen mtight">(</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3280857142857143em;"><span style="top:-2.357em;margin-left:-0.04398em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mpunct mtight">,</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3280857142857143em;"><span style="top:-2.357em;margin-left:-0.04398em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2818857142857143em;"><span></span></span></span></span></span></span><span class="mclose mtight">)</span><span class="mord mtight">/</span><span class="mord mathnormal mtight" style="margin-right:0.1132em;">τ</span></span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.9563649999999997em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05764em;">S</span><span class="mopen mtight">(</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3280857142857143em;"><span style="top:-2.357em;margin-left:-0.04398em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mpunct mtight">,</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8476642857142855em;"><span style="top:-2.204392857142857em;margin-left:-0.04398em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span><span style="top:-2.931em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mbin mtight">+</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29560714285714285em;"><span></span></span></span></span></span></span><span class="mclose mtight">)</span><span class="mord mtight">/</span><span class="mord mathnormal mtight" style="margin-right:0.1132em;">τ</span></span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.3070490000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p>K：表示其余的样本<br />
+τ：温度超参，用来控制缩放和相似度的范围，实验证明，温度需要设置一个比较小的数值，一般为0.1/0.2。<br />
+实验表明因为存在温度超参，IndoNCE是一个能够感知负例难度的损失函数。</p>
+<p>可以看到，分子鼓励正例相似度越高越好，即投影的距离越近越好；分母鼓励负例相似度越低越好，即投影的距离越远越好。</p>
+<h3 id="总结"><a class="markdownIt-Anchor" href="#总结"></a> 总结</h3>
+<p>SimCLR有很多组件：Encoder，Projector，增强器，损失函数。这些都是可以被替换的，但是我们最终的目的只是Encoder，而其余组件只是为了辅助训练Encoder。<br />
+SimCLR的贡献，一个是证明了复合图像增强很重要；另外一个就是这个Projector结构。这两者结合，给对比学习系统带来很大的性能提升，将对比学习性能提升到或者超过了有监督模型，在此之后的对比学习模型，基本都采取了Encoder+Projector的两次映射结构，以及复合数据增强的方法。</p>
+<h2 id="评判标准"><a class="markdownIt-Anchor" href="#评判标准"></a> 评判标准</h2>
+<p>论文：《Understanding Contrastive Representation Learning through Alignment and Uniformity on the Hypersphere》<br />
+<img src="https://img-blog.csdnimg.cn/img_convert/b67716bb09350b02c680bf0d0fc5e2c2.png" alt="" /></p>
+<h3 id="前言单位超球面"><a class="markdownIt-Anchor" href="#前言单位超球面"></a> 前言：单位超球面</h3>
+<ul>
+<li>在做相似度计算时，首先要对表示向量做L2正则，之后再做点积计算，或者直接采用Cosine相似性。<strong>这个地方谁能帮我推导推导？</strong></li>
+<li>对学习到的表示向量进行L2正则，或者采用Cosine相似性，就等价于将表示向量投影到了单位超球面上进行相互比较。<br />
+将特征表示映射到单位超球面上有很多好处：
+<ul>
+<li>单位长度：单位长度向量的点积能增加深度学习模型的训练稳定性</li>
+<li>超球面：当表示向量被映射到超球面上，如果模型的表示能力足够好，能够把相似的例子在超球面上聚集到较近区域，那么很容易使用线性分类器把某类和其它类区分开。</li>
+</ul>
+</li>
+</ul>
+<h3 id="两个属性alignment和uniformity"><a class="markdownIt-Anchor" href="#两个属性alignment和uniformity"></a> 两个属性：Alignment和Uniformity。</h3>
+<ul>
+<li>Alignment：近似例子/正例在超球面上的距离应该比较近。</li>
+<li>Uniformity：系统保留了尽可能多的信息，即 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">z_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.04398em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 被均匀地映射到超球面上。越均匀说明信息被保留得越充分，不同样本间两两有差。</li>
+</ul>
+<h3 id="模型坍塌"><a class="markdownIt-Anchor" href="#模型坍塌"></a> 模型坍塌</h3>
+<p><img src="https://pic3.zhimg.com/80/v2-0d7d0bfb87ebfd79653c4d6a66cd9fce_1440w.jpg" alt="" /><br />
+是 Uniformity 的极端反例，表示所有的数据都被映射到单位超球面的同一个点上。</p>
+<ul>
+<li>防止模型坍塌的方法：
+<ul>
+<li>基于负例的对比学习方法：依靠负例的Uniformity特性，eg. Moco（v1-v3）和SimCLR（v1-v2）</li>
+<li>基于对比聚类的方法：eg. SwAV</li>
+<li>基于不对称网络结构的方法：eg. BYOL</li>
+<li>基于冗余消除损失函数的方法：eg. Barlow Twins</li>
+</ul>
+</li>
+</ul>
+<h2 id="优化策略"><a class="markdownIt-Anchor" href="#优化策略"></a> 优化策略</h2>
+<ol>
+<li>增大Batch：memory bank --》 Momentum contrast(Moco)</li>
+<li>提升Encoder模型能力</li>
+<li>提升数据增强的效果</li>
+</ol>
+<h2 id="nlp中的对比学习思想"><a class="markdownIt-Anchor" href="#nlp中的对比学习思想"></a> NLP中的对比学习思想</h2>
+<h3 id="自监督对比学习"><a class="markdownIt-Anchor" href="#自监督对比学习"></a> 自监督对比学习</h3>
+<ul>
+<li>一般有两个思路：
+<ul>
+<li>损失联合方式自监督：将CL的loss和其他loss混合，通过联合优化，使CL起到效果：CLEAR，DeCLUTER，SCCL。</li>
+<li>非联合方法自监督：构造增强样本，fine-tune模型：Bert-CT，ConSERT，SimCSE。</li>
+</ul>
+</li>
+</ul>
+<h3 id="有监督的对比学习"><a class="markdownIt-Anchor" href="#有监督的对比学习"></a> 有监督的对比学习</h3>
+<ul>
+<li>
+<p>一个学习方式：两个阶段的学习：<br />
+<img src="https://i.loli.net/2021/09/09/93sNptk8rZQXxul.png" alt="" /><br />
+先有监督地学习encoder，然后冻结encoder，学习分类层参数。</p>
+</li>
+<li>
+<p>损失函数，同类样本互为正例<br />
+<img src="https://i.loli.net/2021/09/09/gGhxpNqaHlLbsZv.png" alt="" /><br />
+p(i)表示样本i的类，即同类的样本互为正例<br />
+导入方式：<code>from pytorch_metric_learning.losses import NTXentLoss, SupConLoss</code>上面的调用方式为<code>superConLoss</code>, 下面的调用方式为<code>ntxent_loss</code>。</p>
+</li>
+</ul>
+<h4 id="supervised-cl"><a class="markdownIt-Anchor" href="#supervised-cl"></a> Supervised CL：</h4>
+<p><img src="https://i.loli.net/2021/09/09/NFds2BOcx8UXIRK.png" alt="" /><br />
+使用上述方法构建正负样本，并且联合这个CL loss和CE loss。<br />
+视频中，进行对比的内容有两种选择：<br />
+- 句子的向量表征：<code>pooled_outputs</code><br />
+- 句子的向量表征和分类器中不同label的向量表征：<code>torch.cat([pooled_outputs, classfier.linear.weight], dim=0)</code><br />
+使用<code>torch.cat()</code>按行进行拼接:<code>cat((batch_size * 768, class_num * 768), dim=0) =&gt; (batch_size+class_num, 768)</code><br />
+这同样是样本标签和线性分类器进行交互的方式。</p>
+<h3 id="结合非监督和有监督"><a class="markdownIt-Anchor" href="#结合非监督和有监督"></a> 结合非监督和有监督</h3>
+<h4 id="consert"><a class="markdownIt-Anchor" href="#consert"></a> ConSERT</h4>
+<p>作者rumor小姐姐的博客：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/378544839">https://zhuanlan.zhihu.com/p/378544839</a></p>
+<ul>
+<li>问题：<br />
+Bert的表征坍塌 Collapse：bert会将所有的句子表征都编码到一个较小的空间上，这违背了Uniformity，同样也是bert在相似度问题上可能还比不上W2V的原因。<br />
+<img src="https://pic3.zhimg.com/80/v2-9706a5c25730d420dd8e6a51b5b0a006_1440w.jpg" alt="" /></li>
+<li>模型结构：<br />
+横轴为人为相似度打分，可以理解为标签，纵轴为bert打分。<br />
+<img src="https://img-blog.csdnimg.cn/img_convert/125a0ca970a877f0055b1a48f807be12.png" alt="" /></li>
+<li>数据增强：<br />
+显示增加样本(CBert)，Embedding层隐式生成增强样本(对抗，打乱位置编码，删字/维，dropout)<br />
+<img src="https://img-blog.csdnimg.cn/img_convert/ccf493aff20e9038502bdc6ba743be8f.png" alt="" /><br />
+<img src="https://img-blog.csdnimg.cn/img_convert/8d3673f55ad8d2f6a9080d35428ec256.png" alt="" /></li>
+<li>结合有监督训练：<br />
+目的：通过外部数据进行增强<br />
+引入有监督的entailment句子对数据集。<br />
+方式：联合训练/先有监督再迁移到无监督/联合训练再无监督</li>
+</ul>
+<h4 id="simcse"><a class="markdownIt-Anchor" href="#simcse"></a> SimCSE</h4>
+<ul>
+<li>使用dropout作为数据增强的方式：Bert中的dropout决定了相同样本的最终编码不同。（插个题外话，那为什么老师的源码同参数得到的效果相同，是因为设置了随机种子？）<br />
+所以使用两次dropout来得到增强样本，然后后面的工作基本相同。<br />
+<img src="https://img-blog.csdnimg.cn/20210430153842722.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80NTgzOTY5Mw==,size_16,color_FFFFFF,t_70" alt="" /></li>
+<li>Fine-tunning: 后接分类器，冻结encoder参数。</li>
+<li>赛题启发：<br />
+使用有标注的数据进行训练，得到一个encoder，然后接分类器或者转化为句子匹配任务（后面直接编码测试集中的样本，去找相似度最高的那一个）。</li>
+</ul>
+<h2 id="引用"><a class="markdownIt-Anchor" href="#引用"></a> 引用</h2>
+<ul>
+<li>公众号：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/wm6NW2fS2w08n1Cs4Sqz-Q">https://mp.weixin.qq.com/s/wm6NW2fS2w08n1Cs4Sqz-Q</a></li>
+<li>博客：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/367290573">https://zhuanlan.zhihu.com/p/367290573</a></li>
+<li>博客：<a target="_blank" rel="noopener" href="https://blog.csdn.net/u011984148/article/details/106233313/">https://blog.csdn.net/u011984148/article/details/106233313/</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/08/29/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/NeZha/" rel="prev" title="NeZha">
+      <i class="fa fa-chevron-left"></i> NeZha
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/09/18/Coding/Numpy/1.%E5%9F%BA%E6%93%8D/" rel="next" title="1.基本操作">
+      1.基本操作 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text"> 介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BE%8B%E5%AD%90simclr"><span class="nav-number">2.</span> <span class="nav-text"> 例子：SimCLR</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B7%E6%9C%AC%E5%A2%9E%E5%BC%BA"><span class="nav-number">2.1.</span> <span class="nav-text"> 样本增强</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text"> 整体过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E8%B0%83%E4%BC%98"><span class="nav-number">2.3.</span> <span class="nav-text"> 模型调优</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B7%9D%E7%A6%BB%E5%BA%A6%E9%87%8F%E5%87%BD%E6%95%B0"><span class="nav-number">2.3.1.</span> <span class="nav-text"> 距离度量函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0"><span class="nav-number">2.3.2.</span> <span class="nav-text"> 损失函数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">2.4.</span> <span class="nav-text"> 总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%84%E5%88%A4%E6%A0%87%E5%87%86"><span class="nav-number">3.</span> <span class="nav-text"> 评判标准</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80%E5%8D%95%E4%BD%8D%E8%B6%85%E7%90%83%E9%9D%A2"><span class="nav-number">3.1.</span> <span class="nav-text"> 前言：单位超球面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E4%B8%AA%E5%B1%9E%E6%80%A7alignment%E5%92%8Cuniformity"><span class="nav-number">3.2.</span> <span class="nav-text"> 两个属性：Alignment和Uniformity。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E5%9D%8D%E5%A1%8C"><span class="nav-number">3.3.</span> <span class="nav-text"> 模型坍塌</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%8C%96%E7%AD%96%E7%95%A5"><span class="nav-number">4.</span> <span class="nav-text"> 优化策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#nlp%E4%B8%AD%E7%9A%84%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0%E6%80%9D%E6%83%B3"><span class="nav-number">5.</span> <span class="nav-text"> NLP中的对比学习思想</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E7%9B%91%E7%9D%A3%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0"><span class="nav-number">5.1.</span> <span class="nav-text"> 自监督对比学习</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%89%E7%9B%91%E7%9D%A3%E7%9A%84%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0"><span class="nav-number">5.2.</span> <span class="nav-text"> 有监督的对比学习</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#supervised-cl"><span class="nav-number">5.2.1.</span> <span class="nav-text"> Supervised CL：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E5%90%88%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%92%8C%E6%9C%89%E7%9B%91%E7%9D%A3"><span class="nav-number">5.3.</span> <span class="nav-text"> 结合非监督和有监督</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#consert"><span class="nav-number">5.3.1.</span> <span class="nav-text"> ConSERT</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#simcse"><span class="nav-number">5.3.2.</span> <span class="nav-text"> SimCSE</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text"> 引用</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

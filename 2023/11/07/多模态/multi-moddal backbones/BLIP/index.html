@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="BLIP Paper: BLIP: Bootstrapping Language-Image Pre-training for Unified Vision-Language Understanding and Generation">
+<meta property="og:type" content="article">
+<meta property="og:title" content="BLIP">
+<meta property="og:url" content="http://example.com/2023/11/07/%E5%A4%9A%E6%A8%A1%E6%80%81/multi-moddal%20backbones/BLIP/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="BLIP Paper: BLIP: Bootstrapping Language-Image Pre-training for Unified Vision-Language Understanding and Generation">
+<meta property="og:locale">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/GHp-z_X9mbf8ow7B53VK0f0mAKxMuT4v6HPJgfAB_6U.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/KL_kIaYuADG18tr-XSzopcFKO3ur9OjTGA4kMKOGYKc.original.fullsize.png">
+<meta property="og:image" content="https://pic2.zhimg.com/v2-fe33323e1deced16d57e9068e6c62c49_b.jpg">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/UYqrIj-5nqQii9eSJB-zZ-kdtd3K0ve45AOqqlZTYX0.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/BNSHn5WehupMUw1mrwb_4ctd6BXVVFWBY0h0CRU6A18.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/fEsQ3F2dSrOk8rnVN5eTYq2ZQMBW9RKnJgk7d9XllkE.original.fullsize.png">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-fa822b97a2a967cfb2b99e3cb69ea76f_1440w.webp">
+<meta property="og:image" content="https://pic3.zhimg.com/80/v2-8b2a31f04bf86307bb8bebc8da423c8a_1440w.webp">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-d1cdd1d081f2e22eb8fdbb5a1353bf0d_1440w.webp">
+<meta property="article:published_time" content="2023-11-07T21:21:09.000Z">
+<meta property="article:modified_time" content="2024-03-16T05:57:55.060Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.mathpix.com/snip/images/GHp-z_X9mbf8ow7B53VK0f0mAKxMuT4v6HPJgfAB_6U.original.fullsize.png">
+
+<link rel="canonical" href="http://example.com/2023/11/07/%E5%A4%9A%E6%A8%A1%E6%80%81/multi-moddal%20backbones/BLIP/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>BLIP | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/11/07/%E5%A4%9A%E6%A8%A1%E6%80%81/multi-moddal%20backbones/BLIP/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          BLIP
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-07 13:21:09" itemprop="dateCreated datePublished" datetime="2023-11-07T13:21:09-08:00">2023-11-07</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MultiModal/" itemprop="url" rel="index"><span itemprop="name">MultiModal</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>16 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="blip"><a class="markdownIt-Anchor" href="#blip"></a> BLIP</h1>
+<p>Paper: <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2201.12086.pdf">BLIP: Bootstrapping Language-Image Pre-training for Unified Vision-Language Understanding and Generation</a></p>
+<span id="more"></span>
+<h2 id="abstract-and-intro"><a class="markdownIt-Anchor" href="#abstract-and-intro"></a> Abstract and Intro</h2>
+<p>Drawbacks of Most existing Vision-Language Pre-trained models (VLP) :</p>
+<ol>
+<li>Model perspective: only encoder-based model - <strong>understanding-based tasks, like retrieval</strong> /// encoder-decoder model - <strong>generation-based tasks</strong> .</li>
+<li>Data perspective: Despite the performance gain obtained by scaling up the dataset, our paper shows that the noisy web text is suboptimal for vision-language learning.</li>
+</ol>
+<p>Blip’s corresponding two contributions:</p>
+<ol>
+<li><strong>Multi-modal mixture of Encoder-Decoder (MED)</strong>, 针对不同的 task，作者构建了三种不同形式的模型，并且使用三种目标进行训练：
+<ol>
+<li>a uni-modal encoder：image-text contrastive learning</li>
+<li>an image-grounded text encoder：image-text matching</li>
+<li>an image-grounded text decoder：image-conditioned language modeling</li>
+</ol>
+</li>
+<li><strong>Captioning and Filtering (CapFilt)</strong>，提出一种新的数据集 bootstrap 方法，来从 web noisy image-text pairs 上学到更多信息。
+<ul>
+<li>作者实现了 bootstrap caption，即通过两个 module 来训练 BLIP：
+<ul>
+<li><strong>a captioner</strong> ：construct synthetic captions</li>
+<li><strong>a filter</strong> ：removing noisy captions from 「synthetic captions and original web texts」</li>
+</ul>
+</li>
+<li>从 <strong>知识蒸馏 knowledge distillation</strong> 的角度来理解，目前有方法使用 self-distillation 的方法（ALBEF）；作者认为 CapFilt 是一种更加有效的蒸馏方法 。</li>
+<li>该工作证明了 <strong>合成标注 synthetic captions</strong> 在 large-scale vision-language pre-training 的有效性。</li>
+</ul>
+</li>
+</ol>
+<p>Downstream Tasks: Image-text Retrieval ; VQA ; Image Captioning ; visual reasoning, and visual dialog .</p>
+<h2 id="method"><a class="markdownIt-Anchor" href="#method"></a> Method</h2>
+<h3 id="model-architecturemed-and-pre-training-objectives"><a class="markdownIt-Anchor" href="#model-architecturemed-and-pre-training-objectives"></a> Model Architecture(MED) and Pre-training Objectives</h3>
+<p>模型结构为 1 visual encoder + 3 text transformer<br />
+不同的 text transformer 对应了不同的预训练任务（2 understanding-based objectives + 1 generation- based objective），来进行 multi-task learning 。<br />
+所以训练时，每一个 image-text pair 需要「1 computational-heavier visual transformer forward pass」和「3 text transformer forward passes」。</p>
+<p><img src="https://cdn.mathpix.com/snip/images/GHp-z_X9mbf8ow7B53VK0f0mAKxMuT4v6HPJgfAB_6U.original.fullsize.png" alt="" /></p>
+<p>Image Encoder : ViT（ImageNet-1K） , an additional <code>[CLS]</code> token to represent the global image feature</p>
+<p>Text Transformer<br />
+(1) Uni-modal encoder :</p>
+<ul>
+<li>BERT for text encoding , <code>[CLS]</code> token to represent the global text feature</li>
+<li><strong>Image-Text Contrastive Loss (ITC)：</strong> 「对应了 Uni-modal encoder」 ，作者采用和 ALBEF 相同的方式，使用一个 momentum encoder 构造标签。</li>
+</ul>
+<p>(2) Image-grounded text encoder :</p>
+<ul>
+<li>在 BERT 的每一 block 中，在 self-attention (SA) layer 和 feed forward network (FFN) 层之间插入一个额外的 cross-attention (CA) layer ，用来融合 visual patch token embedding 的信息。一个 task specific <code>[Encode]</code> 替换 <code>[CLS]</code> ，将这个 token 看作 image-text 的 multi-modal representation 。</li>
+<li><strong>Image-Text Matching Loss (ITM)：</strong> 「对应了 Image-grounded text encoder」，使用一个 MLP 线性分类器对 <code>[Encode]</code> 进行二分类的训练 matched/unmatched。作者借鉴了 ALBEF 的 hard negative mining strategy。</li>
+</ul>
+<p>(3) Image-grounded text decoder :</p>
+<ul>
+<li>将 self-attention (SA) layer 改成 causal self-attention layer ，也就是变成了 GPT 结构 。在 text 前后插入 <code>[Decode]</code> 和 <code>[EOS]</code> 。</li>
+<li><strong>Language Modeling Loss (LM)：</strong>「对应 Image-grounded text decoder」，a cross entropy loss + 0.1 label smoothing</li>
+</ul>
+<p>训练过程中，</p>
+<ul>
+<li>text encoder 和 text decoder 的 Self-attention 层参数不共享（ Uni-modal encoder 和 Image-grounded text encoder 的 text Self-attention layer 参数共享）<br />
+因为由于 mask 的不同，SA 层建模了不同的任务（encoding / decoding tasks）。</li>
+<li>其他参数全部共享（embedding层+插入的CA层+FFN层）<br />
+这样可以加快训练效率，同时利用 multi-task training 来提升效果。</li>
+</ul>
+<h3 id="capfilt"><a class="markdownIt-Anchor" href="#capfilt"></a> CapFilt</h3>
+<p><img src="https://cdn.mathpix.com/snip/images/KL_kIaYuADG18tr-XSzopcFKO3ur9OjTGA4kMKOGYKc.original.fullsize.png" alt="" /></p>
+<p>预训练的数据包含：</p>
+<ol>
+<li>a limited number of high-quality human-annotated image-text pairs <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mo stretchy="false">(</mo><msub><mi>I</mi><mi>h</mi></msub><mo separator="true">,</mo><msub><mi>T</mi><mi>h</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{(I_h,T_h)\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">h</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">h</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">}</span></span></span></span> ，比如 COCO  。</li>
+<li>a much larger number of low-quality web image-text pair <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mo stretchy="false">(</mo><msub><mi>I</mi><mi>w</mi></msub><mo separator="true">,</mo><msub><mi>T</mi><mi>w</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{(I_w,T_w)\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">}</span></span></span></span> ， <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>w</mi></msub></mrow><annotation encoding="application/x-tex">T_w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 质量比较差，噪音多。</li>
+</ol>
+<p>所以作者提出 Captioning and Filtering (CapFilt) ，模型为：</p>
+<ul>
+<li>a captioner to generate captions given web images ；使用训练后的 Image-grounded text decoder ，为每一个图像 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>I</mi><mi>w</mi></msub></mrow><annotation encoding="application/x-tex">I_w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 合成一个 caption <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>s</mi></msub></mrow><annotation encoding="application/x-tex">T_s</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 。</li>
+<li>a filter to remove noisy image-text pairs ；使用训练后的 image-grounded text encoder ，对 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mo stretchy="false">(</mo><msub><mi>I</mi><mi>w</mi></msub><mo separator="true">,</mo><msub><mi>T</mi><mi>w</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{(I_w,T_w)\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">}</span></span></span></span> 和 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mo stretchy="false">(</mo><msub><mi>I</mi><mi>w</mi></msub><mo separator="true">,</mo><msub><mi>T</mi><mi>s</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{(I_w,T_s)\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">}</span></span></span></span> 进行二分类。</li>
+</ul>
+<p>过程为：</p>
+<ol>
+<li>初始化：captioner 和 filter 都是直接通过 pre-trained MED model 初始化得到的，然后独立地在人工标注的 CoCo 数据集上进行轻量化微调得到。</li>
+<li>重构数据集：然后如图的对 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mo stretchy="false">(</mo><msub><mi>I</mi><mi>w</mi></msub><mo separator="true">,</mo><msub><mi>T</mi><mi>w</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{(I_w,T_w)\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.07847em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">}</span></span></span></span> 进行样本增强</li>
+<li>可以继续跳回到 1</li>
+</ol>
+<h2 id="dataset"><a class="markdownIt-Anchor" href="#dataset"></a> DataSet</h2>
+<p>图像编码器使用 ImageNet-1K 上预训练的 ViT 初始化（Vit-B/ Vit-L），文本编码器以 BERT-Base 初始化。</p>
+<p>按照 Vit-B 2880/ Vit-L 2400 的 batch-size 训练 20 Epochs，预训练阶段图像尺寸 224*224，微调阶段尺寸 384*384。</p>
+<p>3部分数据集预训练，加起来大概是 14M:<br />
+COCO<br />
+Visual Genome<br />
+网络数据：Conceptual Captions，Conceptual 12M（噪声较大），SBU Captions<br />
+还尝试了一个额外的噪声文本较多的web 数据集 LAION（115M 图像）。</p>
+<hr />
+<h1 id="blip-2"><a class="markdownIt-Anchor" href="#blip-2"></a> BLIP-2</h1>
+<p>Paper: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2301.12597">BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models</a><br />
+Code: <a target="_blank" rel="noopener" href="https://github.com/salesforce/LAVIS/tree/main/projects/blip2">https://github.com/salesforce/LAVIS/tree/main/projects/blip2</a><br />
+Official Blog: <a target="_blank" rel="noopener" href="https://blog.salesforceairesearch.com/blip-2/">https://blog.salesforceairesearch.com/blip-2/</a><br />
+代码解读: <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/664601983">多模态学习6—深入理解BLIP-2</a></p>
+<p><em><strong>the first to unlock the capability of zero-shot instructed image-to-text generation</strong></em></p>
+<p>为了降低计算量，并且缓解灾难性遗忘的问题，visual encoder 和 text encoder 全都采用已经训练好的单模态模型。</p>
+<p>然后训练了 Querying Transformer (QFormer) , a lightweight Querying Transformer，来对图文进行对齐，从而让图像和文本产生交互。<br />
+QFormer 通过一系列 learnable query vectors 从 visual features from the frozen image encoder 中抽取出有效的信息，传递给 LLM 。<br />
+即一个中间键，作为「不可训练的视觉模型」和「不可训练的文本模型」之间的桥梁。</p>
+<p><img src="https://pic2.zhimg.com/v2-fe33323e1deced16d57e9068e6c62c49_b.jpg" alt="" /><br />
+使用二阶段训练的方式：</p>
+<ul>
+<li>1st step : bootstraps vision-language representation learning from a frozen image encoder, to enforces the Q-Former to <strong>learn visual representation most relevant to the text</strong>.<br />
+<strong>让 Queries 去适应 Image Encoder：</strong> 将原始图像特征，转化为「和文本特征很接近的特征」。</li>
+<li>2nd step : bootstraps vision-to-language generative learning from a frozen language model, such that the output visual representation can be <strong>interpreted by the LLM</strong>.<br />
+<strong>让 Queries 去适应 LLM：</strong> 前面将图片转化为「和文本特征接近的特征」还不够，必须要转换为目标 LLM 能看懂的特征。</li>
+</ul>
+<h2 id="method-2"><a class="markdownIt-Anchor" href="#method-2"></a> Method</h2>
+<h3 id="q-former-architecture"><a class="markdownIt-Anchor" href="#q-former-architecture"></a> Q-Former Architecture</h3>
+<p>通过「固定数量」的 query vector，从 image encoder 中抽取出信息。</p>
+<p>包含两个 <strong>transformer submodule</strong> ， 共享相同的 self-attention 层：</p>
+<ul>
+<li>an image transformer: 和 frozen image encoder 交互
+<ul>
+<li>输入为 a set number of learnable query embeddings</li>
+<li>每层包含一个 self-attention；cross-attention；FFN<br />
+其中 cross-attention 用于 attend frozen image features</li>
+</ul>
+</li>
+<li>a text transformer: 同时支持 text encoding 和 text decoding
+<ul>
+<li>和 bert 架构一致，和 image transformer 共享 self-attention 参数。</li>
+</ul>
+</li>
+</ul>
+<p>根据预训练任务的不同，self-attention 的 mask 方式也不同。</p>
+<p>模型根据 BERT-base weights 进行初始化，cross-attention layers 随机初始化；self-attention 共享。 =</p>
+<p>实验中，query token 维度为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>×</mo><mn>768</mn></mrow><annotation encoding="application/x-tex">32 \times 768</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">3</span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">7</span><span class="mord">6</span><span class="mord">8</span></span></span></span> ，远远小于 image encoder 的维度（ 比如 ViT-L/14，输出为 257 × 1024 ，估计需要加一个 MLP 降维 ）。</p>
+<p><img src="https://cdn.mathpix.com/snip/images/UYqrIj-5nqQii9eSJB-zZ-kdtd3K0ve45AOqqlZTYX0.original.fullsize.png" alt="" /></p>
+<h3 id="bootstrap-vision-language-representation-learning"><a class="markdownIt-Anchor" href="#bootstrap-vision-language-representation-learning"></a> Bootstrap Vision-Language Representation Learning</h3>
+<p>Aim：train the Q-Former such that the queries can learn to extract visual representation that is most informative of the text<br />
+目标：将 query vector 与文本空间中的向量进行对齐</p>
+<p>和 BLIP 一致，对于一个相同的 image-text pair，使用三个预训练目标。</p>
+<p><u> 图文检索任务：<strong>Image-Text Contrastive Learning (ITC)</strong> ～ 双塔</u><br />
+Attention 类型：uni-modal self-attention mask ，query 和 text 看不到彼此。<br />
+任务：image-text similarity 进行对比学习，类似检索任务<br />
+表征：文本测为 <code>[CLS]</code> 表征 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathnormal">t</span></span></span></span> ；图像侧为多个 query tokens <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span></span> 。<br />
+推理：图片文本相似度为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathnormal">t</span></span></span></span> 和每一个 query token 的相似度的最大值。</p>
+<p><u>Image Caption 任务：<strong>Image-grounded Text Generation (ITG)</strong>  ～ encoder-decoder</u><br />
+Attention 类型：multi-modal causal self-attention mask</p>
+<ul>
+<li>(Encoder) queries 只能看到其他 query token，</li>
+<li>(Decoder) text token 可以看到 query token 和其他 text token。</li>
+</ul>
+<p>任务：将 text 端第一个 <code>[CLS]</code> token 替换为 <code>[DEC]</code> token，类似 GPT 的 <code>[eos]</code> 。</p>
+<p><u> 图文 re-rank 任务：<strong>Image-Text Matching (ITM)</strong>  ～ 单塔attention</u><br />
+Attention 类型：bi-directional self-attention mask : query 和 text token 可以相互看见<br />
+任务：将每一个 output query token <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span></span> 全部放入一个线性二分类器，然后平均 logits 。借鉴 ALBEF，挖掘 hard negative 样本。</p>
+<h3 id="bootstrap-vision-to-language-generative-learning"><a class="markdownIt-Anchor" href="#bootstrap-vision-to-language-generative-learning"></a> Bootstrap Vision-to-Language Generative Learning</h3>
+<p>将 image query tokens from image transformer <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span></span> 送入 MLP，和 LLM 维度对齐 ，然后作为前缀拼接到 instruction embedding 前面，作为 <strong>soft visual prompts</strong> 。</p>
+<p><img src="https://cdn.mathpix.com/snip/images/BNSHn5WehupMUw1mrwb_4ctd6BXVVFWBY0h0CRU6A18.original.fullsize.png" alt="" /></p>
+<p>作者实验了两种 LLM: decoder-based LLMs and encoder-decoder-based LLMs，继续微调 Q-Former：</p>
+<ul>
+<li>对于 decoder-based LLM，使用 language modeling loss</li>
+<li>对于 encoder-decoder-based LLMs，使用 prefix language modeling loss</li>
+</ul>
+<h2 id="model-pre-training"><a class="markdownIt-Anchor" href="#model-pre-training"></a> Model Pre-training</h2>
+<p><strong>Dataset:</strong></p>
+<ul>
+<li>the same pre-training dataset as BLIP with 129M images in total.</li>
+<li>Adopt the CapFilt method (Li et al., 2022) to create synthetic captions for the web images.
+<ul>
+<li>generate 10 captions using the BLIP-large captioning model</li>
+<li>rank the synthetic captions along with the original web caption based on the image-text similarity produced by a CLIP ViT-L/14 model</li>
+<li>keep top-two captions per image and randomly sample one at each pre-training step</li>
+</ul>
+</li>
+</ul>
+<p><strong>Pre-trained image encoder and LLM:</strong></p>
+<ul>
+<li>Frozen image encoder: ViT-L/14 from CLIP ; ViT-g/14 from EVA-CLIP : remove the last layer of the ViT and uses the second last layer’s output features.</li>
+<li>Frozen language model: OPT(unsupervised-trained decoder-based LLMs) ; FlanT5(instruction-trained encoder-decoder-based LLMs).</li>
+</ul>
+<p><strong>Pre-training settings:</strong></p>
+<ul>
+<li>batch size:
+<ul>
+<li>the first stage: batch size of 2320/1680 for ViT-L/ViT-g</li>
+<li>the second stage: batch size of 1920/1520 for OPT/FlanT5</li>
+</ul>
+</li>
+<li>convert the frozen ViTs’ and LLMs’ parameters into <strong>FP16</strong>, except for FlanT5 where we use <strong>BFloat16</strong>.</li>
+</ul>
+<p><strong>image process:</strong><br />
+images of size 224×224, augmented with random resized cropping and horizontal flipping.</p>
+<p><strong>Instructed Zero-shot Image-to-Text Generation:</strong><br />
+BLIP2 enables a LLM to understand images while preserving its capability in following text prompts, which allows us to <strong>control image-to-text generation with instructions</strong>.</p>
+<ul>
+<li>simply append the text prompt after the visual prompt as input to the LLM.</li>
+<li>For OPT models: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>Question: {} Answer:</mtext></mrow><annotation encoding="application/x-tex">\text{Question: \{\} Answer:}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Question: {} Answer:</span></span></span></span></span></li>
+<li>For FlanT5: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>Question: {} Short answer:</mtext></mrow><annotation encoding="application/x-tex">\text{Question: \{\} Short answer:}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Question: {} Short answer:</span></span></span></span></span></li>
+<li>beam search with a beam width of 5</li>
+<li>length-penalty to -1 which encourages shorter answers, align better with human annotation</li>
+</ul>
+<h2 id="limitation"><a class="markdownIt-Anchor" href="#limitation"></a> Limitation</h2>
+<ul>
+<li>Do not observe an improved VQA performance when providing the LLM with in-context VQA examples.<br />
+Because training dataset only contains a single image-text pair per sample.<br />
+The same observation is also reported in the Flamingo paper.</li>
+<li>BLIP-2’s image-to-text generation inherits the risks of LLMs.</li>
+</ul>
+<h2 id="fine-tune"><a class="markdownIt-Anchor" href="#fine-tune"></a> Fine-tune</h2>
+<p><strong>VQA</strong> 微调：<br />
+<img src="https://cdn.mathpix.com/snip/images/fEsQ3F2dSrOk8rnVN5eTYq2ZQMBW9RKnJgk7d9XllkE.original.fullsize.png" alt="" /></p>
+<p>Image Caption 微调:<br />
+use <code>a photo of</code> as prefix for LLM</p>
+<p>Retrieval 微调:<br />
+用第一阶段的模型 w/o LLM</p>
+<h2 id="dataset-2"><a class="markdownIt-Anchor" href="#dataset-2"></a> Dataset</h2>
+<p>沿用BLIP的数据集，加起来总共129M：COCO, Visual Genome, Conceptual Captions 3M+12M, SBU Captions, 额外的 web 数据集 LAION400M 的一部分，该数据集包含 115M 图像，具有更多的噪声文本；</p>
+<h2 id="self-thinking"><a class="markdownIt-Anchor" href="#self-thinking"></a> Self-thinking</h2>
+<ul>
+<li>
+<p>第一阶段采用三种常见多模态任务，充分对齐图像和文本，和BLIP是很相似的。第二阶段将LLMs引入进来，通过对齐后的图像特征，来为LLMs提供视觉prompts，从而实现图生文的能力。</p>
+</li>
+<li>
+<p>理论上，第一阶段的模型，就是一个训练完成的图文多模态模型。该模型能够完成图文retrieval、图文匹配、图生文的任务。为了进一步利用LLMs的生成能力和zero-shot能力，训练才进入到第二阶段。</p>
+</li>
+<li>
+<p>从与 LLM 对齐的角度来讲，第一阶段的目的其实就是为了得到 output query tokens <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span></span></span></span> ，text transformer 是辅助训练过程的，最后用不到。所以本质上是在用 BLIP 作为不同模态之间的桥梁。<br />
+从这个角度，是否有其他更好的方法，直接去对齐两个不同模态的 transformer 呢，也就是对 visual representation 进行一个 mapping，转换到 LLM 的空间。</p>
+</li>
+<li>
+<p>为什么要用 Bert-base 进行初始化，首先初始化的参数基本不会影响最后的效果，并且初始化模型和两个 frozen model 应该也没有影响，因为最终 Q-former 总是能够拟合适配 frozen model 。<br />
+这里使用 Bert-base 的原因应该是从文本端考虑的，让 text vector 有一定的意义。</p>
+</li>
+<li>
+<p>两阶段的训练方法真的最优吗？实验发现 step1 可以增益 step2，所以从对齐 LLM 的角度，step1 是对 step2 有效的。但是 step2 肯定也会降低 step1 model 的一定能力（图文retrieval、图文匹配、图生文）。<br />
+所以这篇论文不是在单纯地讨论多模态的任务，而更倾向于探究如何利用 large uni-modal model，或者说 image 2 text 的任务，也就需要运用 LLM 的 zero-shot 能力，论文实验部分也是在终点讨论 Visual Question Answering 。</p>
+</li>
+<li>
+<p>上下文学习能力缺失：由于预训练数据集中的每个数据只包含一个图文对，LLM无法学习单个序列中多个图文对的相关性。</p>
+</li>
+</ul>
+<hr />
+<h1 id="instructblip"><a class="markdownIt-Anchor" href="#instructblip"></a> InstructBLIP</h1>
+<p>基于 BLIP-2 提出指令微调的范式，借助额外的 instruction 提取更有用的视觉特征。</p>
+<p>直接从预训练好的 BLIP-2 模型初始化，沿用 BLIP-2 VQA 微调 的方法，把 instruction text tokens 也作为输入同时给到 Q-former 和 LLM，</p>
+<p><img src="https://pic4.zhimg.com/80/v2-fa822b97a2a967cfb2b99e3cb69ea76f_1440w.webp" alt="" /></p>
+<p>推理分两种情况：</p>
+<ol>
+<li>对于大部分描述性任务，如 image captioning，open-ended VQA 等，InstructBLIP 可以直接使用 LLM 生成的文本作为输出；</li>
+<li>对于选择性任务，如 classification 和 multi-choice VQA ，参考 <strong>vocabulary ranking method</strong> ，将LLM生成的内容词汇限制为候选列表进行排序，计算每个候选的对数似然，选择最高值的一个作为最终预测。</li>
+</ol>
+<p>作者将11类任务的26个数据集 <strong>转化成指令微调的格式</strong> ，把它们分成13个 held-in 数据集用于指令微调，和13个 held-out 数据集用于 Zero-Shot 能力的评估。held-out分两种，一种是这些数据在训练期间没被模型见过，但是同类型的任务中学过，另一种是在训练和同类型的任务都不涉及（比如下图中全为白框的4个任务）。</p>
+<p><img src="https://pic3.zhimg.com/80/v2-8b2a31f04bf86307bb8bebc8da423c8a_1440w.webp" alt="" /></p>
+<p>指令模板：<br />
+<img src="https://pic2.zhimg.com/80/v2-d1cdd1d081f2e22eb8fdbb5a1353bf0d_1440w.webp" alt="" /></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/11/03/NLP/LLM/Transformer%20%E5%8F%82%E6%95%B0%E9%87%8F%EF%BC%9B%E6%98%BE%E5%AD%98%EF%BC%9BFlops%20%E5%88%86%E6%9E%90/" rel="prev" title="Transformer 参数量；显存；Flops 分析">
+      <i class="fa fa-chevron-left"></i> Transformer 参数量；显存；Flops 分析
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/11/08/NLP/LLM/%E5%B9%B6%E8%A1%8C%E8%AE%AD%E7%BB%831-%E5%90%90%E8%A1%80%E7%BB%BC%E8%BF%B0/" rel="next" title="并行训练1-吐血综述">
+      并行训练1-吐血综述 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#blip"><span class="nav-number">1.</span> <span class="nav-text"> BLIP</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#abstract-and-intro"><span class="nav-number">1.1.</span> <span class="nav-text"> Abstract and Intro</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#method"><span class="nav-number">1.2.</span> <span class="nav-text"> Method</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#model-architecturemed-and-pre-training-objectives"><span class="nav-number">1.2.1.</span> <span class="nav-text"> Model Architecture(MED) and Pre-training Objectives</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#capfilt"><span class="nav-number">1.2.2.</span> <span class="nav-text"> CapFilt</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dataset"><span class="nav-number">1.3.</span> <span class="nav-text"> DataSet</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#blip-2"><span class="nav-number">2.</span> <span class="nav-text"> BLIP-2</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#method-2"><span class="nav-number">2.1.</span> <span class="nav-text"> Method</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#q-former-architecture"><span class="nav-number">2.1.1.</span> <span class="nav-text"> Q-Former Architecture</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#bootstrap-vision-language-representation-learning"><span class="nav-number">2.1.2.</span> <span class="nav-text"> Bootstrap Vision-Language Representation Learning</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#bootstrap-vision-to-language-generative-learning"><span class="nav-number">2.1.3.</span> <span class="nav-text"> Bootstrap Vision-to-Language Generative Learning</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#model-pre-training"><span class="nav-number">2.2.</span> <span class="nav-text"> Model Pre-training</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#limitation"><span class="nav-number">2.3.</span> <span class="nav-text"> Limitation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fine-tune"><span class="nav-number">2.4.</span> <span class="nav-text"> Fine-tune</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dataset-2"><span class="nav-number">2.5.</span> <span class="nav-text"> Dataset</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#self-thinking"><span class="nav-number">2.6.</span> <span class="nav-text"> Self-thinking</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#instructblip"><span class="nav-number">3.</span> <span class="nav-text"> InstructBLIP</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

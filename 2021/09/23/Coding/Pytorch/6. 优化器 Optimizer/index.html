@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="知乎 ： https:&#x2F;&#x2F;zhuanlan.zhihu.com&#x2F;p&#x2F;346205754?utm_medium&#x3D;social&amp;utm_oi&#x3D;73844937195520  介绍  我们需要在训练的每一步中调整模型的参数。优化算法 Optimization algorithm定义了这个过程。该算法被封装在了optimizer对象中。 优化器的初始化需要传入模型中待优化的参数和学习率。  1op">
+<meta property="og:type" content="article">
+<meta property="og:title" content="6. 优化器optimizer和调度器scheduler">
+<meta property="og:url" content="http://example.com/2021/09/23/Coding/Pytorch/6.%20%E4%BC%98%E5%8C%96%E5%99%A8%20Optimizer/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="知乎 ： https:&#x2F;&#x2F;zhuanlan.zhihu.com&#x2F;p&#x2F;346205754?utm_medium&#x3D;social&amp;utm_oi&#x3D;73844937195520  介绍  我们需要在训练的每一步中调整模型的参数。优化算法 Optimization algorithm定义了这个过程。该算法被封装在了optimizer对象中。 优化器的初始化需要传入模型中待优化的参数和学习率。  1op">
+<meta property="og:locale">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-71259a10c00ce7f2a86d91e33a8a86c3_1440w.jpg">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-4d2604b2dabc8554ebc9cbf6a1e6ff1d_1440w.jpg">
+<meta property="article:published_time" content="2021-09-23T23:21:39.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:16.103Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic4.zhimg.com/80/v2-71259a10c00ce7f2a86d91e33a8a86c3_1440w.jpg">
+
+<link rel="canonical" href="http://example.com/2021/09/23/Coding/Pytorch/6.%20%E4%BC%98%E5%8C%96%E5%99%A8%20Optimizer/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>6. 优化器optimizer和调度器scheduler | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/23/Coding/Pytorch/6.%20%E4%BC%98%E5%8C%96%E5%99%A8%20Optimizer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          6. 优化器optimizer和调度器scheduler
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-23 16:21:39" itemprop="dateCreated datePublished" datetime="2021-09-23T16:21:39-07:00">2021-09-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.4k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>12 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>知乎 ： <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/346205754?utm_medium=social&amp;utm_oi=73844937195520">https://zhuanlan.zhihu.com/p/346205754?utm_medium=social&amp;utm_oi=73844937195520</a></p>
+<h2 id="介绍"><a class="markdownIt-Anchor" href="#介绍"></a> 介绍</h2>
+<ul>
+<li>我们需要在训练的每一步中调整模型的参数。<strong>优化算法 Optimization algorithm</strong>定义了这个过程。该算法被封装在了<code>optimizer</code>对象中。</li>
+<li>优化器的初始化需要传入模型中待优化的参数和学习率。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>在训练的loop中，我们经常需要3个步骤：
+<ul>
+<li><code>optimizer.zero_grad()</code>：梯度清空</li>
+<li><code>loss.backwards()</code>：传播梯度</li>
+<li><code>optimizer.step()</code>：根据梯度调整参数</li>
+</ul>
+</li>
+</ul>
+<h2 id="torchoptim-库"><a class="markdownIt-Anchor" href="#torchoptim-库"></a> torch.optim 库</h2>
+<p><code>torch.optim</code>是一个实现了多种优化算法的库，可以保存当前状态并且根据计算的梯度来更新参数。</p>
+<h3 id="例子"><a class="markdownIt-Anchor" href="#例子"></a> 例子</h3>
+<h4 id="创建"><a class="markdownIt-Anchor" href="#创建"></a> 创建</h4>
+<ul>
+<li>需要传入一个包含<code>Parameter</code>参数的可迭代对象，最简单的是<code>model.parameters()</code>，然后设置<strong>超参数(defaults)选项</strong>，比如学习率，权重衰减等。</li>
+<li>此外，用于分层学习率：<code>optimizer</code>也支持为每个参数单独设置选项，传入一个元素为<strong>字典</strong>的可迭代对象。<br />
+每一个<code>字典</code>都分别定义了一组参数：必须包含一个<code>param</code>键及其<code>超参数(defaults)选项</code>（注意这里<code>params</code>键的值为<code>Parameter</code>类型元素的列表），还可以加上针对这些参数的参数选项（比如<code>weight_decay</code>,<code>lr</code>,<code>momentum</code>）。</li>
+<li>还可以使用分层学习率。后面传递的<strong>总参数选项</strong>，用于没有定义这些选项的<code>parameter</code>。这在只想改变一个参数组选项时是很有用的。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">optim.SGD([ &#123;&#x27;params&#x27;: model.base.parameters()&#125;,</span><br><span class="line">            &#123;&#x27;params&#x27;: model.classifier.parameters(), &#x27;lr&#x27;: 1e-3&#125;</span><br><span class="line">            ], lr=1e-2, momentum=0.9)</span><br></pre></td></tr></table></figure>
+<h5 id="权值衰减l2正则"><a class="markdownIt-Anchor" href="#权值衰减l2正则"></a> 权值衰减/l2正则</h5>
+<p>首先正则化主要是为了防止过拟合，而过拟合一般表现为模型对于输入的微小改变产生了输出的较大差异。<br />
+这主要是由于有些参数w过大的关系，通过对||w||进行惩罚，可以缓解这种问题。<br />
+参数b对于输入的改变是不敏感的，不管输入改变是大还是小，参数b的贡献就只是加个偏置而已。<br />
+举个例子，如果你在训练集中，w和b都表现得很好，但是在测试集上发生了过拟合，b是不背这个锅的，因为它对于所有的数据都是一视同仁的（都只是给它们加个偏置），要背锅的是w，因为它会对不同的数据产生不一样的加权。</p>
+<h4 id="更新参数"><a class="markdownIt-Anchor" href="#更新参数"></a> 更新参数</h4>
+<p>所有的优化器都有<code>step()</code>方法来更新参数。有两种调用方式：</p>
+<ul>
+<li>方法一<br />
+<code>optimizer.step()</code>：用在参数已经存好梯度的情况下，比如在调用<code>loss.backward()</code>方法之后。</li>
+<li>方法二<br />
+有些优化算法需要多次重新计算函数，因此需要传递一个闭包，使它们能够重新计算您的模型。闭包应该清除梯度，计算损失，然后返回。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">for input, target in dataset:</span><br><span class="line">    def closure():</span><br><span class="line">        optimizer.zero_grad()</span><br><span class="line">        output = model(input)</span><br><span class="line">        loss = loss_fn(output, target)</span><br><span class="line">        loss.backward()</span><br><span class="line">        return loss</span><br><span class="line">    optimizer.step(closure)</span><br></pre></td></tr></table></figure>
+<h3 id="基类"><a class="markdownIt-Anchor" href="#基类"></a> 基类</h3>
+<p><code>torch.optim.Optimizer(params, defaults)</code></p>
+<h4 id="初始化函数"><a class="markdownIt-Anchor" href="#初始化函数"></a> 初始化函数：</h4>
+<p><code>__init__(self, params, defaults)</code>：</p>
+<ul>
+<li><code>params</code>：<code>parameter</code>的迭代对象，或者是一个字典。</li>
+<li>核心为：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">self.defaults = defaults</span><br><span class="line">self.param_groups = []</span><br><span class="line"></span><br><span class="line">param_groups = list(params)</span><br><span class="line">if not isinstance(param_groups[0], dict):</span><br><span class="line">    param_groups = [&#123;&#x27;params&#x27;: param_groups&#125;]</span><br><span class="line"></span><br><span class="line">for param_group in param_groups:</span><br><span class="line">    self.add_param_group(param_group)</span><br></pre></td></tr></table></figure>
+<p>可以看到，如果<code>params</code>传入非字典形式（<code>model.parameters()</code>），则构造函数会自动创建字典，键为<code>'params'</code>，值为传入的<code>parameter</code>。如果是字典形式，则不用转换。<br />
+强调一下，<code>__init__</code>方法生成了两个实例变量和一个字典列表：<br />
+- <code>self.param_groups = []</code><br />
+- <code>self.defaults = defaults</code><br />
+- <code>param_groups = [&#123;'params': list, ('lr': -, ..)&#125;]</code><br />
+然后对<code>self.param_groups</code>中每个字典元素使用<code>self.add_param_group()</code>方法进行处理。</p>
+<h4 id="其他函数"><a class="markdownIt-Anchor" href="#其他函数"></a> 其他函数：</h4>
+<ul>
+<li>
+<p><code>Optimizer.add_param_group(param_group)</code>：<code>param_group</code>为字典形式，向<code>self.param_groups</code>中增加参数组。<br />
+源码实现过程：</p>
+<ul>
+<li>将<code>param_group['params']</code>转化为list形式。</li>
+<li>使用<code>self.defaults</code>中设置的超参数给这个<code>param_group</code>赋值。</li>
+<li>将赋值后的<code>param_group</code>字典放入<code>self.param_groups</code>。</li>
+</ul>
+</li>
+<li>
+<p><code>Optimizer.step()</code>：完成一次模型参数的更新。基层<code>Optimizer</code>定义了 step 方法接口，不同的子类优化器进行了不同的实现。</p>
+</li>
+<li>
+<p><code>Optimizer.zero_grad()</code>：将Tensor的梯度清空</p>
+</li>
+<li>
+<p><code>Optimizer.state_dict()</code>：返回优化器的字典</p>
+</li>
+<li>
+<p><code>Optimizer.load_state_dict(dict)</code>：根据字典加载优化器\</p>
+</li>
+</ul>
+<blockquote>
+<p>上面两个方法可用来实现模型训练中断后继续训练功能</p>
+</blockquote>
+<h4 id="分层学习率例子"><a class="markdownIt-Anchor" href="#分层学习率例子"></a> 分层学习率例子</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">class DummyModel(nn.Module):</span><br><span class="line">def __init__(self, class_num=10):</span><br><span class="line">    super(DummyModel, self).__init__()</span><br><span class="line">    self.base = nn.Sequential(</span><br><span class="line">        nn.Conv2d(3, 64, kernel_size=3, padding=1),</span><br><span class="line">        nn.ReLU(),</span><br><span class="line">        nn.Conv2d(64, 128, kernel_size=3, padding=1),</span><br><span class="line">        nn.ReLU(),</span><br><span class="line">    )</span><br><span class="line">    self.gap = nn.AdaptiveAvgPool2d(1)</span><br><span class="line">    self.fc = nn.Linear(128, class_num)</span><br><span class="line"></span><br><span class="line">model = DummyModel().cuda()</span><br><span class="line"></span><br><span class="line">optimizer = SGD([</span><br><span class="line">                &#123;&#x27;params&#x27;: model.base.parameters()&#125;,</span><br><span class="line">                &#123;&#x27;params&#x27;: model.fc.parameters(), &#x27;lr&#x27;: 1e-3&#125; # 对 fc的参数设置不同的学习率</span><br><span class="line">            ], lr=1e-2, momentum=0.9)</span><br></pre></td></tr></table></figure>
+<h3 id="不同的优化器子类"><a class="markdownIt-Anchor" href="#不同的优化器子类"></a> 不同的优化器子类</h3>
+<ul>
+<li><code>SGD(params, lr, momentum=0, dampening=0, weight_decay=0, nesterov=False)</code></li>
+<li><code>Adam(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, amsgrad=False)</code></li>
+</ul>
+<h2 id="torchoptimlr_scheduler-库"><a class="markdownIt-Anchor" href="#torchoptimlr_scheduler-库"></a> torch.optim.lr_scheduler 库</h2>
+<p>用于根据epoch来动态调整lr。<br />
+原理：在每个epoch中，计算参数组的lr，然后更新optimizer对应参数中的lr。</p>
+<h3 id="基类-2"><a class="markdownIt-Anchor" href="#基类-2"></a> 基类</h3>
+<p>Class：<code>torch.optim.lr_scheduler._LRScheduler</code></p>
+<h4 id="主要attribute"><a class="markdownIt-Anchor" href="#主要attribute"></a> 主要attribute：</h4>
+<ul>
+<li><code>optimizer</code>：关联的优化器</li>
+<li><code>last_epoch</code>：记录epoch数</li>
+<li><code>base_lrs</code>：记录初始学习率</li>
+</ul>
+<h4 id="初始化函数-2"><a class="markdownIt-Anchor" href="#初始化函数-2"></a> 初始化函数</h4>
+<p><code>__init__(self, optimizer, last_epoch=-1, verbose=False)</code></p>
+<ul>
+<li>参数：<br />
+<code>optimizer</code><br />
+<code>last_epoch = -1</code>：最后一次epoch的index。</li>
+<li>源码实现：
+<ul>
+<li>根据<code>last_epoch</code>是否为-1初始化<code>optimizer.param_groups</code>中每个字典的<code>initial_lr</code>键值对，并将所有的<code>initial_lr</code>放入<code>self.base_lrs</code>。<br />
+· 如果<code>last_epoch==-1</code>，则代表初次训练模型，此时会向optimizer里的各参数字典中添加初始学习率：<code>group.setdefault('initial_lr', group['lr'])</code><br />
+· 若<code>last_epoch</code>传入值大于-1，则代表从某个epoch开始继续上次训练，此时要求optimizer的参数组中有<code>initial_lr</code>初始学习率信息，否则报错。</li>
+<li>初始化内部<code>with_counter</code>函数：确保<code>lr_scheduler.step()</code>是在<code>optimizer.step()</code>之后调用的。</li>
+<li><code>self.optimizer._step_count = 0</code><br />
+<code>self._step_count = 0</code><br />
+<code>self.last_epoch = last_epoch</code><br />
+<code>self.verbose = verbose</code></li>
+<li>执行一次<code>self.step()</code></li>
+</ul>
+</li>
+</ul>
+<h4 id="其他函数-2"><a class="markdownIt-Anchor" href="#其他函数-2"></a> 其他函数：</h4>
+<ul>
+<li>
+<p><code>step(epoch=None)</code>: 子类公用。</p>
+<ul>
+<li>对<code>last_epoch</code>自增，然后调整学习率。</li>
+<li>调用子类的<code>get_lr()</code>方法得到学习率，并且更新到<code>optimizer</code>的<code>para_groups</code>属性中。</li>
+<li>将所有的学习率更新到<code>self._last_lr</code>中。</li>
+</ul>
+</li>
+<li>
+<p><code>get_lr()</code>: 子类需要实现，不同子类继承后会有不同的实现.其返回值是<code>[lr1, lr2, ...]</code>结构。</p>
+</li>
+<li>
+<p><code>get_last_lr()</code>: 子类公用，记录的最后一次<code>optimizer</code>各参数组里更新后的学习率信息。</p>
+</li>
+<li>
+<p><code>print_lr(is_verbose, group, lr, epoch=None)</code>: 显示 lr 调整信息</p>
+</li>
+<li>
+<p><code>state_dict()</code>: 子类可能会重写</p>
+</li>
+<li>
+<p><code>load_state_dict(state_dict)</code>: 子类可能会重写</p>
+</li>
+</ul>
+<h3 id="常用的学习率调整方法"><a class="markdownIt-Anchor" href="#常用的学习率调整方法"></a> 常用的学习率调整方法</h3>
+<h4 id="steplr"><a class="markdownIt-Anchor" href="#steplr"></a> StepLR</h4>
+<p><code>StepLR(optimizer, step_size, gamma=0.1, last_epoch=-1, verbose=False)</code></p>
+<ul>
+<li>功能：等间隔调整学习率，也就是每隔一段时间去调整学习率，最终学习率的图形是阶梯形状逐渐下降（gamma小于1）或者上升（gamma大于1，估计没有人会这么设置吧）</li>
+<li>参数：
+<ul>
+<li><code>step_size</code>：调整学习率的间隔数</li>
+<li><code>gamma</code>：调整系数，也就是每次调整学习率，都将之前的学习率乘以这个系数，具体调整方式：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>r</mi><mo>=</mo><mi>l</mi><mi>r</mi><mo>∗</mo><mi>g</mi><mi>a</mi><mi>m</mi><mi>m</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">lr=lr*gamma</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">a</span><span class="mord mathnormal">m</span><span class="mord mathnormal">m</span><span class="mord mathnormal">a</span></span></span></span></li>
+</ul>
+</li>
+</ul>
+<p><img src="https://pic4.zhimg.com/80/v2-71259a10c00ce7f2a86d91e33a8a86c3_1440w.jpg" alt="" /></p>
+<h4 id="multisteplr"><a class="markdownIt-Anchor" href="#multisteplr"></a> MultiStepLR</h4>
+<p><code>MultiStepLR(optimizer, milestones, gamma=0.1, last_epoch=-1, verbose=False)</code></p>
+<ul>
+<li>功能：按给定间隔调整学习率</li>
+<li>参数：
+<ul>
+<li><code>milestones</code>：设定调整时刻数，这个参数是一个列表，其中每一项都是一个整数，代表所需要调整学习率的epoch时刻。<br />
+例如：<code>[50, 125, 180]</code>表示分别在epoch为 50，125，180时进行调整。<br />
+具体图像和StepLR类似。</li>
+</ul>
+</li>
+</ul>
+<h4 id="exponentiallr"><a class="markdownIt-Anchor" href="#exponentiallr"></a> ExponentialLR</h4>
+<p><code>ExponentialLR(optimizer, gamma, last_epoch=-1, verbose=False)</code></p>
+<ul>
+<li>功能：按指数衰减调整学习率</li>
+<li>参数：
+<ul>
+<li><code>gamma</code>：指数的底，通常设置为接近1的数（0.9），调整方式：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>r</mi><mo>=</mo><mi>l</mi><mi>r</mi><mo>∗</mo><mi>g</mi><mi>a</mi><mi>m</mi><mi>m</mi><mi>a</mi><mo>∗</mo><mo>∗</mo><mi>e</mi><mi>p</mi><mi>o</mi><mi>c</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">lr=lr*gamma**epoch</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.6597200000000001em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">a</span><span class="mord mathnormal">m</span><span class="mord mathnormal">m</span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord">∗</span><span class="mord mathnormal">e</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal">c</span><span class="mord mathnormal">h</span></span></span></span><br />
+<img src="https://pic2.zhimg.com/80/v2-4d2604b2dabc8554ebc9cbf6a1e6ff1d_1440w.jpg" alt="" /></li>
+</ul>
+</li>
+</ul>
+<h4 id="更加常用的warmup等策略可以使用transformers库中的调度器"><a class="markdownIt-Anchor" href="#更加常用的warmup等策略可以使用transformers库中的调度器"></a> 更加常用的warmup等策略可以使用<code>transformers</code>库中的调度器</h4>
+<p><strong>“为什么warmup有效 ？”</strong> 这个问题目前还没有被充分证明。</p>
+<ul>
+<li>直觉：
+<ul>
+<li>深层网络随机初始化差异较大，如果一开始以较大的学习率，初始学习带来的偏差在后续学习过程中难以纠正。<br />
+若一开始以较大的学习率学习，易对数据造成过拟合，需要经过之后更多轮的训练进行修正。</li>
+<li>而浅层神经网络一开始使用幅度大的更新并不会导致方向错误。</li>
+</ul>
+</li>
+<li>理论：
+<ul>
+<li>缓解模型在初期对 mini-batch 过拟合的现象</li>
+<li>保持模型深层的稳定性。在训练的过程中，如果有mini-batch内的数据分布方差特别大，这会导致模型学习剧烈波动，使其学得的权重很不稳定，这在训练初期最为明显，最后期较为缓解。<br />
+初期在预热的小学习率下，模型可以慢慢趋于稳定,等模型相对稳定后再选择预先设置的学习率进行训练,使得模型收敛速度变得更快，模型效果更佳。</li>
+</ul>
+</li>
+<li>实现：<code>warmup_lr</code>的初始值是跟训练预料的大小成反比的，也就是说训练预料越大，那么warmup_lr 初值越小
+<ul>
+<li>使得学习率可以适应不同的训练集合size</li>
+<li>即使不幸学习率设置得很大，那么也能通过warmup机制看到合适的学习率区间（即训练误差先降后升的<strong>关键位置</strong>附近），以便后续验证。</li>
+</ul>
+</li>
+<li>不同的策略和代码实现：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/468356692">Transformers之自定义学习率动态调整</a></li>
+</ul>
+<h2 id="swa算法"><a class="markdownIt-Anchor" href="#swa算法"></a> SWA算法</h2>
+<p><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/optim.html?highlight=swa_model">https://pytorch.org/docs/stable/optim.html?highlight=swa_model</a></p>
+<ul>
+<li><code>swa_util</code>中还有两个类和一个函数用于实现SWA算法。
+<ul>
+<li><code>AveragedModel</code> ：实现SWA算法的权重平均模型</li>
+<li><code>SWALR</code> ：搭配使用的学习率调整策略</li>
+<li><code>update_bn</code> ：更新模型中的bn</li>
+</ul>
+</li>
+<li>使用<code>AveragedModel</code>封装需要使用swa算法的任意<code>nn.Module</code>，<code>swa_model</code>会追踪参数的平均值。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">swa_model = AveragedModel(model)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>然后使用<code>update_parameters()</code>方法来更新均值参数。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">swa_model.update_parameters(model)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>例子：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; loader, optimizer, model, loss_fn = ...</span><br><span class="line">&gt;&gt;&gt; swa_model = torch.optim.swa_utils.AveragedModel(model)</span><br><span class="line">&gt;&gt;&gt; scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=300)</span><br><span class="line">&gt;&gt;&gt; swa_start = 160</span><br><span class="line">&gt;&gt;&gt; swa_scheduler = SWALR(optimizer, swa_lr=0.05)</span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">&gt;&gt;&gt; for epoch in range(300):</span><br><span class="line">&gt;&gt;&gt;       for input, target in loader:</span><br><span class="line">&gt;&gt;&gt;           optimizer.zero_grad()</span><br><span class="line">&gt;&gt;&gt;           loss_fn(model(input), target).backward()</span><br><span class="line">&gt;&gt;&gt;           optimizer.step()</span><br><span class="line">&gt;&gt;&gt;       if epoch &gt; swa_start:</span><br><span class="line">&gt;&gt;&gt;           swa_model.update_parameters(model)</span><br><span class="line">&gt;&gt;&gt;           swa_scheduler.step()</span><br><span class="line">&gt;&gt;&gt;       else:</span><br><span class="line">&gt;&gt;&gt;           scheduler.step()</span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">&gt;&gt;&gt; # Update bn statistics for the swa_model at the end</span><br><span class="line">&gt;&gt;&gt; torch.optim.swa_utils.update_bn(loader, swa_model)</span><br><span class="line">&gt;&gt;&gt; # Use swa_model to make predictions on test data</span><br><span class="line">&gt;&gt;&gt; preds = swa_model(test_input)</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/09/23/Coding/Pytorch/5.%20%E5%88%86%E7%B1%BB%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0/" rel="prev" title="5. 分类损失函数">
+      <i class="fa fa-chevron-left"></i> 5. 分类损失函数
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/10/06/%E5%9B%BE%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C/1.%20%E5%9B%BE%E7%9A%84%E7%AE%80%E4%BB%8B/" rel="next" title="1. 图的简介">
+      1. 图的简介 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text"> 介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#torchoptim-%E5%BA%93"><span class="nav-number">2.</span> <span class="nav-text"> torch.optim 库</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BE%8B%E5%AD%90"><span class="nav-number">2.1.</span> <span class="nav-text"> 例子</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA"><span class="nav-number">2.1.1.</span> <span class="nav-text"> 创建</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%9D%83%E5%80%BC%E8%A1%B0%E5%87%8Fl2%E6%AD%A3%E5%88%99"><span class="nav-number">2.1.1.1.</span> <span class="nav-text"> 权值衰减&#x2F;l2正则</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E5%8F%82%E6%95%B0"><span class="nav-number">2.1.2.</span> <span class="nav-text"> 更新参数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E7%B1%BB"><span class="nav-number">2.2.</span> <span class="nav-text"> 基类</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E5%87%BD%E6%95%B0"><span class="nav-number">2.2.1.</span> <span class="nav-text"> 初始化函数：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E5%87%BD%E6%95%B0"><span class="nav-number">2.2.2.</span> <span class="nav-text"> 其他函数：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%86%E5%B1%82%E5%AD%A6%E4%B9%A0%E7%8E%87%E4%BE%8B%E5%AD%90"><span class="nav-number">2.2.3.</span> <span class="nav-text"> 分层学习率例子</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%90%8C%E7%9A%84%E4%BC%98%E5%8C%96%E5%99%A8%E5%AD%90%E7%B1%BB"><span class="nav-number">2.3.</span> <span class="nav-text"> 不同的优化器子类</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#torchoptimlr_scheduler-%E5%BA%93"><span class="nav-number">3.</span> <span class="nav-text"> torch.optim.lr_scheduler 库</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E7%B1%BB-2"><span class="nav-number">3.1.</span> <span class="nav-text"> 基类</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BB%E8%A6%81attribute"><span class="nav-number">3.1.1.</span> <span class="nav-text"> 主要attribute：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E5%87%BD%E6%95%B0-2"><span class="nav-number">3.1.2.</span> <span class="nav-text"> 初始化函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E5%87%BD%E6%95%B0-2"><span class="nav-number">3.1.3.</span> <span class="nav-text"> 其他函数：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E7%9A%84%E5%AD%A6%E4%B9%A0%E7%8E%87%E8%B0%83%E6%95%B4%E6%96%B9%E6%B3%95"><span class="nav-number">3.2.</span> <span class="nav-text"> 常用的学习率调整方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#steplr"><span class="nav-number">3.2.1.</span> <span class="nav-text"> StepLR</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#multisteplr"><span class="nav-number">3.2.2.</span> <span class="nav-text"> MultiStepLR</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#exponentiallr"><span class="nav-number">3.2.3.</span> <span class="nav-text"> ExponentialLR</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E5%8A%A0%E5%B8%B8%E7%94%A8%E7%9A%84warmup%E7%AD%89%E7%AD%96%E7%95%A5%E5%8F%AF%E4%BB%A5%E4%BD%BF%E7%94%A8transformers%E5%BA%93%E4%B8%AD%E7%9A%84%E8%B0%83%E5%BA%A6%E5%99%A8"><span class="nav-number">3.2.4.</span> <span class="nav-text"> 更加常用的warmup等策略可以使用transformers库中的调度器</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#swa%E7%AE%97%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text"> SWA算法</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

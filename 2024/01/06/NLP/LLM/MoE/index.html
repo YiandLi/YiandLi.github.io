@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="群魔乱舞：MoE大模型详解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MOE">
+<meta property="og:url" content="http://example.com/2024/01/06/NLP/LLM/MoE/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="群魔乱舞：MoE大模型详解">
+<meta property="og:locale">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled1.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled2.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled3.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled4.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/v2-ba4daaa9bdc05ab46fdf49b73ef57b79_b.webp">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled5.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled6.png">
+<meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled7.png">
+<meta property="article:published_time" content="2024-01-07T07:12:07.000Z">
+<meta property="article:modified_time" content="2024-03-11T01:53:43.734Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/NLP/LLM/MoE/Untitled.png">
+
+<link rel="canonical" href="http://example.com/2024/01/06/NLP/LLM/MoE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>MOE | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/01/06/NLP/LLM/MoE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MOE
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2024-01-06 23:12:07" itemprop="dateCreated datePublished" datetime="2024-01-06T23:12:07-08:00">2024-01-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Model/" itemprop="url" rel="index"><span itemprop="name">LLM Model</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>5.3k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>27 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/677638939">群魔乱舞：MoE大模型详解</a></p>
+<!-- ![alt text](/images/NLP/LLM/MoE/Untitled.png) -->
+<center>
+<img src="/images/NLP/LLM/MoE/Untitled.png" height="600" weight="">
+</center>
+<span id="more"></span>
+<h1 id="moe"><a class="markdownIt-Anchor" href="#moe"></a> MoE</h1>
+<p>将原本的 FFN 层替换为 <strong>稀疏 MoE 层</strong> ，MoE 层包含若干独立的 FFN网络（专家）和一个门控网络（路由器）。</p>
+<p>根据路由器的结果，每一个 token 都被发送到 top-k 个专家层。</p>
+<p>在 MoE 模型中，只有 FFN 层被当做独立的专家，其他部分的模型参数则是共享的。</p>
+<p><strong>优势：</strong></p>
+<ol>
+<li>
+<p><strong>训练速度更快，效果更好：</strong></p>
+<p>在预训练阶段，与与Dense模型相比，混合专家模型通常能够更快地达到相同的质量水平。与Dense模型相比，在相同计算资源下，训练速度更快，而且可以训练更大的模型。</p>
+</li>
+<li>
+<p><strong>相同参数情况下，推理成本低：</strong> 因为仅仅使用 k 个专家层。</p>
+</li>
+<li>
+<p><strong>扩展性好：</strong> 允许模型在保持计算成本不变的情况下增加参数数量，这使得它能够扩展到非常大的模型规模，如万亿参数模型。</p>
+</li>
+<li>
+<p><strong>多任务学习能力</strong></p>
+</li>
+</ol>
+<p>缺点：</p>
+<ol>
+<li><strong>训练稳定性</strong>：MoE在训练过程中可能会遇到稳定性问题。</li>
+<li><strong>通信成本</strong>：在分布式训练环境中，MoE的专家路由机制可能会增加通信成本，尤其是在模型规模较大时。</li>
+<li><strong>模型复杂性</strong>：MoE的设计相对复杂，可能需要更多的工程努力来实现和优化。</li>
+<li><strong>下游任务性能</strong>：MoE由于其稀疏性，使得在Fine-tuning过程中容易出现过拟合。</li>
+</ol>
+<h2 id="解读"><a class="markdownIt-Anchor" href="#解读"></a> 解读</h2>
+<h3 id="sparsely-gated-moe"><a class="markdownIt-Anchor" href="#sparsely-gated-moe"></a> <strong>Sparsely-Gated MoE</strong></h3>
+<h4 id="门控网络gating-network"><a class="markdownIt-Anchor" href="#门控网络gating-network"></a> 门控网络（Gating Network）</h4>
+<p>负责为每一个token选择一个专家组合</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 为门控网络输出，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>E</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E_i(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.05764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 为第 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> 个 expert 的输出 ，这是Sparsely-Gated MoE 层的核心组成部分。</p>
+<p>则加权和为 ：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><msubsup><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mi>G</mi><mo stretchy="false">(</mo><mi>x</mi><msub><mo stretchy="false">)</mo><mi>i</mi></msub><msub><mi>E</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y=\sum_{i=1}^n G(x)_i E_i(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.104002em;vertical-align:-0.29971000000000003em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.05764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>G</mi><mi>σ</mi></msub><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">Softmax</mi><mo>⁡</mo><mrow><mo fence="true">(</mo><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mi>g</mi></msub><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">G_\sigma(\boldsymbol{x})=\operatorname{Softmax}\left(\boldsymbol{x} \cdot \boldsymbol{W}_g\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">G</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">σ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm">t</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">x</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span></p>
+<p>注意，这里没有筛选 top k ，所有 expert 都会对所有输入进行运算，再通过门控网络的输出进行加权和，如果 experts 的数量太大，就会导致计算量非常大。</p>
+<p>Shazeer 等人的工作还探索了其他的门控机制，其中包括带噪声的 TopK 门控 (Noisy Top-K Gating)。这种门控方法引入了一些可调整的噪声，然后保留前 k 个值。</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">x</span></span></span></span> 为上一层 attention 层的输出结果，维度为 <code>[ batch, seq, emb_size ]</code></p>
+<p>首先，在原来 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mi>g</mi></msub></mrow><annotation encoding="application/x-tex">\boldsymbol{x} \cdot \boldsymbol{W}_g</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.44445em;vertical-align:0em;"></span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.972218em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> 的基础上加一些噪音（标准噪音 * 计算出来的权重）：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><msub><mo stretchy="false">)</mo><mi>i</mi></msub><mo>=</mo><msub><mrow><mo fence="true">(</mo><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mi>g</mi></msub><mo fence="true">)</mo></mrow><mi>i</mi></msub><mo>+</mo><mi mathvariant="normal">StandardNormal</mi><mo>⁡</mo><mo stretchy="false">(</mo><mo stretchy="false">)</mo><mo>⋅</mo><mi mathvariant="normal">Softplus</mi><mo>⁡</mo><mrow><mo fence="true">(</mo><msub><mrow><mo fence="true">(</mo><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mtext>noise </mtext></msub><mo fence="true">)</mo></mrow><mi>i</mi></msub><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">H(\boldsymbol{x})_i=\left(\boldsymbol{x} \cdot \boldsymbol{W}_g\right)_i+\operatorname{StandardNormal}() \cdot \operatorname{Softplus}\left(\left(\boldsymbol{x} \cdot \boldsymbol{W}_{\text {noise }}\right)_i\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.085808em;vertical-align:-0.335808em;"></span><span class="minner"><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.12585599999999997em;"><span style="top:-2.364192em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.335808em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">t</span><span class="mord mathrm">a</span><span class="mord mathrm">n</span><span class="mord mathrm">d</span><span class="mord mathrm">a</span><span class="mord mathrm">r</span><span class="mord mathrm">d</span><span class="mord mathrm">N</span><span class="mord mathrm">o</span><span class="mord mathrm">r</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">l</span></span><span class="mopen">(</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.29969999999999997em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm">t</span><span class="mord mathrm">p</span><span class="mord mathrm">l</span><span class="mord mathrm">u</span><span class="mord mathrm">s</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="minner"><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31750199999999995em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">noise </span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.161964em;"><span style="top:-2.4003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29969999999999997em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span></p>
+<p>然后，保留  Top-K 个值：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">KeepTopK</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>v</mi><mo separator="true">,</mo><mi>k</mi><msub><mo stretchy="false">)</mo><mi>i</mi></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.3599999999999999em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><msub><mi>v</mi><mi>i</mi></msub><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mtext> if </mtext><msub><mi>v</mi><mi>i</mi></msub><mtext> is in the topK elements. </mtext></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mi mathvariant="normal">∞</mi><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> otherwise. </mtext></mstyle></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\operatorname{KeepTopK}(v, k)_i= \begin{cases}v_i, &amp; \text { if } v_i \text { is in the topK elements. } \\ -\infty, &amp; \text { otherwise. }\end{cases}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">K</span><span class="mord mathrm">e</span><span class="mord mathrm">e</span><span class="mord mathrm">p</span><span class="mord mathrm">T</span><span class="mord mathrm">o</span><span class="mord mathrm">p</span><span class="mord mathrm">K</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:3.0000299999999998em;vertical-align:-1.25003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord">−</span><span class="mord">∞</span><span class="mpunct">,</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord"> if </span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord text"><span class="mord"> is in the topK elements. </span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord"> otherwise. </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p>最后使用 Soft max 得到每一个 Expert 的结果：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">Softmax</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">KeepTopK</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>H</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo separator="true">,</mo><mi>k</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(\boldsymbol{x})=\operatorname{Softmax}(\operatorname{KeepTopK}(H(\boldsymbol{x}), k))
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm">t</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">x</span></span><span class="mopen">(</span><span class="mop"><span class="mord mathrm">K</span><span class="mord mathrm">e</span><span class="mord mathrm">e</span><span class="mord mathrm">p</span><span class="mord mathrm">T</span><span class="mord mathrm">o</span><span class="mord mathrm">p</span><span class="mord mathrm">K</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span></span></p>
+<p>对于非 TopK 的部分，由于值是负无穷，这样在经过 Softmax 之后就会变成 0，不会被选中。</p>
+<p>noise 项则可以使得不同 expert 的负载更加均衡。</p>
+<p>在具体实验中，作者使用的 K=2~4。</p>
+<h4 id="平衡专家利用率balancing-expert-utilization"><a class="markdownIt-Anchor" href="#平衡专家利用率balancing-expert-utilization"></a> 平衡专家利用率（Balancing Expert Utilization）</h4>
+<p>论文指出，门控网络倾向于收敛到一种状态，总是为相同的几个专家产生大的权重。</p>
+<p>这种不平衡是自我强化的，因为受到青睐的专家训练得更快，因此被门控网络更多地选择。</p>
+<p>为了解决这个问题，论文提出了一种<strong>软约束方法</strong>。定义专家相对于每 batch 数据 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">X</mi></mrow><annotation encoding="application/x-tex">\mathbf X</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68611em;vertical-align:0em;"></span><span class="mord mathbf">X</span></span></span></span> 的重要性 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>Importance</mtext><mo stretchy="false">(</mo><mi mathvariant="bold">X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{Importance}(\mathbf X)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Importance</span></span><span class="mopen">(</span><span class="mord mathbf">X</span><span class="mclose">)</span></span></span></span> ，表示门控值的总和。</p>
+<p>然后通过重要性 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>Importance</mtext><mo stretchy="false">(</mo><mi mathvariant="bold">X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{Importance}(\mathbf X)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Importance</span></span><span class="mopen">(</span><span class="mord mathbf">X</span><span class="mclose">)</span></span></span></span> 的得到损失函数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mtext>Importance</mtext></msub><mo stretchy="false">(</mo><mi mathvariant="bold">X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L_{\text{Importance}}(\mathbf X)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.328331em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">Importance</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathbf">X</span><span class="mclose">)</span></span></span></span> ，用于约束门控值，使其专家们的重要性差不多。</p>
+<p>这个损失函数通过所有专家<strong>重要性集合的 coefficient of variation</strong> 决定，然后乘以一个<strong>缩放因子超参数</strong> <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mtext>Importance</mtext></msub></mrow><annotation encoding="application/x-tex">w_{\text{Importance}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.716668em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.328331em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">Importance</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> 。</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.24999999999999992em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mtext>Importance</mtext><mo stretchy="false">(</mo><mi mathvariant="bold-italic">X</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo>∑</mo><mrow><mi mathvariant="bold-italic">x</mi><mo>∈</mo><mi mathvariant="bold-italic">X</mi></mrow></munder><mi>G</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><msub><mi>L</mi><mtext>importance</mtext></msub><mo stretchy="false">(</mo><mi mathvariant="bold-italic">X</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>w</mi><mtext>importance</mtext></msub><mo>⋅</mo><mi>C</mi><mi>V</mi><mo stretchy="false">(</mo><mtext>Importance</mtext><mi mathvariant="bold-italic">X</mi><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+&amp;\text{Importance}(\boldsymbol{X}) = \sum_{\boldsymbol{x} \in \boldsymbol{X}} G(\boldsymbol{x}) \\
+&amp; L_{\text{importance}}(\boldsymbol{X}) = w_{\text{importance}} \cdot CV(\text{Importance}\boldsymbol{X})
+\end{aligned}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.173657em;vertical-align:-1.8368285000000002em;"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.3368285em;"><span style="top:-4.3368285em;"><span class="pstrut" style="height:3.050005em;"></span><span class="mord"></span></span><span style="top:-1.8731765em;"><span class="pstrut" style="height:3.050005em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.8368285000000002em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.3368285em;"><span style="top:-4.3368285em;"><span class="pstrut" style="height:3.050005em;"></span><span class="mord"><span class="mord"></span><span class="mord text"><span class="mord">Importance</span></span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.07778em;">X</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.050005em;"><span style="top:-1.8537179999999998em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord boldsymbol mtight">x</span></span></span><span class="mrel mtight">∈</span><span class="mord mtight"><span class="mord mtight"><span class="mord boldsymbol mtight" style="margin-right:0.07778em;">X</span></span></span></span></span></span><span style="top:-3.0500049999999996em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.323652em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span></span></span><span style="top:-1.8731765em;"><span class="pstrut" style="height:3.050005em;"></span><span class="mord"><span class="mord"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.317502em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">importance</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.07778em;">X</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.317502em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">importance</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mopen">(</span><span class="mord text"><span class="mord">Importance</span></span><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.07778em;">X</span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.8368285000000002em;"><span></span></span></span></span></span></span></span></span></span></span></span></p>
+<h2 id="gshard"><a class="markdownIt-Anchor" href="#gshard"></a> <strong>GShard</strong></h2>
+<p>GShard 是谷歌 2021 年在论文 <a href="https://link.zhihu.com/?target=https%3A//openreview.net/pdf%3Fid%3Dqrwe7XHTmYb">GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding</a> 中提出的使用 GShard 实现 MoE 跨设备分片的方法。</p>
+<p>GShard 是第一个将 MoE 的思想拓展到 Transformer 上的工作。</p>
+<p>具体的做法是，把 Transformer 的 <strong>encoder</strong> 和 <strong>decoder</strong> 中，每隔一个的 FFN 层，替换成 MoE 层，使用的都是 <strong>Top-2</strong> 门控网络。</p>
+<p>当扩展到多个设备时，MoE 层在不同设备间共享，也就是每一个设备都只有一个 MoE 层，而其他所有层则在每个设备上复制。</p>
+<p>每个专家网络负责处理一部分输入数据，并且每个 token 根据门控机制的输出被分配到一个或两个专家网络中。</p>
+<p><img src="/images/NLP/LLM/MoE/Untitled1.png" alt="alt text" /></p>
+<p>实现 MoE 跨设备分片的关键技术是模型并行化（model parallelism）和数据并行化（data parallelism）的结合。</p>
+<p>为了保持负载平衡和训练效率，GShard 的作者除了引入上节 Sparsely-Gated MoE 中的辅助 loss 外，还引入了一些关键变化：</p>
+<ul>
+<li>**随机路由：**在 Top-2 设置中，GShard 始终选择排名最高的专家，但第二个专家是根据其权重比例随机选择的。</li>
+<li>**专家容量：**我们可以设定一个阈值，定义一个专家能处理多少 token。如果两个专家的容量都达到上限，token 就会溢出，并通过残差连接传递到下一层，或在某些情况下被完全丢弃。专家容量是 MoE 中最重要的概念之一。为什么需要专家容量呢？因为所有张量的形状在编译时是静态确定的，我们无法提前知道多少 token 会分配给每个专家，因此需要一个固定的容量因子。</li>
+</ul>
+<h2 id="switch-transformers"><a class="markdownIt-Anchor" href="#switch-transformers"></a> <strong>Switch Transformers</strong></h2>
+<p>Switch Transformers  被谷歌提出，拥有 2048 个专家，1.6T 参数 。</p>
+<p>Switch Transformers 简化了 MoE 路由算法，设计了直观的改进模型，降低了通信和计算成本。Switch Transformers 的训练方法减轻了不稳定性，并且首次展示了用较低精度（bfloat16）格式训练大型稀疏模型的可能性。</p>
+<p>和 T5 Base、T5 Large 相比，Switch Transformers 在相同计算资源情况下获得了高达 7 倍的预训练速度。</p>
+<h3 id="switch-transformer-主要优化"><a class="markdownIt-Anchor" href="#switch-transformer-主要优化"></a> <strong>Switch Transformer 主要优化</strong></h3>
+<ol>
+<li>
+<p>Swith Transformer 在论文中提到其设计的指导原则是——<strong>尽可能地把 Transformer 模型的参数量做大！</strong></p>
+<p>和其他 MoE 模型的一个显著不同就是，<strong>Switch Transformer 的门控网络每次只路由到 1 个 expert</strong>，也就是每次只选取 top1 的专家，而其他的模型都是至少 2 个。</p>
+<p><img src="/images/NLP/LLM/MoE/Untitled2.png" alt="alt text" /></p>
+<p>这种方法的效果包括：</p>
+<ul>
+<li>减少了路由计算，一个 token 每次只路由到一个专家</li>
+<li>每个专家的 batch size（专家容量、Expert Capacity） 至少可以减半</li>
+<li>简化路由的实现，降低了 MoE 中的通信成本</li>
+</ul>
+</li>
+<li>
+<p>Switch Transformer 可以降低每个专家的 <strong>专家容量</strong> ，那么什么是专家容量？</p>
+<p><strong>专家容量（<strong>Expert Capacity</strong>）</strong> 是指每个专家在模型中处理的 token 数。</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext> Expert Capacity </mtext><mo>=</mo><mrow><mo fence="true">(</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mtext> tokens per batch </mtext><mtext> number of experts </mtext></mfrac></mstyle><mo fence="true">)</mo></mrow><mo>×</mo><mtext> capacity factor </mtext></mrow><annotation encoding="application/x-tex">\text { Expert Capacity }=\left(\dfrac{\text { tokens per batch }}{\text { number of experts }}\right) \times \text { capacity factor }</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8777699999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> Expert Capacity </span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714399999999998em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> number of experts </span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> tokens per batch </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8804400000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> capacity factor </span></span></span></span></span></p>
+<p>容量因子是一个大于 1.0 的数，它的作用是为每个专家提供额外的缓冲空间，以容纳可能超出平均分配的 token。<br />
+这样，即使某些专家接收到的 token 数量超过了平均值，也能够处理这些额外的 token，而不会因为容量不足而导致计算跳过。</p>
+<p><strong>对于这些溢出的 token，模型会跳过计算，直接将 token 的表示通过残差连接传递到下一层</strong>。</p>
+<p>虽然增加容量因子可以减少 token 溢出，但是它也有缺点。如果容量因子设置得过高，会导致计算资源和内存的浪费，因为模型会为可能永远不会用到的 token 分配额外的资源。</p>
+<p>论文中，Switch Transformers 在低容量因子 (例如 1 至 1.25) 下表现出色。</p>
+<h3 id="容量因子和通信成本"><a class="markdownIt-Anchor" href="#容量因子和通信成本"></a> <strong>容量因子和通信成本</strong></h3>
+<p>提升容量因子（CF）可以提高性能质量，但同时会增加通信成本和激活状态的内存需求。如果 all-to-all 的通信速度较慢，使用较低的容量因子更为合适。一个合理的初始设置是采用 1.25 的容量因子，每个 core 配置一个专家，并使用 top-2 路由。在评估过程中，可以通过调整容量因子来降低计算需求。</p>
+</li>
+<li>
+<p><strong>不同的负载均衡损失：</strong></p>
+<p>作者还重新审视并简化了前面章节中提到的负载均衡损失，通过合理设置负载均衡损失的系数，可以在训练过程中实现专家之间的良好负载分布。</p>
+<p>理想情况下，每个专家应该处理相同数量的数据，以实现资源的均匀利用。</p>
+<p>在实际训练过程中，由于数据分布的不均匀性，某些专家可能会处理更多的数据，而其他专家可能会处理较少的数据。这种不均衡可能导致训练效率低下，因为某些专家可能会过载，而其他专家则可能闲置。</p>
+<p>为了解决这个问题，论文中引入了一种辅助损失函数，以促进专家之间的负载均衡。</p>
+<p>假设总共存在 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span>  个专家，索引为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mn>1...</mn><mi>N</mi></mrow><annotation encoding="application/x-tex">i=1...N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> ，训练 batch <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="script">B</mi></mrow><annotation encoding="application/x-tex">\mathcal B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathcal" style="margin-right:0.03041em;">B</span></span></span></span> 包含了 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span></span>  个 Token</p>
+<ol>
+<li>
+<p>首先计算出batch 中分配给专家 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span>  的 token 比例，计算方式为 batch 中被路由到专家 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> 的 token 数除以总token 数：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>=</mo><mfrac><mn>1</mn><mi>T</mi></mfrac><munder><mo>∑</mo><mrow><mi>x</mi><mo>∈</mo><mi mathvariant="script">B</mi></mrow></munder><mi mathvariant="double-struck">I</mi><mo stretchy="false">{</mo><mi mathvariant="normal">argmax</mi><mo>⁡</mo><mi>p</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>i</mi><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">f_i=\dfrac{1}{T} \sum_{x \in \mathcal{B}} \mathbb{I}\{\operatorname{argmax} p(x)=i\}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.10764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.6431459999999998em;vertical-align:-1.321706em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.050005em;"><span style="top:-1.8556639999999998em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="mrel mtight">∈</span><span class="mord mtight"><span class="mord mathcal mtight" style="margin-right:0.03041em;">B</span></span></span></span></span><span style="top:-3.0500049999999996em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.321706em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathbb">I</span></span><span class="mopen">{</span><span class="mop"><span class="mord mathrm">a</span><span class="mord mathrm">r</span><span class="mord mathrm" style="margin-right:0.01389em;">g</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">x</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">i</span><span class="mclose">}</span></span></span></span></span></p>
+</li>
+<li>
+<p>然后计算所有输入token 被路由到专家 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> 的概率</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>P</mi><mi>i</mi></msub><mo>=</mo><mfrac><mn>1</mn><mi>T</mi></mfrac><munder><mo>∑</mo><mrow><mi>x</mi><mo>∈</mo><mi mathvariant="script">B</mi></mrow></munder><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">P_i=\frac{1}{T} \sum_{x \in \mathcal{B}} p_i(x)
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.6431459999999998em;vertical-align:-1.321706em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.050005em;"><span style="top:-1.8556639999999998em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="mrel mtight">∈</span><span class="mord mtight"><span class="mord mathcal mtight" style="margin-right:0.03041em;">B</span></span></span></span></span><span style="top:-3.0500049999999996em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.321706em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></p>
+</li>
+<li>
+<p>计算 Loss，为上面两者的缩放点积</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext> auxiliary loss </mtext><mo>=</mo><mi>α</mi><mo>⋅</mo><mi>N</mi><mo>⋅</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msub><mi>f</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>P</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">\text { auxiliary loss }=\alpha \cdot N \cdot \sum_{i=1}^N f_i \cdot P_i
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> auxiliary loss </span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.44445em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:3.106005em;vertical-align:-1.277669em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8283360000000002em;"><span style="top:-1.872331em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3000050000000005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.277669em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.10764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span></p>
+</li>
+</ol>
+<p>我们希望batch 中的所有 token 能够均匀地分配给专家，即 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn><mi mathvariant="normal">/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">f_i= 1 / N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.10764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> ，通过最小化公式的辅助 loss，可以鼓励这种均匀路由。当 token 均匀分布时，这个损失会被最小化。</p>
+<p>最终的 loss 被乘以专家数量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> ，这样即使专家数量变化，loss 也能保持恒定。这是因为在均匀路由情况下：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mrow><mo fence="true">(</mo><msub><mi>f</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>P</mi><mi>i</mi></msub><mo fence="true">)</mo></mrow><mo>=</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mrow><mo fence="true">(</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><mo fence="true">)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac></mrow><annotation encoding="application/x-tex">\sum_{i=1}^N\left(f_i \cdot P_i\right)=\sum_{i=1}^N\left(\dfrac{1}{N} \cdot \dfrac{1}{N}\right)=\dfrac{1}{N}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3.106005em;vertical-align:-1.277669em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8283360000000002em;"><span style="top:-1.872331em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3000050000000005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.277669em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.10764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:3.106005em;vertical-align:-1.277669em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8283360000000002em;"><span style="top:-1.872331em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3000050000000005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.277669em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.00744em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span> 是一个超参数，用于调整辅助 loss 的权重。论文中选择了 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><msup><mn>0</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-2}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> ，可以快速平衡负载，同时不会干扰训练损失。</p>
+</li>
+<li>
+<p><strong>改进训练和Fine-Tuning技术</strong></p>
+</li>
+<li>
+<p><strong>半精度</strong></p>
+<p>作者还尝试了混合精度训练：较低的精度可以减少处理器间的通信成本、计算成本以及存储 tensor 的内存。</p>
+<p>在最初的实验中，当专家和门控网络都使用 <code>bfloat16</code> 精度训练时，出现了不稳定的训练现象。这种不稳定性主要是由路由计算引起的，因为路由涉及指数函数等操作，这些操作对精度要求较高。因此，为了保持计算的稳定性和精确性，<strong>路由过程也使用了全精度</strong>。</p>
+</li>
+<li>
+<p><strong>更小的参数初始化</strong></p>
+<p>为了提高模型的稳定性，作者建议减少默认的 Transformer 初始化规模。在 Transformer 模型中，权重矩阵通常是从一个截断的正态分布，其均值为0，标准差由一个超参数 s 决定。作者建议将这个初始化超参数 s 从默认值1.0 减少 10 倍，即 s = 0.1。这种较小的初始化规模有助于提高模型效果和减少训练过程中的不稳定性。</p>
+</li>
+<li>
+<p><strong>Fine-Tuning 过程正则化</strong></p>
+<p>为了解决 Fine-Tuning 过程中的过拟合问题，作者提出了增加 dropout的策略，特别是在专家层（expert layers）中。</p>
+<p>他们称之为**“expert dropout”**，即在 Fine-Tuning 时在专家层增加 dropout 率。</p>
+</li>
+<li>
+<p><strong>高效训练：数据、模型、专家并行</strong></p>
+<p>任意增加专家数量会导致收益递减（如图4-3所示）。这意味着在某个点之后，继续增加专家数量不会显著提高模型性能。但是可以通过增加模型的维度，如模型的隐藏层大小（dmodel）或前馈网络的维度（dff）来继续提升模型效果。但是这样又会导致显存和内存开销增加，这时候就可以通过并行技术，解决高效训练问题。</p>
+<p><strong>专家和数据并行：每个专家分配到一个 core 上（其他模型权重复制），同时数据也切分</strong></p>
+ <center>
+ <img src="/images/NLP/LLM/MoE/Untitled3.png" height="600" weight="">
+ </center>
+ <!-- ![alt text](/images/NLP/LLM/MoE/Untitled3.png) -->
+<p><strong>数据、模型、专家并行</strong></p>
+<p>每个 core 配有不同的专家，并且数据被分割到所有 cores 。</p>
+ <center>
+ <img src="/images/NLP/LLM/MoE/Untitled4.png" height="600" weight="">
+ </center>
+</li>
+</ol>
+<h2 id="glam"><a class="markdownIt-Anchor" href="#glam"></a> <strong>GLaM</strong></h2>
+<p>除了 Switch Transformer，Google还推出另外一个 MoE 模型：<a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2112.06905.pdf">GLaM (Generalist Language Model)</a></p>
+<p>Switch Transformers 在 Encoder-Decoder 结构中实现了类似于 T5 的混合专家模型（MoE）；GLaM 论文则探讨了 Decoder-Only 的模型。</p>
+<p><img src="/images/NLP/LLM/MoE/v2-ba4daaa9bdc05ab46fdf49b73ef57b79_b.webp" alt="alt text" /></p>
+<p>GLaM 比 GPT-3 大三倍，但是由于使用了 Sparse MoE 的设计，训练成本却只有 GPT-3 的 1/3，而且在 29 个NLP 任务上超越了 GPT-3。</p>
+<p><img src="/images/NLP/LLM/MoE/Untitled5.png" alt="alt text" /></p>
+<h2 id="st-moe"><a class="markdownIt-Anchor" href="#st-moe"></a> <strong>ST-MOE</strong></h2>
+<p>之前讨论的负载均衡损失可能会导致稳定性问题。我们可以使用许多方法来稳定稀疏模型的训练，但这可能会牺牲模型质量。</p>
+<p>在谷歌的论文 <a href="https://link.zhihu.com/?target=https%3A//arxiv.org/pdf/2202.08906.pdf">ST-MOE: Designing Stable and Transferable Sparse Expert Models</a> 中，作者提出了一种新的辅助损失函数，称为 <strong>Router z-loss</strong>，用于提高稀疏模型的训练稳定性，同时保持或稍微提高模型质量。</p>
+<p>这个损失函数是针对稀疏专家模型中的路由器（router）部分设计的，路由器负责将输入的 token 路由到最合适的专家（expert）层。</p>
+<p>目标是鼓励路由器产生较小的logits 值，因为较大的 logits 值在 softmax 激活函数中会导致较大的梯度，这可能会引起训练不稳定。</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mi>z</mi></msub><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mn>1</mn><mi>B</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>B</mi></munderover><msup><mrow><mo fence="true">(</mo><mi>log</mi><mo>⁡</mo><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msup><mi>e</mi><msubsup><mi>x</mi><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup></msup><mo fence="true">)</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">L_z(\boldsymbol{x})=\dfrac{1}{B} \sum_{i=1}^B\left(\log \sum_{j=1}^N e^{x_j^{(i)}}\right)^2
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.04398em;">z</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:3.4461210000000007em;vertical-align:-1.4137769999999998em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8283360000000002em;"><span style="top:-1.872331em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3000050000000005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05017em;">B</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.277669em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">(</span></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8283360000000006em;"><span style="top:-1.872331em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3000050000000005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.4137769999999998em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:1.17193em;"><span style="top:-3.1719299999999997em;margin-right:0.05em;"><span class="pstrut" style="height:2.74136em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0590857142857142em;"><span style="top:-2.2134285714285715em;margin-left:0em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5357142857142856em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.059085714285714em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5357142857142856em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">i</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.46117142857142857em;"><span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size4">)</span></span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:2.0323440000000006em;"><span style="top:-4.281236000000001em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span> 是 batch 中的 token 数量，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span>  是专家的数量，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">x</span></span></span></span> 是路由器的 logits 。</p>
+<p><strong>专家如何学习？</strong></p>
+<p>ST-MoE 的研究者们发现，</p>
+<p>encorder 中不同的专家倾向于专注于特定类型的 token 或浅层概念。例如，某些专家可能专门处理标点符号，而其他专家则专注于专有名词等。</p>
+<p>与此相反，decorder 中的专家通常具有较低的专业化程度。</p>
+<p>此外，研究者们还对这一模型进行了多语言训练。尽管人们可能会预期每个专家处理一种特定语言，但实际上并非如此。由于 token 路由和负载均衡的机制，没有任何专家被特定配置以专门处理某一特定语言。</p>
+<p><strong>Fine-Tuning MoE 模型</strong></p>
+<p>稀疏模型更易于出现过拟合现象，因此在处理这些模型时，尝试更强的内部正则化措施是有益的，比如使用更高比例的 dropout。</p>
+<p>我们可以为稠密层设定一个较低的 dropout 率，而为稀疏层设置一个更高的 dropout 率，以此来优化模型性能。</p>
+<p>在 Fine-Tuning 过程中是否使用辅助损失是一个需要决策的问题。ST-MoE 的作者尝试关闭辅助损失，发现即使高达 11% 的 token 被丢弃，模型的质量也没有显著受到影响。token 丢弃可能是一种正则化形式，有助于防止过拟合。但是  论文《Mixture-of-Experts Meets Instruction Tuning-A Winning Combination for Large Language Models》发现：与之前讨论的关闭辅助损失函数相反，这种损失实际上有助于防止过拟合。</p>
+<p>实验观察到，在相同的预训练 PPL 下，稀疏模型在下游任务中的表现不如对应的稠密模型，特别是在<strong>理解任务 (如 SuperGLUE)</strong> 上。另一方面，对于<strong>知识密集型任务 (如 TriviaQA)</strong>，稀疏模型的表现异常出色。</p>
+<p>一种可行的 Fine-Tuning 策略是尝试冻结所有非专家层的权重。实践中，这会导致性能大幅下降，我们可以尝试相反的方法：<strong>仅冻结 MoE 层的参数</strong>。实验结果显示，这种方法几乎与更新所有参数的效果相当。这种做法可以加速 Fine-Tuning 过程，并降低显存需求。</p>
+<p>在 Fine-Tuning MoE 时还需要考虑的一个问题是，它们有需要特殊设置的超参数，例如，稀疏模型往往更适合使用较小的 batch size 和较高的学习率，这样可以获得更好的训练效果。</p>
+<p>同时，稀疏模型在小型任务中表现不佳（过拟合），但在大型任务中表现良好。</p>
+<h2 id="when-to-use-sparse-moes-vs-dense-models"><a class="markdownIt-Anchor" href="#when-to-use-sparse-moes-vs-dense-models"></a> <strong>When to use sparse MoEs vs dense models?</strong></h2>
+<ol>
+<li>需要大量算力并且处理速度极快的情况下</li>
+<li>在预训练过程中计算资源有限</li>
+<li>在只有少量VRAM且处理速度不是那么快的环境下</li>
+</ol>
+<p>服务：</p>
+<p>Megablocks（2022年11月）通过引入新型 GPU kernels，有效处理 MoEs 中的动态性，进而探索了高效的稀疏预训练方法。</p>
+<p>FasterMoE（2022年3月）对 MoEs 在高效分布式系统中的表现进行了分析，并研究了不同并行策略的理论极限、调整专家受欢迎程度的技术、减少延迟的精细通信调度，以及一种基于最低延迟选择专家的调整后的拓扑感知门控</p>
+<p>2023年10月推出的 <a href="https://link.zhihu.com/?target=https%3A//arxiv.org/abs/2310.16795">QMoE</a> 在这个方向上取得了重大进展，通过将 MoEs 量化到每个参数不足 1 bit，使得原本使用 3.2TB 加速器的 1.6T Switch Transformer 压缩到只有 160GB。</p>
+<h2 id="代码部分"><a class="markdownIt-Anchor" href="#代码部分"></a> 代码部分</h2>
+<p><a target="_blank" rel="noopener" href="https://huggingface.co/blog/AviSoori1x/makemoe-from-scratch">makeMoE: Implement a Sparse Mixture of Experts Language Model from Scratch</a></p>
+<h3 id="basic-top-k-gating"><a class="markdownIt-Anchor" href="#basic-top-k-gating"></a> <strong>Basic Top-k Gating</strong></h3>
+<p><img src="/images/NLP/LLM/MoE/Untitled6.png" alt="alt text" /></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># First define the top k router module </span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">TopkRouter</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, n_embed, num_experts, top_k</span>):</span><br><span class="line">        <span class="built_in">super</span>(TopkRouter, self).__init__()</span><br><span class="line">        self.top_k = top_k</span><br><span class="line">        self.linear =nn.Linear(n_embed, num_experts) <span class="comment"># 定义 router classification</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, mh_ouput</span>):</span><br><span class="line">				<span class="comment"># 输入为 Multi-head attention 的输出，维度为 [ batch_size, seq_len, emb_size ] </span></span><br><span class="line">        logits = self.linear(mh_output) <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        top_k_logits, indices = logits.topk(self.top_k, dim=-<span class="number">1</span>)  <span class="comment"># Get top-k experts , # 维度都是 [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        zeros = torch.full_like(logits, <span class="built_in">float</span>(<span class="string">&#x27;-inf&#x27;</span>))  <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        sparse_logits = zeros.scatter(-<span class="number">1</span>, indices, top_k_logits)  <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        router_output = F.softmax(sparse_logits, dim=-<span class="number">1</span>)  <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        <span class="keyword">return</span> router_output, indices</span><br><span class="line"></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">#output</span></span><br><span class="line"><span class="string">(torch.Size([2, 4, 4]),</span></span><br><span class="line"><span class="string"> tensor([[[0.5284, 0.0000, 0.4716, 0.0000],</span></span><br><span class="line"><span class="string">          [0.0000, 0.4592, 0.0000, 0.5408],</span></span><br><span class="line"><span class="string">          [0.0000, 0.3529, 0.0000, 0.6471],</span></span><br><span class="line"><span class="string">          [0.3948, 0.0000, 0.0000, 0.6052]],</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">         [[0.0000, 0.5950, 0.4050, 0.0000],</span></span><br><span class="line"><span class="string">          [0.4456, 0.0000, 0.5544, 0.0000],</span></span><br><span class="line"><span class="string">          [0.7208, 0.0000, 0.0000, 0.2792],</span></span><br><span class="line"><span class="string">          [0.0000, 0.0000, 0.5659, 0.4341]]], grad_fn=&lt;SoftmaxBackward0&gt;),</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"> tensor([[[0, 2],</span></span><br><span class="line"><span class="string">          [3, 1],</span></span><br><span class="line"><span class="string">          [3, 1],</span></span><br><span class="line"><span class="string">          [3, 0]],</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">         [[1, 2],</span></span><br><span class="line"><span class="string">          [2, 0],</span></span><br><span class="line"><span class="string">          [0, 3],</span></span><br><span class="line"><span class="string">          [2, 3]]]))</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+<h3 id="noisy-top-k-gating"><a class="markdownIt-Anchor" href="#noisy-top-k-gating"></a> Noisy Top-k Gating</h3>
+<p><img src="/images/NLP/LLM/MoE/Untitled7.png" alt="alt text" /></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">x</span></span></span></span> 为上一层 attention 层的输出结果，维度为 <code>[ batch, seq, emb_size ]</code></p>
+<p>首先，在原来 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mi>g</mi></msub></mrow><annotation encoding="application/x-tex">\boldsymbol{x} \cdot \boldsymbol{W}_g</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.44445em;vertical-align:0em;"></span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.972218em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> 的基础上加一些噪音（标准噪音 * 计算出来的权重），对应新增加 <code>noise_liner</code>  ：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>H</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><msub><mo stretchy="false">)</mo><mi>i</mi></msub><mo>=</mo><msub><mrow><mo fence="true">(</mo><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mi>g</mi></msub><mo fence="true">)</mo></mrow><mi>i</mi></msub><mo>+</mo><mi mathvariant="normal">StandardNormal</mi><mo>⁡</mo><mo stretchy="false">(</mo><mo stretchy="false">)</mo><mo>⋅</mo><mi mathvariant="normal">Softplus</mi><mo>⁡</mo><mrow><mo fence="true">(</mo><msub><mrow><mo fence="true">(</mo><mi mathvariant="bold-italic">x</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">W</mi><mtext>noise </mtext></msub><mo fence="true">)</mo></mrow><mi>i</mi></msub><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">H(\boldsymbol{x})_i=\left(\boldsymbol{x} \cdot \boldsymbol{W}_g\right)_i+\operatorname{StandardNormal}() \cdot \operatorname{Softplus}\left(\left(\boldsymbol{x} \cdot \boldsymbol{W}_{\text {noise }}\right)_i\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.085808em;vertical-align:-0.335808em;"></span><span class="minner"><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.12585599999999997em;"><span style="top:-2.364192em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.335808em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">t</span><span class="mord mathrm">a</span><span class="mord mathrm">n</span><span class="mord mathrm">d</span><span class="mord mathrm">a</span><span class="mord mathrm">r</span><span class="mord mathrm">d</span><span class="mord mathrm">N</span><span class="mord mathrm">o</span><span class="mord mathrm">r</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">l</span></span><span class="mopen">(</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.29969999999999997em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm">t</span><span class="mord mathrm">p</span><span class="mord mathrm">l</span><span class="mord mathrm">u</span><span class="mord mathrm">s</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="minner"><span class="minner"><span class="mopen delimcenter" style="top:0em;">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol" style="margin-right:0.15972em;">W</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31750199999999995em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">noise </span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.161964em;"><span style="top:-2.4003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29969999999999997em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;">)</span></span></span></span></span></span></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>Softplus</mtext><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>l</mi><mi>n</mi><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{Softplus}(x) = ln(1 + exp(x))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Softplus</span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span>  softplus 函数在神经网络中常用作激活函数，它在保持非线性特性的同时，克服了 sigmoid 函数在输入值较大或较小时的梯度消失问题。</p>
+<p>然后，保留  Top-K 个值：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">KeepTopK</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>v</mi><mo separator="true">,</mo><mi>k</mi><msub><mo stretchy="false">)</mo><mi>i</mi></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.3599999999999999em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><msub><mi>v</mi><mi>i</mi></msub><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mtext> if </mtext><msub><mi>v</mi><mi>i</mi></msub><mtext> is in the topK elements. </mtext></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mi mathvariant="normal">∞</mi><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> otherwise. </mtext></mstyle></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\operatorname{KeepTopK}(v, k)_i= \begin{cases}v_i, &amp; \text { if } v_i \text { is in the topK elements. } \\ -\infty, &amp; \text { otherwise. }\end{cases}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">K</span><span class="mord mathrm">e</span><span class="mord mathrm">e</span><span class="mord mathrm">p</span><span class="mord mathrm">T</span><span class="mord mathrm">o</span><span class="mord mathrm">p</span><span class="mord mathrm">K</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:3.0000299999999998em;vertical-align:-1.25003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord">−</span><span class="mord">∞</span><span class="mpunct">,</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord"> if </span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord text"><span class="mord"> is in the topK elements. </span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord"> otherwise. </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p>最后使用 Soft max 得到每一个 Expert 的结果：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">Softmax</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">KeepTopK</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>H</mi><mo stretchy="false">(</mo><mi mathvariant="bold-italic">x</mi><mo stretchy="false">)</mo><mo separator="true">,</mo><mi>k</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(\boldsymbol{x})=\operatorname{Softmax}(\operatorname{KeepTopK}(H(\boldsymbol{x}), k))
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop"><span class="mord mathrm">S</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm">t</span><span class="mord mathrm">m</span><span class="mord mathrm">a</span><span class="mord mathrm">x</span></span><span class="mopen">(</span><span class="mop"><span class="mord mathrm">K</span><span class="mord mathrm">e</span><span class="mord mathrm">e</span><span class="mord mathrm">p</span><span class="mord mathrm">T</span><span class="mord mathrm">o</span><span class="mord mathrm">p</span><span class="mord mathrm">K</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord boldsymbol">x</span></span></span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mclose">)</span><span class="mclose">)</span></span></span></span></span></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Changing the above to accomodate noisy top-k gating</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">NoisyTopkRouter</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, n_embed, num_experts, top_k</span>):</span><br><span class="line">        <span class="built_in">super</span>(NoisyTopkRouter, self).__init__()</span><br><span class="line">        self.top_k = top_k</span><br><span class="line">        <span class="comment">#layer for router logits</span></span><br><span class="line">        self.topkroute_linear = nn.Linear(n_embed, num_experts)</span><br><span class="line">        self.noise_linear =nn.Linear(n_embed, num_experts)  <span class="comment"># 新增加一个 noise_liner</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, mh_output</span>):</span><br><span class="line">        logits = self.topkroute_linear(mh_output) <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line">        noise_logits = self.noise_linear(mh_output) <span class="comment"># [ batch_size, seq_len, num_experts ] </span></span><br><span class="line"></span><br><span class="line">        <span class="comment">#Adding scaled unit gaussian noise to the logits</span></span><br><span class="line">        noise = torch.randn_like(logits)*F.softplus(noise_logits)  </span><br><span class="line">        noisy_logits = logits + noise</span><br><span class="line"></span><br><span class="line">        top_k_logits, indices = noisy_logits.topk(self.top_k, dim=-<span class="number">1</span>)</span><br><span class="line">        zeros = torch.full_like(noisy_logits, <span class="built_in">float</span>(<span class="string">&#x27;-inf&#x27;</span>))</span><br><span class="line">        sparse_logits = zeros.scatter(-<span class="number">1</span>, indices, top_k_logits)</span><br><span class="line">        router_output = F.softmax(sparse_logits, dim=-<span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> router_output, indices</span><br></pre></td></tr></table></figure>
+<h3 id="sparse-moe-module"><a class="markdownIt-Anchor" href="#sparse-moe-module"></a> <strong>Sparse MoE module</strong></h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">SparseMoE</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, n_embed, num_experts, top_k</span>):</span><br><span class="line">        <span class="built_in">super</span>(SparseMoE, self).__init__()</span><br><span class="line">        self.router = NoisyTopkRouter(n_embed, num_experts, top_k)</span><br><span class="line">        self.experts = nn.ModuleList([Expert(n_embed) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(num_experts)])</span><br><span class="line">        self.top_k = top_k</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        gating_output, indices = self.router(x)  <span class="comment"># b, s, num_expert </span></span><br><span class="line">        final_output = torch.zeros_like(x)  <span class="comment"># b, s, emb </span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># Reshape inputs for batch processing</span></span><br><span class="line">        flat_x = x.view(-<span class="number">1</span>, x.size(-<span class="number">1</span>))  <span class="comment"># b * s, emb </span></span><br><span class="line">        flat_gating_output = gating_output.view(-<span class="number">1</span>, gating_output.size(-<span class="number">1</span>))  <span class="comment"># b * s, num_expert </span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># Process each expert in parallel</span></span><br><span class="line">        <span class="keyword">for</span> i, expert <span class="keyword">in</span> <span class="built_in">enumerate</span>(self.experts):</span><br><span class="line">            <span class="comment"># Create a mask for the inputs where the current expert is in top-k</span></span><br><span class="line">            expert_mask = (indices == i).<span class="built_in">any</span>(dim=-<span class="number">1</span>) <span class="comment"># b, s</span></span><br><span class="line">            flat_mask = expert_mask.view(-<span class="number">1</span>) <span class="comment"># b * s</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> flat_mask.<span class="built_in">any</span>():</span><br><span class="line">                expert_input = flat_x[flat_mask]  <span class="comment"># [ token_num, emb ]  只取出 expert 的 token </span></span><br><span class="line">                expert_output = expert(expert_input)  <span class="comment"># [ token_num, emb ]</span></span><br><span class="line"></span><br><span class="line">                <span class="comment"># Extract and apply gating scores</span></span><br><span class="line">                gating_scores = flat_gating_output[flat_mask, i].unsqueeze(<span class="number">1</span>)  <span class="comment"># b * s, num_expert  -&gt; token_num</span></span><br><span class="line">                weighted_output = expert_output * gating_scores  <span class="comment"># 同理，得到输出 [ token_num, emb ]</span></span><br><span class="line"></span><br><span class="line">                <span class="comment"># Update final output additively by indexing and adding</span></span><br><span class="line">                final_output[expert_mask] += weighted_output.squeeze(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> final_output</span><br></pre></td></tr></table></figure>
+<h3 id="block"><a class="markdownIt-Anchor" href="#block"></a> Block</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Create a self attention + mixture of experts block, that may be repeated several number of times </span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Block</span>(nn.Module):</span><br><span class="line">    <span class="string">&quot;&quot;&quot; Mixture of Experts Transformer block: communication followed by computation (multi-head self attention + SparseMoE) &quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, n_embed, n_head, num_experts, top_k</span>):</span><br><span class="line">        <span class="comment"># n_embed: embedding dimension, n_head: the number of heads we&#x27;d like</span></span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        head_size = n_embed // n_head</span><br><span class="line">        self.sa = MultiHeadAttention(n_head, head_size)</span><br><span class="line">        self.smoe = SparseMoE(n_embed, num_experts, top_k)</span><br><span class="line">        self.ln1 = nn.LayerNorm(n_embed)</span><br><span class="line">        self.ln2 = nn.LayerNorm(n_embed)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        x = x + self.sa(self.ln1(x))</span><br><span class="line">        x = x + self.smoe(self.ln2(x))</span><br><span class="line">        <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+<p>为了更好地初始化，可以使用 Kaiming Init 进行初始化。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2024/01/01/NLP/LLM/Chat%20Format(%E8%81%8A%E5%A4%A9%E6%A0%BC%E5%BC%8F)/" rel="prev" title="Chat Format(聊天格式)">
+      <i class="fa fa-chevron-left"></i> Chat Format(聊天格式)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2024/01/16/%E5%A4%9A%E6%A8%A1%E6%80%81/multi-moddal%20backbones/Honeybee/" rel="next" title="Honeybee">
+      Honeybee <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#moe"><span class="nav-number">1.</span> <span class="nav-text"> MoE</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E8%AF%BB"><span class="nav-number">1.1.</span> <span class="nav-text"> 解读</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#sparsely-gated-moe"><span class="nav-number">1.1.1.</span> <span class="nav-text"> Sparsely-Gated MoE</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%A8%E6%8E%A7%E7%BD%91%E7%BB%9Cgating-network"><span class="nav-number">1.1.1.1.</span> <span class="nav-text"> 门控网络（Gating Network）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B9%B3%E8%A1%A1%E4%B8%93%E5%AE%B6%E5%88%A9%E7%94%A8%E7%8E%87balancing-expert-utilization"><span class="nav-number">1.1.1.2.</span> <span class="nav-text"> 平衡专家利用率（Balancing Expert Utilization）</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gshard"><span class="nav-number">1.2.</span> <span class="nav-text"> GShard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#switch-transformers"><span class="nav-number">1.3.</span> <span class="nav-text"> Switch Transformers</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#switch-transformer-%E4%B8%BB%E8%A6%81%E4%BC%98%E5%8C%96"><span class="nav-number">1.3.1.</span> <span class="nav-text"> Switch Transformer 主要优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%B9%E9%87%8F%E5%9B%A0%E5%AD%90%E5%92%8C%E9%80%9A%E4%BF%A1%E6%88%90%E6%9C%AC"><span class="nav-number">1.3.2.</span> <span class="nav-text"> 容量因子和通信成本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#glam"><span class="nav-number">1.4.</span> <span class="nav-text"> GLaM</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#st-moe"><span class="nav-number">1.5.</span> <span class="nav-text"> ST-MOE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#when-to-use-sparse-moes-vs-dense-models"><span class="nav-number">1.6.</span> <span class="nav-text"> When to use sparse MoEs vs dense models?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E9%83%A8%E5%88%86"><span class="nav-number">1.7.</span> <span class="nav-text"> 代码部分</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#basic-top-k-gating"><span class="nav-number">1.7.1.</span> <span class="nav-text"> Basic Top-k Gating</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#noisy-top-k-gating"><span class="nav-number">1.7.2.</span> <span class="nav-text"> Noisy Top-k Gating</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sparse-moe-module"><span class="nav-number">1.7.3.</span> <span class="nav-text"> Sparse MoE module</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#block"><span class="nav-number">1.7.4.</span> <span class="nav-text"> Block</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="nested ner  序列标注框架  token的多标签分类问题：学习难度大，label依赖缺失 CRF多个标签层，即每层只有一个label，然后合并所有标签层：指数级增加标签 token-level的多标签分类，即将softmax改为多个sigmoid：标签之间的依赖关系会有所缺失   指针标注框架  C个指针网络（bert-span MRC + 指针 + span概率矩阵「单类别标注」">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NER的一些问题和讨论">
+<meta property="og:url" content="http://example.com/2022/01/28/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/NER%E7%9A%84%E4%B8%80%E4%BA%9B%E9%97%AE%E9%A2%98%E5%92%8C%E8%AE%A8%E8%AE%BA/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="nested ner  序列标注框架  token的多标签分类问题：学习难度大，label依赖缺失 CRF多个标签层，即每层只有一个label，然后合并所有标签层：指数级增加标签 token-level的多标签分类，即将softmax改为多个sigmoid：标签之间的依赖关系会有所缺失   指针标注框架  C个指针网络（bert-span MRC + 指针 + span概率矩阵「单类别标注」">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-01-28T22:06:18.000Z">
+<meta property="article:modified_time" content="2024-03-11T02:20:00.575Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2022/01/28/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/NER%E7%9A%84%E4%B8%80%E4%BA%9B%E9%97%AE%E9%A2%98%E5%92%8C%E8%AE%A8%E8%AE%BA/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>NER的一些问题和讨论 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/01/28/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/NER%E7%9A%84%E4%B8%80%E4%BA%9B%E9%97%AE%E9%A2%98%E5%92%8C%E8%AE%A8%E8%AE%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NER的一些问题和讨论
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-01-28 14:06:18" itemprop="dateCreated datePublished" datetime="2022-01-28T14:06:18-08:00">2022-01-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Named-entity-recognition/" itemprop="url" rel="index"><span itemprop="name">Named entity recognition</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.7k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>9 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="nested-ner"><a class="markdownIt-Anchor" href="#nested-ner"></a> nested ner</h1>
+<h2 id="序列标注框架"><a class="markdownIt-Anchor" href="#序列标注框架"></a> 序列标注框架</h2>
+<ol>
+<li>token的多标签分类问题：学习难度大，label依赖缺失</li>
+<li>CRF多个标签层，即每层只有一个label，然后合并所有标签层：指数级增加标签</li>
+<li>token-level的多标签分类，即将softmax改为多个sigmoid：标签之间的依赖关系会有所缺失</li>
+</ol>
+<h2 id="指针标注框架"><a class="markdownIt-Anchor" href="#指针标注框架"></a> 指针标注框架</h2>
+<ol>
+<li>C个指针网络（bert-span</li>
+<li>MRC + 指针 + span概率矩阵「单类别标注」</li>
+</ol>
+<h2 id="span标注框架多头标注框架"><a class="markdownIt-Anchor" href="#span标注框架多头标注框架"></a> Span标注框架/多头标注框架</h2>
+<p>需要注意数据稀疏问题<br />
+构建span概率矩阵有多种方式：</p>
+<ol>
+<li>biaffine：Span概率矩阵的「多类别标注」。</li>
+<li>GlobalPointer：Span概率矩阵的「单类别标注」，但是target为整个Span概率矩阵，是一个「多标签分类问题」。</li>
+<li>EMPIRICAL ANALYSIS OF UNLABELED ENTITY PROBLEM：Span概率矩阵的「多类别标注」。</li>
+</ol>
+<h2 id="片段标注框架"><a class="markdownIt-Anchor" href="#片段标注框架"></a> 片段标注框架</h2>
+<h1 id="数据集"><a class="markdownIt-Anchor" href="#数据集"></a> 数据集</h1>
+<ol>
+<li>CLUENER2020：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/cluener_public">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/cluener_public</a></li>
+<li>MSRA：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/MSRA">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/MSRA</a></li>
+<li>人民网（04年）：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/people_daily">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/people_daily</a></li>
+<li>微博命名实体识别数据集：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/weibo">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/weibo</a></li>
+<li>BosonNLP NER数据：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/boson%EF%BC%882000%E6%9D%A1%EF%BC%89">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/boson（2000条）</a></li>
+<li>影视-音乐-书籍实体标注数据：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/video_music_book_datasets">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/video_music_book_datasets</a></li>
+<li>中文医学文本命名实体识别 2020CCKS：<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/2020_ccks_ner">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/2020_ccks_ner</a></li>
+<li>电子简历实体识别数据集:<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/ResumeNER">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/ResumeNER</a></li>
+<li>医渡云实体识别数据集:<a target="_blank" rel="noopener" href="https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/yidu-s4k">https://github.com/GuocaiL/nlp_corpus/tree/main/open_ner_data/yidu-s4k</a></li>
+<li>简历实体数据集：<a target="_blank" rel="noopener" href="https://github.com/jiesutd/LatticeLSTM/tree/master/data">https://github.com/jiesutd/LatticeLSTM/tree/master/data</a></li>
+<li>CoNLL-2003：<a target="_blank" rel="noopener" href="https://www.clips.uantwerpen.be/conll2003/ner/">https://www.clips.uantwerpen.be/conll2003/ner/</a></li>
+<li>Few-NERD 细粒度数据集:<a target="_blank" rel="noopener" href="https://github.com/thunlp/Few-NERD/tree/main/data">https://github.com/thunlp/Few-NERD/tree/main/data</a></li>
+</ol>
+<h1 id="问题"><a class="markdownIt-Anchor" href="#问题"></a> 问题</h1>
+<p>真实的工业界场景中，通常面临</p>
+<ol>
+<li>标注成本昂贵</li>
+<li>泛化迁移能力不足</li>
+<li>可解释性不强</li>
+<li>计算资源受限</li>
+</ol>
+<p>在医疗领域中</p>
+<ol>
+<li>泛化能力差<br />
+不同医院、不同疾病、不同科室的文本描述形式不一致，而标注成本又很昂贵。导致模型的<strong>泛化迁移能力很差</strong>。<br />
+所以当前的NER技术在医疗领域并不适合做成泛化的工具，应该<strong>具体问题具体模型</strong>。</li>
+<li>可解释性<br />
+医疗领域的严肃性要求模型的<strong>强可解释性</strong>。<br />
+处理过程应该随着处理对象的「层次」和「深度」而<strong>逐步叠加模块</strong>，下级模块使用上级结果，方便进行迭代优化、并具备可解释性。</li>
+<li>多特征<br />
+除了模型外，医疗领域相关的「实体词典」和「特征挖掘」也对NER性能起着关键作用。</li>
+<li>计算资源受限<br />
+医院数据不可出院，需要在院内部署NER系统。而通常医院内部的GPU计算资源又不是很充足，所以机器学习模型需要又轻又快，同时要更充分的利用显存。</li>
+</ol>
+<h1 id="关于bert"><a class="markdownIt-Anchor" href="#关于bert"></a> 关于Bert</h1>
+<h2 id="问题-2"><a class="markdownIt-Anchor" href="#问题-2"></a> 问题</h2>
+<p>不受计算资源限制、通用领域、小样本的场景下，BERT表现会更好。但是对于工业场景中的绝大部分NLP问题（特别是垂直领域），都没有必要堆资源。</p>
+<ul>
+<li>直接BERT+CRF的性能不一定会好，推断速度也非常堪忧。</li>
+<li>BERT和CRF层的学习率也不要设成一样，<strong>让CRF层学习率要更大一些</strong>（一般是BERT的5～10倍），要让CRF层快速学习。</li>
+<li>不要试图对BERT进⾏蒸馏压缩，很可能吃⼒不讨好。</li>
+<li>NER任务是⼀个重底层的任务，上层模型/网络结构再深、性能提升往往也是有限的。</li>
+<li>不同的解码方式（CRF/指针网络/Biaffine）之间的差异其实也是有限的，不要过分拘泥于解码⽅式。</li>
+<li>QA阅读理解的方式进行NER任务，效果也许会提升，但<strong>计算复杂度</strong>也会大大提升。</li>
+<li>设计NER任务时，尽量不要引入嵌套实体，不好做，这往往是一个长尾问题。</li>
+<li>Transformer不合适做NER。</li>
+</ul>
+<h2 id="使用"><a class="markdownIt-Anchor" href="#使用"></a> 使用</h2>
+<ul>
+<li>在低耗时场景中，BERT可以作为一个“对标竞品”，我们可以采取轻量化的多种策略组合去逼近甚至超越BERT的性能。</li>
+<li>在垂直领域应用BERT时，我们首先确认领域内的语料与BERT原始的预训练语料之间是否存在gap，如果这个gap越大，那么我们就不要停止预训练：继续进行领域预训练、任务预训练。</li>
+<li>在小样本条件下，利用BERT可以更好帮助我们解决低资源问题。<br />
+低资源NLP问题的解决方法通常都针对分类任务，往往在NER中提升并不明显。NER本质是基于token的分类任务，其对噪声极其敏感的。如果盲目应用弱监督方法去解决低资源NER问题，可能会导致全局性的性能下降，甚至还不如直接基于词典的NER。
+<ul>
+<li>使用BERT进行数据蒸馏（半监督学习+置信度选择），同时利用实体词典辅助标注。</li>
+<li>实体词典+BERT相结合，进行半监督自训练</li>
+</ul>
+</li>
+<li>在竞赛任务中，可以选取不同的预训练语⾔模型在底层进行特征拼接。语⾔模型的差异越⼤，效果越好。<br />
+如果需要对语言模型finetune，需要设置不同的学习率。</li>
+</ul>
+<h1 id="如何快速有效地提升ner性能"><a class="markdownIt-Anchor" href="#如何快速有效地提升ner性能"></a> 如何快速有效地提升NER性能</h1>
+<h2 id="规则-领域词典"><a class="markdownIt-Anchor" href="#规则-领域词典"></a> 规则 + 领域词典</h2>
+<p>垂直领域：不断积累、不断完善的实体词典<br />
+通⽤领域：多种分词工具和多种句法短语⼯具进行融合来提取候选实体，并结合词典进行NER。</p>
+<h2 id="在模型层面提升ner性能"><a class="markdownIt-Anchor" href="#在模型层面提升ner性能"></a> 在模型层面提升NER性能</h2>
+<p>在embedding层下功夫，引入丰富的特征：比如char、bigram、词典特征、词性特征、elmo等等。<br />
+底层的特征越丰富、差异化越大越好（构造不同视角下的特征）。</p>
+<h2 id="构建引入词汇信息词向量的ner"><a class="markdownIt-Anchor" href="#构建引入词汇信息词向量的ner"></a> 构建引入词汇信息（词向量）的NER</h2>
+<p>中文NER通常是基于字符进行标注的，这是由于基于词汇标注存在分词误差问题。<br />
+但词汇边界对于实体边界很有效，一种行之有效的方法就是信息无损的、引入词汇信息的NER方法，比如FLAT和Simple-Lexicon。</p>
+<h1 id="解决ner实体span过长的问题"><a class="markdownIt-Anchor" href="#解决ner实体span过长的问题"></a> 解决NER实体span过长的问题</h1>
+<p>如果NER任务中某一类实体span比较长（⽐如医疗NER中的⼿术名称是很长的），直接采取CRF解码可能会导致很多连续的实体span断裂。</p>
+<ul>
+<li>加入规则进行修正</li>
+<li>指针网络+CRF构建多任务学习（指针网络会更容易捕捉较长的span，不过指针网络的收敛是较慢的，可以试着调节学习率）</li>
+</ul>
+<h1 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> Reference</h1>
+<ul>
+<li>工业界求解NER问题的12条黄金法则</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/01/26/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/NER%EF%BC%9Abiaffine%20/" rel="prev" title="Named Entity Recognition as Dependency Parsing">
+      <i class="fa fa-chevron-left"></i> Named Entity Recognition as Dependency Parsing
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/01/29/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/MRC%20for%20NER/" rel="next" title="MRC for NER">
+      MRC for NER <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#nested-ner"><span class="nav-number">1.</span> <span class="nav-text"> nested ner</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F%E5%88%97%E6%A0%87%E6%B3%A8%E6%A1%86%E6%9E%B6"><span class="nav-number">1.1.</span> <span class="nav-text"> 序列标注框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E9%92%88%E6%A0%87%E6%B3%A8%E6%A1%86%E6%9E%B6"><span class="nav-number">1.2.</span> <span class="nav-text"> 指针标注框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#span%E6%A0%87%E6%B3%A8%E6%A1%86%E6%9E%B6%E5%A4%9A%E5%A4%B4%E6%A0%87%E6%B3%A8%E6%A1%86%E6%9E%B6"><span class="nav-number">1.3.</span> <span class="nav-text"> Span标注框架&#x2F;多头标注框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%87%E6%AE%B5%E6%A0%87%E6%B3%A8%E6%A1%86%E6%9E%B6"><span class="nav-number">1.4.</span> <span class="nav-text"> 片段标注框架</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9B%86"><span class="nav-number">2.</span> <span class="nav-text"> 数据集</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text"> 问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8Ebert"><span class="nav-number">4.</span> <span class="nav-text"> 关于Bert</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98-2"><span class="nav-number">4.1.</span> <span class="nav-text"> 问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">4.2.</span> <span class="nav-text"> 使用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E5%BF%AB%E9%80%9F%E6%9C%89%E6%95%88%E5%9C%B0%E6%8F%90%E5%8D%87ner%E6%80%A7%E8%83%BD"><span class="nav-number">5.</span> <span class="nav-text"> 如何快速有效地提升NER性能</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%84%E5%88%99-%E9%A2%86%E5%9F%9F%E8%AF%8D%E5%85%B8"><span class="nav-number">5.1.</span> <span class="nav-text"> 规则 + 领域词典</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8%E6%A8%A1%E5%9E%8B%E5%B1%82%E9%9D%A2%E6%8F%90%E5%8D%87ner%E6%80%A7%E8%83%BD"><span class="nav-number">5.2.</span> <span class="nav-text"> 在模型层面提升NER性能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%84%E5%BB%BA%E5%BC%95%E5%85%A5%E8%AF%8D%E6%B1%87%E4%BF%A1%E6%81%AF%E8%AF%8D%E5%90%91%E9%87%8F%E7%9A%84ner"><span class="nav-number">5.3.</span> <span class="nav-text"> 构建引入词汇信息（词向量）的NER</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3ner%E5%AE%9E%E4%BD%93span%E8%BF%87%E9%95%BF%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text"> 解决NER实体span过长的问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#reference"><span class="nav-number">7.</span> <span class="nav-text"> Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

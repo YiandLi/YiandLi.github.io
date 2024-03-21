@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="DML (Data Manipulation Language) 数据操作语言 数据操纵分成  数据查询  和 数据更新 两类。数据更新又分成 插入、删除、和修改 三种操作。 mysql一共有7个查询命令：FROM，SELECT，WHERE，GROUP BY，HAVING，ORDER BY，LIMIT  查询命令和临时表  每一个查询命令在执行时，都是在操作上一个命令生成的临时表。 每一个命令执行">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql DML Data Manipulation Language">
+<meta property="og:url" content="http://example.com/2021/03/05/MySQL%20info/mysql%20DML/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="DML (Data Manipulation Language) 数据操作语言 数据操纵分成  数据查询  和 数据更新 两类。数据更新又分成 插入、删除、和修改 三种操作。 mysql一共有7个查询命令：FROM，SELECT，WHERE，GROUP BY，HAVING，ORDER BY，LIMIT  查询命令和临时表  每一个查询命令在执行时，都是在操作上一个命令生成的临时表。 每一个命令执行">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-03-06T05:46:54.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:15.425Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/03/05/MySQL%20info/mysql%20DML/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>mysql DML Data Manipulation Language | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/05/MySQL%20info/mysql%20DML/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql DML Data Manipulation Language
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-05 21:46:54" itemprop="dateCreated datePublished" datetime="2021-03-05T21:46:54-08:00">2021-03-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.9k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>10 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>DML (Data Manipulation Language) 数据操作语言<br />
+数据操纵分成  <strong>数据查询</strong>  和 <strong>数据更新</strong> 两类。数据更新又分成 <strong>插入、删除、和修改</strong> 三种操作。<br />
+<strong>mysql一共有7个查询命令：FROM，SELECT，WHERE，GROUP BY，HAVING，ORDER BY，LIMIT</strong></p>
+<h3 id="查询命令和临时表"><a class="markdownIt-Anchor" href="#查询命令和临时表"></a> <strong>查询命令和临时表</strong></h3>
+<ol>
+<li>每一个查询命令在执行时，都是在操作上一个命令生成的临时表。</li>
+<li>每一个命令执行完毕后，Mysql服务器自动在内存中销毁上一个查询命令生成的临时表。所以，用户只能看到最后一个查询命令生成的临时表。</li>
+<li>只有<code>FROM</code>命令不需要操作临时表。</li>
+<li>只有<code>GROUP BY</code>命令在执行完后有机会生成多个临时表。</li>
+<li>只有<code>HAVING</code>命令在执行完毕后，不会生成新的临时表。负责将<code>GROUP BY</code>命令生成的临时表中不满足的临时表从内存中删除。</li>
+</ol>
+<h3 id="from命令"><a class="markdownIt-Anchor" href="#from命令"></a> <strong>FROM命令</strong></h3>
+<ol>
+<li>永远是第一个执行的查询命令，负责将硬盘上的表文件加载到内存中生成<strong>临时表</strong>供后续查询命令使用。所以，执行查询命令时，是不会修改文件原来的数据的。</li>
+<li>临时表的名称与硬盘上的表文件名称保持一致。</li>
+</ol>
+<h3 id="select命令"><a class="markdownIt-Anchor" href="#select命令"></a> <strong>SELECT命令</strong></h3>
+<ul>
+<li>语法：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT [DISTINCT] 字段1 [[AS] 别名1], 字段2 [[AS] 别名2] ... FROM 表名;</span><br></pre></td></tr></table></figure>
+<p><code>DISTINCT</code> 去除重复记录，用于字段之前，可以用在select，聚合函数内部 。<br />
+<code>AS</code>是设置别名，增强可读性，<code>AS</code> 也是可以省略的。</p>
+<ol>
+<li>操作的是由FROM命令生成的临时表。</li>
+<li>会像切蛋糕一样，将指定字段下所有的数据读取出来，在内存中将读取的数据组成一个全新的临时表。</li>
+<li>完成SELECT命令之后，服务器会返回SELECT建立的临时表，并且销毁FROM建立的临时表。</li>
+<li>如果临时表由FROM和WHERE提供，则SELECT面对的只有一个临时表。SELECT会读取临时表并形成一个新的。<br />
+如果是由GROUP BY提供的，SELECT可能会面临多个临时表，SELECT会依次每一个临时表，并且在操作某一个临时表时，SELECT只会读取指定字段下的第一个数据，因为按该数据分组，同一个表该字段数据都相同。SELECT会将从多个临时表中读取的数据合成为一列并且保存到一个全新的临时表中。</li>
+</ol>
+<h4 id="高级用法-concat"><a class="markdownIt-Anchor" href="#高级用法-concat"></a> 高级用法 CONCAT</h4>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    customer_id,</span><br><span class="line">    first_name,</span><br><span class="line">    last_name,</span><br><span class="line">    CONCAT(first_name, <span class="string">&#x27; &#x27;</span>, last_name) full_name</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    sales.customers</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span></span><br><span class="line">    full_name;</span><br></pre></td></tr></table></figure>
+<h3 id="where命令"><a class="markdownIt-Anchor" href="#where命令"></a> <strong>WHERE命令</strong></h3>
+<ol>
+<li>执行顺序：<code>FROM</code> --&gt; <code>WHERE</code> --&gt; <code>SELECT/聚合函数</code></li>
+<li>书写顺序： <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT 字段名，函数，子查询</span><br><span class="line">FROM   表文件</span><br><span class="line">WHERE  关系运算/逻辑运算列表</span><br></pre></td></tr></table></figure>
+</li>
+<li>作用：循环遍历所有的数据行，每次得到一个数据行，判断是否需要被<strong>定位</strong>。循环结束后，WHERE命令会生成一个所有定位数据行的临时表。</li>
+<li>运算符：<br />
+a. <strong>关系运算</strong>：<br />
+<code>=</code>：如果指定的字符中空格，直接单/双引号引起来即可: <code>'likes me'</code> ，如果字符内部有单引号，则使用 <code>&quot;Johnson's mother&quot;</code>, <code>'Johnson''s mother'</code>, <code>'Johnson\'s mother'</code> ，用来表示 <code>Johnson's mother</code> 。<br />
+<code>!= </code>或 <code>&lt;&gt;</code><br />
+<code>&gt;</code><br />
+<code>&lt;</code><br />
+<code>&gt;=</code><br />
+<code>&lt;=</code><br />
+b. <strong>逻辑运行</strong>：<br />
+<code>and</code> 或 <code>&amp;&amp;</code><br />
+<code>or</code> 或 <code>||</code><br />
+<code>between ... and ...</code>：闭集合<br />
+<code>in(选项1，选项2，选项3)</code><br />
+<code>not in(选项1，选项2，选项3)</code><br />
+c. <strong>特殊运算符</strong>：null值表示一个不确定的值，而非空含义。<br />
+所以null值不可以参加运算，即”=null“不成立。<br />
+<code>is null</code><br />
+<code>is not null</code><br />
+d. <strong>like / not like 命令：模糊查询</strong><br />
+<code>%</code> 是一个通配符，表示一个长度任意的字符串；<br />
+<code>_</code> 也是一个通配符，表示一个任意的字符<br />
+1. 前置条件模糊查询：以s开头 <code>like 's%'</code>：   <code>select ename from emp where ename like 's%'</code><br />
+2. 后置条件模糊查询：以s结尾 <code>like '%s'</code><br />
+3. 包含s：<code>like &quot;%s%&quot;</code><br />
+4. 第二个字母是S：<code>like '_S%'</code></li>
+</ol>
+<h4 id="聚合函数"><a class="markdownIt-Anchor" href="#聚合函数"></a> <strong>聚合函数</strong></h4>
+<p>将一列数据看作是一个整体，进行纵向计算。<br />
+语法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select 聚合函数([DISTINCT] 字段名) from 表名;</span><br></pre></td></tr></table></figure>
+<p>所有的聚合函数是不计算 null 值的，但是如果该特征里面全都是 Null，那么聚合函数返回值也是 Null 。</p>
+<ol>
+<li><code>max(字段)</code><br />
+<code>select max(sal) from emp where deptno=20</code></li>
+<li><code>min(字段)</code></li>
+<li><code>sum(字段)</code></li>
+<li><code>avg(字段)</code></li>
+<li><code>count(字段)</code> 不为null的个数</li>
+<li><code>count(*) / count(1)</code> 统计数据行的个数，包含null</li>
+</ol>
+<p>三者区别和速度请参考：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/89299468">执行count(1)、count(*) 与 count(列名) 到底有什么区别？</a></p>
+<p>如果在 select 中选择返回了聚合函数，那么其他返回的特征必须：</p>
+<ol>
+<li>也是聚合函数的结果</li>
+<li>是 <code>group by</code> 的键</li>
+</ol>
+<h3 id="group-by命令"><a class="markdownIt-Anchor" href="#group-by命令"></a> <strong>GROUP BY命令</strong></h3>
+<ol>
+<li>分组：先根据分组字段数据种类，将临时表进行分类。然后将具有相同特征的数据行读取出来保存到一个全新的临时表中。</li>
+<li>举例：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SELECT JOB, COUNT(*)</span><br><span class="line">FROM EMP</span><br><span class="line">WHERE DEPTNO=30</span><br><span class="line">GROUP BY JOB</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>执行顺序为：<br />
+<code>FROM</code>--&gt;<code>WHERE</code>--&gt;<strong><code>GROUP BY</code></strong>--&gt;<code>SELECT</code><br />
+选择表--&gt;定位数据行--&gt;根据属性分组--&gt;按要求输出</li>
+<li>只有<code>group by</code>命令有机会在执行完毕后，依次生成多个临时表</li>
+</ol>
+<h3 id="having命令"><a class="markdownIt-Anchor" href="#having命令"></a> <strong>HAVING命令</strong></h3>
+<ol>
+<li>执行顺序：<code>FROM</code>--&gt;<code>WHERE</code>--&gt;<code>GROUP BY</code>--&gt;<strong><code>HAVING</code></strong>--&gt;<code>SELECT</code></li>
+<li>只能出现在<code>GROUP BY</code>命令后</li>
+<li>通过统计临时表中的信息决定是否删除<strong>整个临时表</strong></li>
+<li>只有<code>HAVING</code>命令有可能删除临时表。</li>
+<li><code>WHERE</code> 不能对聚合函数进行判断，而<code>HAVING</code>可以。</li>
+<li><code>HAVING</code> 处理的对象只能是 1. A grouping attribute or 2. Aggregated function .</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"># Courses 表只有 class, student 两个字段</span><br><span class="line"># 查询 人数大于 5 的 class</span><br><span class="line">SELECT class</span><br><span class="line">FROM Courses</span><br><span class="line">GROUP BY class</span><br><span class="line">HAVING count(DISTINCT *)&gt;=5;</span><br><span class="line"></span><br><span class="line">/*</span><br><span class="line">FROM Courses</span><br><span class="line">GROUP BY class;</span><br><span class="line">命令得到的是多个临时表，每个临时表中的 `class` 字段都相同</span><br><span class="line">所以这里的 HAVING 可以有多种方法：</span><br><span class="line">1. HAVING(DISTINCT student) -- 如果 stu 字段为 Null，则不会被计算</span><br><span class="line">2. HAVINF(DISTINCT *)</span><br><span class="line">3. HAVING(DISTINCT class)</span><br><span class="line">*/</span><br></pre></td></tr></table></figure>
+<h3 id="order-by命令"><a class="markdownIt-Anchor" href="#order-by命令"></a> <strong>ORDER BY命令</strong></h3>
+<p>语法：<code>SELECT 字段列表 FROM 表名 ORDER BY 字段1 排序方式1, 字段2 排序方式2</code></p>
+<p>按照字段1进行排序，如果相同则按照字段2排序。</p>
+<p>排序方式为：</p>
+<ul>
+<li><code>asc</code>：生序，默认</li>
+<li><code>desc</code>：降序</li>
+</ul>
+<h3 id="limit命令"><a class="markdownIt-Anchor" href="#limit命令"></a> <strong>LIMIT命令</strong></h3>
+<p>可以看成是截断</p>
+<p>从指定位置的数据行开始，向下截取指定数量的数据行。将截取出来的数据保存到一个全新的临时表中。用于分页展示数据（第一页，第二页 …）。</p>
+<p>语法：<code>SELECT 字段列表 FROM 表名 LIMIT 起始索引, 查询记录数量;</code></p>
+<p>从第【起始索引】行开始，截取【查询记录数量的】行数。<br />
+【起始索引】= （【查询页码】-1 ）*【查询记录数量】<br />
+<strong>注意：数据行位置默认从0开始计算，可以省略。</strong></p>
+<h3 id="总结"><a class="markdownIt-Anchor" href="#总结"></a> 总结：</h3>
+<ul>
+<li>执行顺序：<br />
+<code>FROM</code>--&gt;<code>WHERE</code>--&gt;<code>GROUP BY</code>--&gt;<code>HAVING</code>--&gt;<code>SELECT</code>--&gt;<code>ORDER BY</code>--&gt;<code>LIMIT</code></li>
+<li>书写顺序：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SELECT  字段，函数，子查询</span><br><span class="line">FROM    表</span><br><span class="line">WHERE   定位数据行条件</span><br><span class="line">GROUP BY  分组字段</span><br><span class="line">HAVING  删除的判断条件</span><br><span class="line">ORDER BY  排序字段</span><br><span class="line">LIMIT   起始行位置，从改行开始向下截取行数</span><br></pre></td></tr></table></figure>
+<h3 id="常用查询操作"><a class="markdownIt-Anchor" href="#常用查询操作"></a> 常用查询操作</h3>
+<h5 id="多字段分组查询"><a class="markdownIt-Anchor" href="#多字段分组查询"></a> 多字段分组查询</h5>
+<p>需求：查询各个部门下各个职位的人数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">select DEPTNO, JOB, count(*)</span><br><span class="line">from emp</span><br><span class="line">GROUP BY DEPTNO,JOB  #多字段分组</span><br></pre></td></tr></table></figure>
+<ol>
+<li>多字段分组时，分组顺序对于最终查询的结果没有任何影响。</li>
+<li>多字段分组时，GROUP BY一次只能根据一个分组字段进行分组。<code>GROUP BY DEPTNO,JOB</code>时，需要执行两次。</li>
+<li>从第二个分组字段开始，操作上一个分组字段生成的临时表。对于<code>GROUP BY DEPTNO,JOB</code>，当执行<code>GROUP BY JOB</code>时，在<code>GROUP BY DEPTNO</code>生成的临时表上进行操作。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/04/MySQL%20info/mysql%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BB%8B%E7%BB%8D/" rel="prev" title="mysql数据服务器介绍">
+      <i class="fa fa-chevron-left"></i> mysql数据服务器介绍
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/05/MySQL%20info/LC%20%E9%A2%98%E7%9B%AE%E5%92%8C%E6%96%B0%E5%AD%A6%E5%88%B0%E7%9A%84%E8%AF%AD%E6%B3%95/" rel="next" title="LC 题目和新学到的语法">
+      LC 题目和新学到的语法 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E8%AF%A2%E5%91%BD%E4%BB%A4%E5%92%8C%E4%B8%B4%E6%97%B6%E8%A1%A8"><span class="nav-number">1.</span> <span class="nav-text"> 查询命令和临时表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#from%E5%91%BD%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text"> FROM命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#select%E5%91%BD%E4%BB%A4"><span class="nav-number">3.</span> <span class="nav-text"> SELECT命令</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95-concat"><span class="nav-number">3.1.</span> <span class="nav-text"> 高级用法 CONCAT</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#where%E5%91%BD%E4%BB%A4"><span class="nav-number">4.</span> <span class="nav-text"> WHERE命令</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%81%9A%E5%90%88%E5%87%BD%E6%95%B0"><span class="nav-number">4.1.</span> <span class="nav-text"> 聚合函数</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#group-by%E5%91%BD%E4%BB%A4"><span class="nav-number">5.</span> <span class="nav-text"> GROUP BY命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#having%E5%91%BD%E4%BB%A4"><span class="nav-number">6.</span> <span class="nav-text"> HAVING命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#order-by%E5%91%BD%E4%BB%A4"><span class="nav-number">7.</span> <span class="nav-text"> ORDER BY命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#limit%E5%91%BD%E4%BB%A4"><span class="nav-number">8.</span> <span class="nav-text"> LIMIT命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text"> 总结：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E6%9F%A5%E8%AF%A2%E6%93%8D%E4%BD%9C"><span class="nav-number">10.</span> <span class="nav-text"> 常用查询操作</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A4%9A%E5%AD%97%E6%AE%B5%E5%88%86%E7%BB%84%E6%9F%A5%E8%AF%A2"><span class="nav-number">10.0.1.</span> <span class="nav-text"> 多字段分组查询</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

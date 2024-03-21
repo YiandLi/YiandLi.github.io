@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="torch.utils.data.Dataset对象：存储样本信息。 torch.utils.data.Sampler对象：提供一种遍历数据集所有元素索引的方式。 torch.utils.data.DataLoader对象：包装一个Dataset的迭代器，用于更加方便地得到样本。  总地来说： Dataloader 负责总的调度， 命令 Sampler 定义遍历索引的方式， 然后用索引去 Data">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2. Dataset, Sampler, Dataloader">
+<meta property="og:url" content="http://example.com/2021/09/22/Coding/Pytorch/2.%20Datasets%E5%92%8CDataloaders/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="torch.utils.data.Dataset对象：存储样本信息。 torch.utils.data.Sampler对象：提供一种遍历数据集所有元素索引的方式。 torch.utils.data.DataLoader对象：包装一个Dataset的迭代器，用于更加方便地得到样本。  总地来说： Dataloader 负责总的调度， 命令 Sampler 定义遍历索引的方式， 然后用索引去 Data">
+<meta property="og:locale">
+<meta property="article:published_time" content="2021-09-23T06:46:58.000Z">
+<meta property="article:modified_time" content="2024-03-11T00:46:15.988Z">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/09/22/Coding/Pytorch/2.%20Datasets%E5%92%8CDataloaders/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>2. Dataset, Sampler, Dataloader | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/2.%20Datasets%E5%92%8CDataloaders/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          2. Dataset, Sampler, Dataloader
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:46:58" itemprop="dateCreated datePublished" datetime="2021-09-22T23:46:58-07:00">2021-09-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>913</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><code>torch.utils.data.Dataset</code>对象：存储样本信息。<br />
+<code>torch.utils.data.Sampler</code>对象：提供一种遍历数据集所有元素索引的方式。<br />
+<code>torch.utils.data.DataLoader</code>对象：包装一个Dataset的迭代器，用于更加方便地得到样本。</p>
+<ul>
+<li>总地来说：<br />
+Dataloader 负责总的调度，<br />
+命令 Sampler 定义遍历索引的方式，<br />
+然后用索引去 Dataset 中提取元素。<br />
+于是就实现了对给定数据集的遍历。</li>
+</ul>
+<h2 id="dataset"><a class="markdownIt-Anchor" href="#dataset"></a> Dataset</h2>
+<p><code>torch.utils.data.Dataset</code>对象有两种：「Map-style dataset」和 「Iterable-style dataset」。<br />
+每个样本有对应的索引，通过输入具体的索引，就能够得到自定义的样本信息。</p>
+<h3 id="map-style-dataset"><a class="markdownIt-Anchor" href="#map-style-dataset"></a> Map-style dataset</h3>
+<p>自定义的Dataset对象必须实现<code>__init__()</code>, <code>__len__()</code>和<code>__getitem__(self, idx)</code>方法，作为一种存储和读取数据的协议。</p>
+<p>「Map-style dataset」并不是直接读取的数据集，而是读取每个样本的索引。<br />
+即后续取样本时，通过借助索引，即<code>__getitem__()</code>协议的方式读取样本。大致流程为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">for indices in batch_sampler:</span><br><span class="line">    yield collate_fn([dataset[i] for i in indices])</span><br></pre></td></tr></table></figure>
+<h4 id="参数"><a class="markdownIt-Anchor" href="#参数"></a> 参数：</h4>
+<ul>
+<li><code>__init__()</code>：在创建dataset时被调用一次</li>
+<li><code>__len__()</code>：返回样本数量</li>
+<li><code>__getitem__(self, idx)</code>：加载并且返回一个下标为<code>idx</code>的样本。<br />
+对应的操作符就是索引符号<code>[]</code>，即<code>dataset.__getitem__(idx)</code>和<code>dataset[idx]</code>操作一致。</li>
+</ul>
+<h3 id="iterable-style-dataset"><a class="markdownIt-Anchor" href="#iterable-style-dataset"></a> Iterable-style dataset</h3>
+<p>并不需要实现<code>__getitem__()</code>方法和<code>__len__()</code>方法。Dataset本身更像是一个迭代器，使用<code>__iter()__</code>协议。<br />
+不同于「map-style dataset」，该类型数据集下样本的索引相互独立，注意使用 <code>DataLoader</code> 载入数据时，如果 <code>num_worker</code> 数量大于1，则需要独立分配索引。</p>
+<h2 id="dataloader"><a class="markdownIt-Anchor" href="#dataloader"></a> DataLoader</h2>
+<ul>
+<li><code>Dataset</code>一次只能检索到一个样本，但是我们普遍以batch为单位进行训练。所以我们使用<code>DataLoader</code>作为一个迭代器，返回batch单位的数据。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)</span><br><span class="line">test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>DataLoader的每一次迭代过程都会返回一个batch大小的样本特征数组和样本标签数组。<br />
+<code>train_features, train_labels = next(iter(train_dataloader))</code></li>
+</ul>
+<p>定义后查看一个 batch内部数据：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># have a look at dataloader</span><br><span class="line"></span><br><span class="line">train_data_iter = iter(train_dataloader)</span><br><span class="line">batch_data = next(train_data_iter)</span><br><span class="line">text_id_list, text_list, batch_input_ids, \</span><br><span class="line">batch_attention_mask, batch_token_type_ids, \</span><br><span class="line">tok2char_span_list, batch_shaking_tag = batch_data</span><br></pre></td></tr></table></figure>
+<h3 id="参数-2"><a class="markdownIt-Anchor" href="#参数-2"></a> 参数</h3>
+<ul>
+<li><code>shuffle=True</code>时，调用<code>RandomSampler</code>进行随机索引。</li>
+<li><code>sampler</code>定义从数据集中提取样本的策略，应该传入一个<code>Sampler</code>对象。如果指定<code>sampler</code>对象，则<code>shuffle</code>参数必须为<code>False</code>。</li>
+<li><code>batch_sampler</code>，和<code>sampler</code>类似，但是一般传入<code>BatchSampler</code>对象，每次返回一个<code>batch</code>大小的索引。和<code>batch_size</code>，<code>shuffle</code>参数互斥。</li>
+<li><code>drop_last=True</code>时，会自动删除最后一个不完整的batch。</li>
+<li><code>collate_fn=&lt;function default_collate&gt;</code>，定义如何取样本，我们可以定义自己的函数来准确地实现想要的功能。<br />
+从「Map-style dataset」处取样本的伪代码可以看到，<code>collate_fn</code>这个函数有一个默认的输入<code>[dataset[i] for i in indices]</code>，list的长度是一个batch size，list中的每个元素都是<code>__getitem__()</code>得到的结果。所以在重写该方法时，注意有一个默认的参数<code>def collate(self, examples)</code>。</li>
+<li>·<code>num_workers</code>：使用多少个进行处理数据，<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/523239005">使用unix系统时请注意BUG</a>。</li>
+</ul>
+<h2 id="demo"><a class="markdownIt-Anchor" href="#demo"></a> Demo</h2>
+<ol>
+<li>使用一个自定义的<code>read_example_form_file(args, mode)</code> 方法，读取所有的样本，生成一个样本列表。<br />
+样本列表的结构为：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">examples = [</span><br><span class="line">    &#123;</span><br><span class="line">        &quot;sentence&quot;: sentence,</span><br><span class="line">        &quot;label&quot;: label,</span><br><span class="line">        &quot;feature&quot;: feature</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>
+<p>自定义<code>my_Dataset</code>继承<code>torch.utils.data.Dataset</code>，</p>
+<ol>
+<li>实现<code>__init__()</code>，<code>__len_()</code>，<code>__getitem__()</code>方法。</li>
+<li>自定义一个<code>collate(self, example_list)</code>方法，后续直接传入<code>DataLoader</code>的<code>collate_fn</code>参数。<br />
+在<code>collate()</code>内部实现 tokenizer 和 padding 操作，返回<code>raw_text_list, batch_input_ids, batch_attention_mask, batch_segment_ids, batch_labels, batch_hand_features</code>，这样训练时，直接取出即可交给模型，计算损失，进行训练。</li>
+</ol>
+</li>
+<li>
+<p>直接使用<code>torch.utils.data.DataLoader</code>封装<code>my_Dataset</code>和<code>my_Dataset.collate</code>即可。<br />
+注意传入的是<code>collate</code>(<code>&lt;function&gt;</code>)，不是<code>collate()</code>。</p>
+</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/09/22/Coding/Pytorch/1.4.%20Torch.tensor%E6%8B%BC%E6%8E%A5%E5%92%8C%E5%88%86%E5%89%B2/" rel="prev" title="1.4. Torch.tensor 拼接和分割">
+      <i class="fa fa-chevron-left"></i> 1.4. Torch.tensor 拼接和分割
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/09/22/Coding/Pytorch/3.%20Torch%20%E6%9E%84%E9%80%A0%E6%A8%A1%E5%9E%8B/" rel="next" title="3. 构造模型">
+      3. 构造模型 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#dataset"><span class="nav-number">1.</span> <span class="nav-text"> Dataset</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#map-style-dataset"><span class="nav-number">1.1.</span> <span class="nav-text"> Map-style dataset</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E6%95%B0"><span class="nav-number">1.1.1.</span> <span class="nav-text"> 参数：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#iterable-style-dataset"><span class="nav-number">1.2.</span> <span class="nav-text"> Iterable-style dataset</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dataloader"><span class="nav-number">2.</span> <span class="nav-text"> DataLoader</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E6%95%B0-2"><span class="nav-number">2.1.</span> <span class="nav-text"> 参数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#demo"><span class="nav-number">3.</span> <span class="nav-text"> Demo</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">333</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">562k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:48</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
