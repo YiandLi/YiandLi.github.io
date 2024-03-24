@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="通用： GQA ；位置编码外推 ；滑窗 attention ；LogN-Scaling 关于位置编码长度外推，移步 ： 位置编码1-RoPE,ALiBi和外推方案  模型  位置编码  上下文长度  外推优化  Qwen  RoPE  4k to 16k dynamic ntk + logn +  window attn  Qwen 1.5  RoPE 32k dynamic ntk + logn">
+<meta property="og:type" content="article">
+<meta property="og:title" content="长文本解决方案">
+<meta property="og:url" content="http://example.com/2024/03/22/NLP/LLM/%E9%95%BF%E6%96%87%E6%9C%AC%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="通用： GQA ；位置编码外推 ；滑窗 attention ；LogN-Scaling 关于位置编码长度外推，移步 ： 位置编码1-RoPE,ALiBi和外推方案  模型  位置编码  上下文长度  外推优化  Qwen  RoPE  4k to 16k dynamic ntk + logn +  window attn  Qwen 1.5  RoPE 32k dynamic ntk + logn">
+<meta property="og:locale">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/Kmp-FsaxwiCzUVi-46kgx6Cp3oSXep0-C9Qa6iLlyRk.original.fullsize.png">
+<meta property="article:published_time" content="2024-03-22T08:30:49.000Z">
+<meta property="article:modified_time" content="2024-03-23T00:47:59.412Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.mathpix.com/snip/images/Kmp-FsaxwiCzUVi-46kgx6Cp3oSXep0-C9Qa6iLlyRk.original.fullsize.png">
+
+<link rel="canonical" href="http://example.com/2024/03/22/NLP/LLM/%E9%95%BF%E6%96%87%E6%9C%AC%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>长文本解决方案 | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/03/22/NLP/LLM/%E9%95%BF%E6%96%87%E6%9C%AC%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          长文本解决方案
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2024-03-22 01:30:49" itemprop="dateCreated datePublished" datetime="2024-03-22T01:30:49-07:00">2024-03-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Inference/" itemprop="url" rel="index"><span itemprop="name">LLM Inference</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Model/" itemprop="url" rel="index"><span itemprop="name">LLM Model</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>905</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>通用：<br />
+GQA ；位置编码外推 ；滑窗 attention ；LogN-Scaling</p>
+<p>关于位置编码长度外推，移步 ： <a href="/2023/11/09/NLP/LLM/%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81-RoPE,ALiBi%E5%92%8C%E5%A4%96%E6%8E%A8%E6%96%B9%E6%A1%88/" title="位置编码1-RoPE,ALiBi和外推方案">位置编码1-RoPE,ALiBi和外推方案</a></p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><menclose notation="top bottom left right"><mtable rowspacing="0.15999999999999992em" columnalign="left left left left" columnlines="solid solid solid" columnspacing="1em" rowlines="solid solid solid solid solid solid solid"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 模型 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 位置编码 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 上下文长度 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 外推优化 </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Qwen </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPE </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 4k to 16k</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtable rowspacing="0.15999999999999992em" columnalign="left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> dynamic ntk + logn + </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> window attn </mtext></mstyle></mtd></mtr></mtable></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Qwen 1.5 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPE </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>32</mn><mi>k</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtable rowspacing="0.15999999999999992em" columnalign="left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> dynamic ntk + logn + </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> window attn </mtext></mstyle></mtd></mtr></mtable></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Baichuan2-7B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPE </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>192</mn><mi>k</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Baichuan2-13B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> ALiBi </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>192</mn><mi>k</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Yi </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPe </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>4k to 200k</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>不修改模型架构，仍然是全注意力。</mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> LLaMa 2 Long </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPE </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>192</mn><mi>k</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> base=500000 </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> ChatGLM-4 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> RoPE </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>128</mn><mi>k</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow></mrow></mstyle></mtd></mtr></mtable></menclose></mrow><annotation encoding="application/x-tex">\begin{array}{|l|l|l|l|}
+\hline \text { 模型 } &amp; \text { 位置编码 } &amp; \text { 上下文长度 } &amp; \text { 外推优化 } \\
+\hline \text { Qwen } &amp; \text { RoPE } &amp; \text { 4k to 16k} &amp; \begin{array}{l}
+\text { dynamic ntk + logn + } \\
+\text { window attn }
+\end{array} \\
+\hline \text { Qwen 1.5 } &amp; \text { RoPE } &amp; 32 k &amp; \begin{array}{l}
+\text { dynamic ntk + logn + } \\
+\text { window attn }
+\end{array} \\
+\hline \text { Baichuan2-7B } &amp; \text { RoPE } &amp; 192 k &amp; \\
+\hline \text { Baichuan2-13B } &amp; \text { ALiBi } &amp; 192 k &amp; \\
+\hline \text { Yi } &amp; \text { RoPe } &amp; \text {4k to 200k}  &amp; 不修改模型架构，仍然是全注意力。 \\
+\hline \text { LLaMa 2 Long } &amp; \text { RoPE } &amp; 192 k  &amp; \text { base=500000 } \\
+\hline \text { ChatGLM-4 } &amp; \text { RoPE } &amp; 128 k &amp; \\
+\hline
+\end{array}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:12.04em;vertical-align:-5.75em;"></span><span class="mord"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:6.289999999999998em;"><span style="top:-8.25em;"><span class="pstrut" style="height:8.25em;"></span><span class="mtable"><span class="vertical-separator" style="height:11.999999999999998em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-5.749999999999999em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:6.249999999999999em;"><span style="top:-8.86em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">模型</span><span class="mord"> </span></span></span></span><span style="top:-7.049999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> Qwen </span></span></span></span><span style="top:-4.649999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> Qwen 1.5 </span></span></span></span><span style="top:-2.859999999999998em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> Baichuan2-7B </span></span></span></span><span style="top:-1.6599999999999981em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> Baichuan2-13B </span></span></span></span><span style="top:-0.4599999999999988em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> Yi </span></span></span></span><span style="top:0.7400000000000004em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> LLaMa 2 Long </span></span></span></span><span style="top:1.9399999999999997em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> ChatGLM-4 </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:5.75em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:11.999999999999998em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-5.749999999999999em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:6.249999999999999em;"><span style="top:-8.86em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">位置编码</span><span class="mord"> </span></span></span></span><span style="top:-7.049999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPE </span></span></span></span><span style="top:-4.649999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPE </span></span></span></span><span style="top:-2.859999999999998em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPE </span></span></span></span><span style="top:-1.6599999999999981em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> ALiBi </span></span></span></span><span style="top:-0.4599999999999988em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPe </span></span></span></span><span style="top:0.7400000000000004em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPE </span></span></span></span><span style="top:1.9399999999999997em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> RoPE </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:5.75em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:11.999999999999998em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-5.749999999999999em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:6.249999999999999em;"><span style="top:-8.86em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">上下文长度</span><span class="mord"> </span></span></span></span><span style="top:-7.049999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> 4k to 16k</span></span></span></span><span style="top:-4.649999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord">3</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:-2.859999999999998em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord">1</span><span class="mord">9</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:-1.6599999999999981em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord">1</span><span class="mord">9</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:-0.4599999999999988em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord">4k to 200k</span></span></span></span><span style="top:0.7400000000000004em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord">1</span><span class="mord">9</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:1.9399999999999997em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord">1</span><span class="mord">2</span><span class="mord">8</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:5.75em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:11.999999999999998em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-5.749999999999999em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:6.249999999999999em;"><span style="top:-8.86em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">外推优化</span><span class="mord"> </span></span></span></span><span style="top:-7.049999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> dynamic ntk + logn + </span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> window attn </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span></span></span><span style="top:-4.649999999999999em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> dynamic ntk + logn + </span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> window attn </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span></span></span><span style="top:-2.859999999999998em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"></span></span><span style="top:-1.6599999999999981em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"></span></span><span style="top:-0.4599999999999988em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord cjk_fallback">不</span><span class="mord cjk_fallback">修</span><span class="mord cjk_fallback">改</span><span class="mord cjk_fallback">模</span><span class="mord cjk_fallback">型</span><span class="mord cjk_fallback">架</span><span class="mord cjk_fallback">构</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">仍</span><span class="mord cjk_fallback">然</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">全</span><span class="mord cjk_fallback">注</span><span class="mord cjk_fallback">意</span><span class="mord cjk_fallback">力</span><span class="mord cjk_fallback">。</span></span></span><span style="top:0.7400000000000004em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"><span class="mord text"><span class="mord"> base=500000 </span></span></span></span><span style="top:1.9399999999999997em;"><span class="pstrut" style="height:3.45em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:5.75em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:11.999999999999998em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-5.749999999999999em;"></span></span></span><span style="top:-2.5em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.6999999999999993em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-4.899999999999999em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-6.099999999999998em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-7.299999999999997em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-8.499999999999996em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-10.899999999999999em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-13.299999999999997em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-14.499999999999998em;"><span class="pstrut" style="height:8.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:5.75em;"><span></span></span></span></span></span></span></span></span></span></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/678755776">RoPE外推优化——支持192K上下文长度</a></p>
+<span id="more"></span>
+<h1 id="mistral"><a class="markdownIt-Anchor" href="#mistral"></a> Mistral</h1>
+<p>Pre-train 时，就已经考虑到了超长输入的情况。</p>
+<ul>
+<li>Grouped-query attention (GQA)</li>
+<li>Sliding Window Attention (SWA) ：只 attend 4,096 个前面的 token</li>
+<li>Rolling buffer cache 滑动缓存区 ：推理时，KV cache 只需要维护 4,096 个 token</li>
+<li>Pre-fill and chunking 缓存预处理</li>
+</ul>
+<h1 id="qwen-16-k"><a class="markdownIt-Anchor" href="#qwen-16-k"></a> Qwen 16 K</h1>
+<p><font size=5.5 color='red'> -&gt; [post_link NLP/LLM/Qwen] <a href="/2024/02/09/NLP/LLM/Qwen/" title="Qwen">Qwen</a> </font></p>
+<p>训练时使用的长度是 4096 ；采用 <strong>training-free</strong> 的一些方法，实验时最大长度可以达到 16384 。</p>
+<ul>
+<li>Dynamic NTK-aware interpolation → YaRN</li>
+<li>Log N Scaling</li>
+<li>Window Attention ，不同层的 window size 都不一样</li>
+</ul>
+<h1 id="yi-200-k"><a class="markdownIt-Anchor" href="#yi-200-k"></a> Yi 200 K</h1>
+<p><font size=5.5 color='red'> -&gt; [post_link NLP/LLM/Yi] <a href="/2024/03/08/NLP/LLM/Yi/" title="Yi">Yi</a> </font></p>
+<p>预训练使用了 4096 ，外推后最高 200 K 。</p>
+<p>作者认为，模型能够建模比预训练长度(4K)更长的依赖关系是一种内在的能力，基础模型已经具有建模超过4K依赖的能力。可以通过轻量的后训练/微调过程解锁长上下文能力（论文中仅仅为 100 steps）。</p>
+<p>不修改模型架构，仍然是全注意力。只是需要有针对性地构造一些长文数据。</p>
+<p>同时训练过程经历了两个部分：</p>
+<ol>
+<li>Continue Pre-training -》适应长文本</li>
+<li>Supervised Fine-tuning -》对齐</li>
+</ol>
+<h1 id="元象的方案xverse-long-256k"><a class="markdownIt-Anchor" href="#元象的方案xverse-long-256k"></a> 元象的方案：XVERSE-Long-256K</h1>
+<p>Source：<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/634006127/answer/3364472978">https://www.zhihu.com/question/634006127/answer/3364472978</a></p>
+<img src="https://cdn.mathpix.com/snip/images/Kmp-FsaxwiCzUVi-46kgx6Cp3oSXep0-C9Qa6iLlyRk.original.fullsize.png" />
+<p>两个阶段：继续预训练的方法可降低训练量，而ABF和NTK可解决模型attention衰减问题。</p>
+<ul>
+<li>
+<p>第一阶段： <strong>ABF+继续预训练</strong> ，序列长度从8K拓展到32K</p>
+<ul>
+<li>
+<p>使用20%的预训练数据进行32K的长序列的继续预训练。</p>
+</li>
+<li>
+<p>ABF：将位置编码RoPE（Rotary Position Embedding）的频率从10000修改成500000。</p>
+</li>
+<li>
+<p>仅使用继续预训练是无法将序列长度提升到256K的，如此长度的预训练无法完成。</p>
+</li>
+</ul>
+</li>
+<li>
+<p>第二阶段： <strong>NTK+SFT</strong> ，序列长度从32K拓展到256K</p>
+<ul>
+<li>
+<p>SFT是通过一问一答的方式，使得模型具备了Chat的能力并且强化NTK拓展序列长度的能力。</p>
+</li>
+<li>
+<p>SFT的关键是如何生成训练数据： 团队使用预训练阶段使用的训练数据来构造长序列的SFT训练数据。</p>
+<p>每个文章都首先得到 QA 对，然后混合不同文章，将对应 QA 作为最终的训练目标。</p>
+<blockquote>
+<p>以构建多文档QA类数据为例：首先，基于自研的XVERSE-65B模型 <strong>生成与单个文章有关的高质量问题回答对</strong> ；然后将文章内容混合成目标长度的整段内容，随机选择与其中某个内容匹配的问题回答对；最后将该问题和回答作为整段内容的问题和回答，构成训练的单个样本。通过上述批量化数据生产管线，我们可以得到32K、64K，一直到256K长度的高质量对话数据。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2024/03/20/NLP/RAG/Info-RAG/" rel="prev" title="Info-RAG">
+      <i class="fa fa-chevron-left"></i> Info-RAG
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2024/03/23/NLP/RAG/RAG%E8%AF%84%E4%BC%B0/" rel="next" title="RAG评估1">
+      RAG评估1 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#mistral"><span class="nav-number">1.</span> <span class="nav-text"> Mistral</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#qwen-16-k"><span class="nav-number">2.</span> <span class="nav-text"> Qwen 16 K</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#yi-200-k"><span class="nav-number">3.</span> <span class="nav-text"> Yi 200 K</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%83%E8%B1%A1%E7%9A%84%E6%96%B9%E6%A1%88xverse-long-256k"><span class="nav-number">4.</span> <span class="nav-text"> 元象的方案：XVERSE-Long-256K</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">334</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">36</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">564k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">46:59</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
