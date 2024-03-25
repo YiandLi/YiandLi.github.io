@@ -29,7 +29,7 @@
 <meta property="og:locale">
 <meta property="og:image" content="http://example.com/images/NLP/RAG/SevenFailures.png">
 <meta property="article:published_time" content="2024-03-16T06:28:06.000Z">
-<meta property="article:modified_time" content="2024-03-16T09:03:52.831Z">
+<meta property="article:modified_time" content="2024-03-24T23:44:19.989Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/NLP/RAG/SevenFailures.png">
 
@@ -229,14 +229,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>367</span>
+              <span>2.1k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
+              <span>11 mins.</span>
             </span>
 
         </div>
@@ -285,6 +285,144 @@
 <li>Incorrect Specificity ：响应中是返回答案了的，但是无法满足用户需求。有可能是用户的问题过于笼统，或者是模型本身的原因。</li>
 <li>Incomplete ：答案不完整</li>
 </ol>
+<h1 id="其他问题"><a class="markdownIt-Anchor" href="#其他问题"></a> 其他问题</h1>
+<p>Source：<br />
+<a target="_blank" rel="noopener" href="https://www.cnblogs.com/gogoSandy/p/17873827.html">https://www.cnblogs.com/gogoSandy/p/17873827.html</a></p>
+<p>如何切 chunk （决定数量，和粗排召回的结果，考虑到短 query 和长 chunk 的 embedding 不平衡<br />
+触发 RAG 时机问题（什么时候使用 RAG，如何使用 RAG，怎么结合模型自有知识<br />
+召回问题（如何优化召回：rewriter，多路召回，精排，粗排 …<br />
+召回后润色问题（已经知道 top k 文本，如何组织他们给到 GPT<br />
+模型输出问题（给到 context，仍然需要模型自己进行判断，从 context 中选择有效知识点，过滤噪音，甚至自己补全，拒绝回复</p>
+<h2 id="召回率问题"><a class="markdownIt-Anchor" href="#召回率问题"></a> 召回率问题</h2>
+<p><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=STxoTMwRUpE">大模型增强检索RAG应用知识库召回率提升专题圆桌:1、现在通用RAG方法的召回率怎么样？2、如何提升召回率？提升的方法有哪些？3、embeding里哪个算法最好？</a></p>
+<p>问题：有真实数据在库中，但是召回失败 。</p>
+<p>观点：</p>
+<ul>
+<li>chunk size 很重要：知识的颗粒度，决定了召回的数量</li>
+<li>召回率其实不如准确率重要 。</li>
+<li>搜索端搜索召回其实已经很成熟了，LLM 还是在开发。</li>
+</ul>
+<p>如何提升召回：</p>
+<ul>
+<li>chunk 大小，overlap：一般 chunk 越大，召回率越大</li>
+<li>数据准备阶段：做概括</li>
+<li>rewrite query：
+<ul>
+<li>结合上下文，问题过短，存在大量专业词汇，简写</li>
+<li>query 2 keyword：关键词字典匹配 / llm进行联想 / 嵌套字典匹配（进行第一轮关键词生成之后，或者说得到其解释之后，解释其实仍然包含专业术语，然后再次进行解释，最终让llm能理解）</li>
+</ul>
+</li>
+<li>ES 提升召回</li>
+</ul>
+<h2 id="粗排"><a class="markdownIt-Anchor" href="#粗排"></a> 粗排</h2>
+<h3 id="query-改写"><a class="markdownIt-Anchor" href="#query-改写"></a> query 改写</h3>
+<p>问题：用户 query 和 向量库中 chunk 长度不对称，或者表述方法不相关，导致检索效果很差。</p>
+<p>解决：rewrite : Query改写成document</p>
+<p>优点：缓解短文本query向量化效果较差的问题<br />
+缓解document长文本向量和query短文本向量存在空间差异的问题<br />
+提高BM25等离散索引抽取的效果,毕竟文本长了更容易抽出有效关键词<br />
+缺点：pseudo-document可能发生语义漂移，幻觉回答会引入错误的关键词降低召回的准确率，以及解码的耗时较长</p>
+<h3 id="document-chunk-改写"><a class="markdownIt-Anchor" href="#document-chunk-改写"></a> document chunk 改写</h3>
+<p>反过来，给每篇文档都生成N个关联Query（pseudo-query），使用关联Query的embedding向量来表征文档，和真实Query进行相似度计算。</p>
+<h3 id="训练-query-改写模型"><a class="markdownIt-Anchor" href="#训练-query-改写模型"></a> 训练 query 改写模型</h3>
+<p>微软提出的rewrite-retrieve-read框架：尝试使用PPO微调改写模型，Reward模型的目标是不同改写query召回后推理内容和真实答案的Exact Match和F1。</p>
+<h3 id="索引扩展"><a class="markdownIt-Anchor" href="#索引扩展"></a> 索引扩展</h3>
+<p>单一向量作为召回索引有以下几个常见问题：</p>
+<ol>
+<li>相似度定义不同：结构，语义，关键词？</li>
+<li>相似度粒度不同：精确匹配 or 模糊匹配</li>
+<li>不同领域相似度定义不同：垂直领域相似度较低，有可能支持本文就比较少？或者训练较少，向量表征就不充分。</li>
+<li>长短文本间表征存在 Gap</li>
+</ol>
+<h4 id="离散化"><a class="markdownIt-Anchor" href="#离散化"></a> 离散化</h4>
+<p>抽取：ngram 倒排，关键词提取 …</p>
+<p>分类：意图分类，话题分类，概念分类，地点分类etc</p>
+<p>多跳：实体链接，同义词扩展，KG查询etc</p>
+<p>使用到 LLM，则可以进行 关键词拓展，同义词拓展 。</p>
+<h4 id="连续索引扩展"><a class="markdownIt-Anchor" href="#连续索引扩展"></a> 连续索引扩展</h4>
+<p>最朴素：不同的Embedding模型，多路同时召回，加权召回</p>
+<p>简单模式：抽取关键词，词向量加权召回。垂域效果较好 。缺点是准确率低，不过召回阶段本来就是广撒网多敛鱼。</p>
+<p>困难模式：训练 embedding model ，不过领域模型对比通用模型提升有限，且成本较高 。</p>
+<h2 id="精排"><a class="markdownIt-Anchor" href="#精排"></a> 精排</h2>
+<h3 id="如何打分"><a class="markdownIt-Anchor" href="#如何打分"></a> 如何打分</h3>
+<p>如果我们进行了多路召回，假设多路召回会出现 shared content，那么如何对最终文档进行排序？</p>
+<ul>
+<li>RRF_score : <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r(d)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span></span> 是单一打分维度中的文档排名，K是常数起到平滑的作用，微软实验后给的取值是60。</li>
+</ul>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>R</mi><mi>F</mi><mi>s</mi><mi>c</mi><mi>o</mi><mi>r</mi><mi>e</mi><mtext> </mtext><mo stretchy="false">(</mo><mi>d</mi><mo>∈</mo><mi>D</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo>∑</mo><mrow><mi>r</mi><mo>∈</mo><mi>R</mi></mrow></munder><mfrac><mn>1</mn><mrow><mi>k</mi><mo>+</mo><mi>r</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">R R F s c o r e ~(d \in D)=\sum_{r \in R} \frac{1}{k+r(d)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal" style="margin-right:0.13889em;">F</span><span class="mord mathnormal">s</span><span class="mord mathnormal">c</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">e</span><span class="mspace nobreak"> </span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">D</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.6431459999999998em;vertical-align:-1.321706em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.050005em;"><span style="top:-1.8556639999999998em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mrel mtight">∈</span><span class="mord mathnormal mtight" style="margin-right:0.00773em;">R</span></span></span></span><span style="top:-3.0500049999999996em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.321706em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<ul>
+<li>
+<p>直接用 Cross-Encoder re-Rank 其实也可以</p>
+</li>
+<li>
+<p>LongLLMLingua 进行打分：给定内容计算问题的熵值，熵越大，表示这个chunk越重要。</p>
+</li>
+</ul>
+<h2 id="重排序"><a class="markdownIt-Anchor" href="#重排序"></a> 重排序</h2>
+<p>现在选择出 TopK上文候选 ，如何进行排列组合，甚至压缩？也就是保证整体最优。</p>
+<h3 id="排列"><a class="markdownIt-Anchor" href="#排列"></a> 排列</h3>
+<p>论文告诉我们，头部和尾部关注度最高 ；</p>
+<p>LongLLMLingua</p>
+<h3 id="文档关联性"><a class="markdownIt-Anchor" href="#文档关联性"></a> 文档关联性</h3>
+<p>考虑 「不同召回内容之间的关联性」</p>
+<ol>
+<li>
+<p>langchain 的 LOTR (Merger Retriever)实现了部分类似的功能，包括使用embedding对多路召回的内容进行消重，以及对内容进行聚类，每个聚类中筛选最靠近中心的一条内容。这一步可以放在排序中去做，也可以放在排序后的重排模块。</p>
+</li>
+<li>
+<p>评分指标：微软的MetaInsight：</p>
+<ul>
+<li>
+<p>内容的整体价值=每条内容的价值之和-两两内容重合价值和</p>
+</li>
+<li>
+<p>两两内容重合价值=两条内容打分的最小值*内容重合率（这里为相似度）</p>
+</li>
+</ul>
+</li>
+<li>
+<p>是不是可以设置指标，相似度大于多少，我们就删除一个，或者两个组合进行 rewrite ？</p>
+</li>
+<li>
+<p>信息连贯性：把内容相似的多个召回连续排列，会比散落在Context各处效果更好么</p>
+</li>
+<li>
+<p>信息一致性：观点或内容冲突的多个召回内容，对推理的影响有多大</p>
+</li>
+</ol>
+<h3 id="压缩-context"><a class="markdownIt-Anchor" href="#压缩-context"></a> 压缩 context</h3>
+<p>Selective-Context<br />
+LLMLingua<br />
+LongLLMLingua</p>
+<h2 id="保留模型智能"><a class="markdownIt-Anchor" href="#保留模型智能"></a> 保留模型智能</h2>
+<p>目前 LLM 好像仅仅是用来润色重组检索到的 context</p>
+<p>所以如何用好 RAG 的关键：</p>
+<ol>
+<li>
+<p>Detection：什么时候使用 RAG ，哪一轮才是用外挂，什么时候直接回复 ？</p>
+</li>
+<li>
+<p>Calibration：用外挂可能会引入 bias，所以出现了 后检索 的方法，先让模型先生成，再使用召回内容对模型回答进行修正校准和事实性检查 。</p>
+</li>
+</ol>
+<p>结合一下：<br />
+<strong>高置信度判断模型可以自行完成直接回答，中置信度先生成再校验，低置信度直接走RAG检索生成。</strong></p>
+<h3 id="检测时机detection"><a class="markdownIt-Anchor" href="#检测时机detection"></a> 检测时机：Detection</h3>
+<p>SELFCHECKGPT: Zero-Resource Black-Box Hallucination Detection for Generative Large Language Models<br />
+SELF-CONTRADICTORY HALLUCINATIONS OF LLMS: EVALUATION, DETECTION AND MITIGATION<br />
+R-Tuning: Teaching Large Language Models to Refuse Unknown Questions ：让模型在碰到自己不确定的问题时，直接选择拒绝回答，类似 RLHF</p>
+<h3 id="后处理calibration-method"><a class="markdownIt-Anchor" href="#后处理calibration-method"></a> 后处理：Calibration Method</h3>
+<p>先不做判断直接使用模型生成回答，再调用工具对回答进行校验和修改。</p>
+<ul>
+<li>指令方案：<br />
+RARR: Researching and Revising What Language Models Say, Using Language Models<br />
+CRITIC: LARGE LANGUAGE MODELS CAN SELFCORRECT WITH TOOL-INTERACTIVE CRITIQUING</li>
+<li>微调方案<br />
+PURR: Efficiently Editing Language Model Hallucinations by Denoising Language Model Corruptions<br />
+Check Your Facts and Try Again: Improving Large Language Models with External Knowledge and Automated Feedback<br />
+Fusion-in-decoder: Leveraging Passage Retrieval with Generative Models for Open Domain Question Answering</li>
+</ul>
 
     </div>
 
@@ -365,7 +503,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#retrieval-augmented-generation"><span class="nav-number">1.</span> <span class="nav-text"> Retrieval Augmented Generation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#failure-points-of-rag-systems"><span class="nav-number">2.</span> <span class="nav-text"> Failure Points of RAG Systems</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#retrieval-augmented-generation"><span class="nav-number">1.</span> <span class="nav-text"> Retrieval Augmented Generation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#failure-points-of-rag-systems"><span class="nav-number">2.</span> <span class="nav-text"> Failure Points of RAG Systems</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text"> 其他问题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AC%E5%9B%9E%E7%8E%87%E9%97%AE%E9%A2%98"><span class="nav-number">3.1.</span> <span class="nav-text"> 召回率问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B2%97%E6%8E%92"><span class="nav-number">3.2.</span> <span class="nav-text"> 粗排</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#query-%E6%94%B9%E5%86%99"><span class="nav-number">3.2.1.</span> <span class="nav-text"> query 改写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#document-chunk-%E6%94%B9%E5%86%99"><span class="nav-number">3.2.2.</span> <span class="nav-text"> document chunk 改写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83-query-%E6%94%B9%E5%86%99%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.2.3.</span> <span class="nav-text"> 训练 query 改写模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%B4%A2%E5%BC%95%E6%89%A9%E5%B1%95"><span class="nav-number">3.2.4.</span> <span class="nav-text"> 索引扩展</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A6%BB%E6%95%A3%E5%8C%96"><span class="nav-number">3.2.4.1.</span> <span class="nav-text"> 离散化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9E%E7%BB%AD%E7%B4%A2%E5%BC%95%E6%89%A9%E5%B1%95"><span class="nav-number">3.2.4.2.</span> <span class="nav-text"> 连续索引扩展</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B2%BE%E6%8E%92"><span class="nav-number">3.3.</span> <span class="nav-text"> 精排</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E6%89%93%E5%88%86"><span class="nav-number">3.3.1.</span> <span class="nav-text"> 如何打分</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E6%8E%92%E5%BA%8F"><span class="nav-number">3.4.</span> <span class="nav-text"> 重排序</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%92%E5%88%97"><span class="nav-number">3.4.1.</span> <span class="nav-text"> 排列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E6%A1%A3%E5%85%B3%E8%81%94%E6%80%A7"><span class="nav-number">3.4.2.</span> <span class="nav-text"> 文档关联性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9-context"><span class="nav-number">3.4.3.</span> <span class="nav-text"> 压缩 context</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%9D%E7%95%99%E6%A8%A1%E5%9E%8B%E6%99%BA%E8%83%BD"><span class="nav-number">3.5.</span> <span class="nav-text"> 保留模型智能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E6%97%B6%E6%9C%BAdetection"><span class="nav-number">3.5.1.</span> <span class="nav-text"> 检测时机：Detection</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8E%E5%A4%84%E7%90%86calibration-method"><span class="nav-number">3.5.2.</span> <span class="nav-text"> 后处理：Calibration Method</span></a></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -430,13 +568,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">564k</span>
+    <span title="Symbols count total">566k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">46:59</span>
+    <span title="Reading time total">47:11</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
