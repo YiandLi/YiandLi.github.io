@@ -179,6 +179,213 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/08/18/NLP/tricks/Kaggle_LLM_competition2024/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/08/18/NLP/tricks/Kaggle_LLM_competition2024/" class="post-title-link" itemprop="url">Kaggle_LLM_competition2024</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-08-18 13:53:50" itemprop="dateCreated datePublished" datetime="2023-08-18T13:53:50-07:00">2023-08-18</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>967</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>5 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1st-place-solution-0933"><a class="markdownIt-Anchor" href="#1st-place-solution-0933"></a> 1st Place Solution 0.933</h1>
+<p>Source: <a target="_blank" rel="noopener" href="https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446422">https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446422</a></p>
+<ul>
+<li>
+<p>Retrieval Model : <a target="_blank" rel="noopener" href="https://huggingface.co/spaces/mteb/leaderboard">mteb/leaderboard</a><br />
+e5-base-v2, e5-large-v2, gte-base, gte-large and bge-large</p>
+</li>
+<li>
+<p>Retrieval Content -&gt; utilizes 2.5TB of input data</p>
+<ul>
+<li>Query: “{prompt} {A}, {B}, {C}, {D}, {E}” ; “{prompt} {A}”, “{prompt} {B}”, etc.</li>
+<li>Key: using public wiki
+<ul>
+<li>recreated the above wiki taking a snapshot from a newer date</li>
+<li>post processing steps: joining very small paragraphs (usually subtitles) with the subsequent paragraph</li>
+<li>merged the sentences together to different target lengths of either 256, 512 or 1024 characters while not breaking any sentences.</li>
+</ul>
+</li>
+<li>Custom pytorch cosine similarity code, no need for FAISS etc. - can just do it without any memory issue in chunks on GPU</li>
+</ul>
+</li>
+<li>
+<p>Longer contexts : train models with 3-chunk contexts and run inference with 5-chunks ; train faster</p>
+</li>
+<li>
+<p>Train Models</p>
+<ul>
+<li>fine-tuned 7B &amp; 13B LLMs : Llama-2-7b ; Mistral-7B-v0.1 ; xgen-7b-8k-base ; Llama-2-13b</li>
+<li>train all models with LORA on all linear layers</li>
+<li>use a binary classification head after <strong>the final next-token logits</strong> ； with lower learning rate</li>
+<li>use a lower learning rate for the head vs. the LORA layers</li>
+<li>All models are trained over a single epoch with typical cosine lr decay and BCE loss, picking the last checkpoint.</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F2675447%2Fe304b1553bae71f790a313f92ea3bc1b%2Fimage.png?generation=1697040115030343&amp;alt=media" alt="" /></p>
+<ul>
+<li>Model Arch.
+<ul>
+<li>Since All the question share the same prefix , and prefix cannot see the question :  so feed the context and the question through the backbone and save the <code>past_key_values</code> .</li>
+<li>each of the five answers gets the <code>past_key_values</code></li>
+<li>take the final next token prediction of each output which are <strong>the logits over the full vocabulary</strong> and feed this through a final classification head trained from scratch.<br />
+Map the output of the LLM across the full vocabulary to a single binary prediction.</li>
+<li>Based on the score, get the final predicted option.</li>
+<li>About the context :
+<blockquote>
+<p>One interesting test that we’ve done was to inverse the order of contexts during the inference which dropped the score quite a bit. So, it might mean that models learnt the position of the “best” context.<br />
+Training on the true context the question was generated on, was a bit worse than training on the generated context.<br />
+It helps the regularization and to learn that context may not always include the correct answers.<br />
+“Unleashing” the model’s “knowledge” of Wikipedia</p>
+</blockquote>
+</li>
+<li>Ensemble: Each model uses a different context approach using different wikis, embeddings and topk.</li>
+</ul>
+</li>
+<li>Model Downside
+<ul>
+<li>each sample lacks the cross-information ； 即每一轮模型只是在考虑一个 question ， 无法同时考虑多个 question 。</li>
+<li>作者也尝试了组合 question 进行拼接(<code>[CLS] &lt;question&gt; [SEP] &lt;retrieved context&gt; [SEP] &lt;option A&gt; [SEP]&lt;option B&gt; [SEP]&lt;option C&gt; [SEP]&lt;option D&gt; [SEP] &lt;option E&gt; [SEP]</code>)，但是发现效果都不好，因为存在 positional bias 。</li>
+<li>solution:【late interaction】 最终的二分类模型的输入为，「logits over vocabulary of this option」 + 「the average next token logits over vocabulary of all other options」</li>
+</ul>
+</li>
+</ul>
+<h1 id="3rd-solution-0928"><a class="markdownIt-Anchor" href="#3rd-solution-0928"></a> 3rd Solution 0.928</h1>
+<p><a target="_blank" rel="noopener" href="https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446358">https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446358</a></p>
+<h1 id="4th-place-solution-单模-0927"><a class="markdownIt-Anchor" href="#4th-place-solution-单模-0927"></a> 4th Place Solution 单模 0.927</h1>
+<p><a target="_blank" rel="noopener" href="https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446307">4th Place Solution</a><br />
+<a target="_blank" rel="noopener" href="https://www.kaggle.com/code/linshokaku/4th-elasticsearch-retrieval-example">4th elasticsearch retrieval example</a></p>
+<p>Multiple Retrieval method:</p>
+<ol>
+<li>the score at the time of Elasticsearch search.</li>
+<li>the edit distance with the question sentence.</li>
+<li>semantic search, implemented using sentence-transformers.</li>
+</ol>
+<p>Validation:</p>
+<ol>
+<li>粗筛 + training set：At first stage, randomly extracted 2,000 instances as validation data from the open dataset without limiting to a specific domain.<br />
+Implemented multiple retrieval rules and evaluated scores in a zero-shot manner to filter the retrieval solution. Using llama2-7b on the train set.</li>
+<li>如果方法比较好，则使用 2000 instances out of 60K data 进行后续训练的 evaluation<br />
+The raw <code>train.csv</code> was too easy for validation and was <strong>hardly</strong> useful; therefore, we did not use it much in the later stages.</li>
+</ol>
+<p>training：<br />
+Model: Deberta v3 Large<br />
+Datasets: Our main training datasets were 60k and 40k.<br />
+Improvement in accuracy was noted by extending the number of tokens from 512 to 768 and 1280.</p>
+<h1 id="5th-place-solution-0926"><a class="markdownIt-Anchor" href="#5th-place-solution-0926"></a> 5th Place Solution 0.926</h1>
+<p><a target="_blank" rel="noopener" href="https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446293">https://www.kaggle.com/competitions/kaggle-llm-science-exam/discussion/446293</a><br />
+pyserini + SciBERT：<a target="_blank" rel="noopener" href="https://www.kaggle.com/code/strifonov/pyserini-scibert">https://www.kaggle.com/code/strifonov/pyserini-scibert</a></p>
+<ul>
+<li>Sparse retrieval：BM25</li>
+<li>Dense retrieval：
+<ul>
+<li>FAISS+instructor-xl：quantized the index</li>
+<li>bge-large-en：STEM 270k</li>
+</ul>
+</li>
+</ul>
+<p><strong>Model :</strong> Llama-2-70b-hf and Mistral-7B-v0.1 , models without Instruction Tuning</p>
+<p><strong>Inference :</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;context_0&#125;</span><br><span class="line"></span><br><span class="line">Question: &#123;prompt&#125;</span><br><span class="line">A. &#123;A&#125;</span><br><span class="line">B. &#123;B&#125;</span><br><span class="line">C. &#123;C&#125;</span><br><span class="line">D. &#123;D&#125;</span><br><span class="line">E. &#123;E&#125;</span><br><span class="line">Answer:</span><br></pre></td></tr></table></figure>
+<p>Had the model output the probability that the token corresponding to “▁A”, “▁B”, “▁C”, “▁D”, “▁E” comes immediately after this sentence.</p>
+<p>A test time augmentation strategy:<br />
+LM can considerably change inference results depending on the order of choices, so rotate the order of choices 5 times to average this effect.</p>
+<p><strong>Training :</strong></p>
+<ul>
+<li>QLoRA + 4bit quantization + PEFT’s LoRAModel</li>
+<li>Registered quantized weights (less than 40GB) for each layer as a dataset, and performed inference layer-by-layer</li>
+<li>Applying xformers’ <code>memory_efficient_attention</code> to the attention layers, we were able to keep memory consumption linear even with long contexts, leaving plenty of room in the GPU memory. We used only approximately 6GB of GPU memory for inference.</li>
+</ul>
+<p><strong>Pipeline :</strong> easy problems are answered by small models (mistral-7B) and difficult problems are answered by large models (llama2-70B).</p>
+<ul>
+<li>
+<p>1st stage: ensemble of mistral-7B models<br />
+mistral-7B with BM25 top2 contexts + mistral-7B with instructor and bge contexts<br />
+Inference on all data</p>
+</li>
+<li>
+<p>2nd stage: llama2-70B<br />
+llama2-70B with BM25 top2, instructor and bge contexts<br />
+Inference on bottom 40% data with low confidence in the 1st stage</p>
+</li>
+<li>
+<p>3rd stage llama2-70B<br />
+llama2-70B with bge contexts (2~3 times longer than bge contexts used in the 1st and 2nd stage)<br />
+Inference on bottom 5% data with low confidence in the 1st and 2nd stage</p>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2023/08/13/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/Faiss/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -211,11 +418,11 @@
               </span>
               <span class="post-meta-item-text">In</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
                 </span>
                   , 
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
                 </span>
                   , 
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
@@ -1312,7 +1519,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-NSM/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/28/NLP/LLM/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A91Selective%20Context,%20RECOMP/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -1326,7 +1533,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-NSM/" class="post-title-link" itemprop="url">KGQA：NSM</a>
+            <a href="/2023/04/28/NLP/LLM/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A91Selective%20Context,%20RECOMP/" class="post-title-link" itemprop="url">上下文压缩1：Selective Context, RECOMP</a>
         </h2>
 
         <div class="post-meta">
@@ -1336,7 +1543,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2023-04-06 15:08:53" itemprop="dateCreated datePublished" datetime="2023-04-06T15:08:53-07:00">2023-04-06</time>
+              <time title="Created: 2023-04-28 12:00:50" itemprop="dateCreated datePublished" datetime="2023-04-28T12:00:50-07:00">2023-04-28</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1346,6 +1553,10 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
                   <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
                 </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Inference/" itemprop="url" rel="index"><span itemprop="name">LLM Inference</span></a>
+                </span>
             </span>
 
           <br>
@@ -1354,14 +1565,14 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>15</span>
+              <span>484</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
+              <span>2 mins.</span>
             </span>
 
         </div>
@@ -1373,7 +1584,36 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>Paper：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.03737">WSDM 2021 - Improving multi-hop knowledge base question answering by learning intermediate supervision signals</a></p>
+          <h1 id="selective-context"><a class="markdownIt-Anchor" href="#selective-context"></a> Selective Context</h1>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/625440016"><font size=5.5 color='grey'>  压缩你的Prompt，让LLMs处理多达2倍的Context </font></a></p>
+<p><strong>背景：</strong></p>
+<ol>
+<li>prompt/instruction 过长时，输入部分就需要进行 padding</li>
+<li>连续对话时，压缩历史上下文记录能够提升效果</li>
+<li><strong>LLMs在训练的过程中很大概率已经见到过类似内容的文本，所以这些内容并没有带来新的信息。</strong></li>
+</ol>
+<p>Prompt压缩的首要问题在于，确定需要压缩的内容。换句话说，判断哪些文本并不能为LLMs带来新的信息。</p>
+<p>我们在这里采用<strong>self-information</strong>来对这一点进行衡量。</p>
+<p>很简单，就是将log probability取负得到self-information ，表示信息量 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mi>log</mi><mo>⁡</mo><mi>P</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">I(x)=-\log P(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">−</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></p>
+<p>里的P可以是小号的LLMs，不需要是大模型本体。例如 1.3b 的OPT和OpenAI-Curie(6.3b).</p>
+<p><strong>过程：</strong><br />
+首先计算文本中每个短语的 self-information <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mi>log</mi><mo>⁡</mo><mi>P</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">I(x)=-\log P(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">−</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> 。<br />
+再根据想要的压缩比设置百分位数（类似 outliers），得到阈值。<br />
+删去低于阈值的短语。</p>
+<p><img src="/images/NLP/LLM/prompt%E5%8E%8B%E7%BC%A9/Untitled.png" alt="alt text" /><br />
+上图展示了在压缩比例设为0.5时，Selective Context是如何精简论文introduction的。</p>
+<h1 id="recomp"><a class="markdownIt-Anchor" href="#recomp"></a> RECOMP</h1>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2310.04408"><font size=5.5 color='grey'>  RECOMP：通过压缩和选择性增强来改进检索增强型语言模型 </font></a></p>
+<p>将检索到的文本进行摘要</p>
+<p>提出两种压缩器/摘要器：</p>
+<ol>
+<li>an extractive compressor：从检索到的文档中选择有用的句子<br />
+Model： a dual encoder model，用 sentence embeddings 的点积表示 helpfulness 。</li>
+<li>an abstractive compressor：综合多个文档中的信息来生成摘要<br />
+Model： an encoder-decoder model，对 LLM 进行蒸馏 。</li>
+</ol>
+<p>两个压缩器都经过训练，以提高 LM 在最终任务上的性能，同时保持摘要的简洁。<br />
+如果检索到的文档与输入无关或没有向 LM 提供附加信息，我们的压缩器可以返回一个空字符串，实现选择性增强。</p>
 
       
     </div>
@@ -1474,7 +1714,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-CBR/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-NSM/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -1488,7 +1728,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-CBR/" class="post-title-link" itemprop="url">KBQA：by CBR</a>
+            <a href="/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-NSM/" class="post-title-link" itemprop="url">KGQA：NSM</a>
         </h2>
 
         <div class="post-meta">
@@ -1498,7 +1738,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2023-04-06 15:03:03" itemprop="dateCreated datePublished" datetime="2023-04-06T15:03:03-07:00">2023-04-06</time>
+              <time title="Created: 2023-04-06 15:08:53" itemprop="dateCreated datePublished" datetime="2023-04-06T15:08:53-07:00">2023-04-06</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -1516,96 +1756,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.6k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>8 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>Paper：<a target="_blank" rel="noopener" href="https://proceedings.mlr.press/v162/das22a/das22a.pdf">ICML 2022 - Knowledge Base Question Answering by Case-based Reasoning over Subgraphs</a></p>
-<p>前身：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2104.08762#">Case-based Reasoning for Natural Language Queries over Knowledge Bases</a></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-CBR/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-KaFSP/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/04/06/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/KAQA/KBQA-KaFSP/" class="post-title-link" itemprop="url">KBQA：KaFSP(Aware Fuzzy Semantic Parsing)</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-04-06 15:03:03" itemprop="dateCreated datePublished" datetime="2023-04-06T15:03:03-07:00">2023-04-06</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>17</span>
+              <span>15</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
@@ -1624,7 +1775,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>Paper：<a target="_blank" rel="noopener" href="https://aclanthology.org/2022.acl-long.35.pdf">KaFSP: Knowledge-Aware Fuzzy Semantic Parsing for Conversational Question Answering over a Large-Scale Knowledge Base</a></p>
+          <p>Paper：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2101.03737">WSDM 2021 - Improving multi-hop knowledge base question answering by learning intermediate supervision signals</a></p>
 
       
     </div>
@@ -1708,7 +1859,7 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">334</span>
+          <span class="site-state-item-count">336</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1760,13 +1911,13 @@ An explicit request to retrieve the entity mentions in the user’s text, specif
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">566k</span>
+    <span title="Symbols count total">571k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">47:11</span>
+    <span title="Reading time total">47:36</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
