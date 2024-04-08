@@ -37,7 +37,7 @@
 <meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled6.png">
 <meta property="og:image" content="http://example.com/images/NLP/LLM/MoE/Untitled7.png">
 <meta property="article:published_time" content="2024-01-07T07:12:07.000Z">
-<meta property="article:modified_time" content="2024-03-11T01:53:43.734Z">
+<meta property="article:modified_time" content="2024-04-08T00:56:28.635Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/NLP/LLM/MoE/Untitled.png">
 
@@ -331,8 +331,8 @@
 <p>实现 MoE 跨设备分片的关键技术是模型并行化（model parallelism）和数据并行化（data parallelism）的结合。</p>
 <p>为了保持负载平衡和训练效率，GShard 的作者除了引入上节 Sparsely-Gated MoE 中的辅助 loss 外，还引入了一些关键变化：</p>
 <ul>
-<li>**随机路由：**在 Top-2 设置中，GShard 始终选择排名最高的专家，但第二个专家是根据其权重比例随机选择的。</li>
-<li>**专家容量：**我们可以设定一个阈值，定义一个专家能处理多少 token。如果两个专家的容量都达到上限，token 就会溢出，并通过残差连接传递到下一层，或在某些情况下被完全丢弃。专家容量是 MoE 中最重要的概念之一。为什么需要专家容量呢？因为所有张量的形状在编译时是静态确定的，我们无法提前知道多少 token 会分配给每个专家，因此需要一个固定的容量因子。</li>
+<li><strong>随机路由：</strong> 在 Top-2 设置中，GShard 始终选择排名最高的专家，但第二个专家是根据其权重比例随机选择的。</li>
+<li><strong>专家容量：</strong> 我们可以设定一个阈值，定义一个专家能处理多少 token。如果两个专家的容量都达到上限，token 就会溢出，并通过残差连接传递到下一层，或在某些情况下被完全丢弃。专家容量是 MoE 中最重要的概念之一。为什么需要专家容量呢？因为所有张量的形状在编译时是静态确定的，我们无法提前知道多少 token 会分配给每个专家，因此需要一个固定的容量因子。</li>
 </ul>
 <h2 id="switch-transformers"><a class="markdownIt-Anchor" href="#switch-transformers"></a> <strong>Switch Transformers</strong></h2>
 <p>Switch Transformers  被谷歌提出，拥有 2048 个专家，1.6T 参数 。</p>
@@ -353,11 +353,11 @@
 </li>
 <li>
 <p>Switch Transformer 可以降低每个专家的 <strong>专家容量</strong> ，那么什么是专家容量？</p>
-<p><strong>专家容量（<strong>Expert Capacity</strong>）</strong> 是指每个专家在模型中处理的 token 数。</p>
+<p><strong>专家容量（Expert Capacity）</strong> 是指每个专家在模型中处理的 token 数。</p>
 <p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext> Expert Capacity </mtext><mo>=</mo><mrow><mo fence="true">(</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mtext> tokens per batch </mtext><mtext> number of experts </mtext></mfrac></mstyle><mo fence="true">)</mo></mrow><mo>×</mo><mtext> capacity factor </mtext></mrow><annotation encoding="application/x-tex">\text { Expert Capacity }=\left(\dfrac{\text { tokens per batch }}{\text { number of experts }}\right) \times \text { capacity factor }</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8777699999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> Expert Capacity </span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3714399999999998em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> number of experts </span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> tokens per batch </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8804400000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> capacity factor </span></span></span></span></span></p>
 <p>容量因子是一个大于 1.0 的数，它的作用是为每个专家提供额外的缓冲空间，以容纳可能超出平均分配的 token。<br />
 这样，即使某些专家接收到的 token 数量超过了平均值，也能够处理这些额外的 token，而不会因为容量不足而导致计算跳过。</p>
-<p><strong>对于这些溢出的 token，模型会跳过计算，直接将 token 的表示通过残差连接传递到下一层</strong>。</p>
+<p><strong>对于这些溢出的 token，模型会跳过计算，直接将 token 的表示通过残差连接传递到下一层</strong> 。</p>
 <p>虽然增加容量因子可以减少 token 溢出，但是它也有缺点。如果容量因子设置得过高，会导致计算资源和内存的浪费，因为模型会为可能永远不会用到的 token 分配额外的资源。</p>
 <p>论文中，Switch Transformers 在低容量因子 (例如 1 至 1.25) 下表现出色。</p>
 <h3 id="容量因子和通信成本"><a class="markdownIt-Anchor" href="#容量因子和通信成本"></a> <strong>容量因子和通信成本</strong></h3>
@@ -408,7 +408,7 @@
 <li>
 <p><strong>Fine-Tuning 过程正则化</strong></p>
 <p>为了解决 Fine-Tuning 过程中的过拟合问题，作者提出了增加 dropout的策略，特别是在专家层（expert layers）中。</p>
-<p>他们称之为**“expert dropout”**，即在 Fine-Tuning 时在专家层增加 dropout 率。</p>
+<p>他们称之为 <strong>“expert dropout”</strong> ，即在 Fine-Tuning 时在专家层增加 dropout 率。</p>
 </li>
 <li>
 <p><strong>高效训练：数据、模型、专家并行</strong></p>
@@ -630,13 +630,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">571k</span>
+    <span title="Symbols count total">575k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">47:35</span>
+    <span title="Reading time total">47:56</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
