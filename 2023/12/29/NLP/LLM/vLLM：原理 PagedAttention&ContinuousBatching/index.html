@@ -22,8 +22,8 @@
 
   <meta name="description" content="PagedAttention：vLLM Paper：https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2309.06180.pdf   解决的不是加速问题，而是能够降低缓存占用，从而增加 batch size，来实现高吞吐。 解决的是 Serving ，而不是 Inference 。 更具体地，batch size &#x3D; 1 时，是无法被加速。所以如果 batch size &#x3D; 1 时，策略上使用投机采">
 <meta property="og:type" content="article">
-<meta property="og:title" content="PagedAttention：vLLM">
-<meta property="og:url" content="http://example.com/2023/12/29/NLP/LLM/PagedAttention%EF%BC%9AvLLM/index.html">
+<meta property="og:title" content="vLLM：原理 PagedAttention &amp; ContinuousBatching">
+<meta property="og:url" content="http://example.com/2023/12/29/NLP/LLM/vLLM%EF%BC%9A%E5%8E%9F%E7%90%86%20PagedAttention&ContinuousBatching/index.html">
 <meta property="og:site_name" content="Yili">
 <meta property="og:description" content="PagedAttention：vLLM Paper：https:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2309.06180.pdf   解决的不是加速问题，而是能够降低缓存占用，从而增加 batch size，来实现高吞吐。 解决的是 Serving ，而不是 Inference 。 更具体地，batch size &#x3D; 1 时，是无法被加速。所以如果 batch size &#x3D; 1 时，策略上使用投机采">
 <meta property="og:locale">
@@ -35,11 +35,11 @@
 <meta property="og:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled3.png">
 <meta property="og:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled4.png">
 <meta property="article:published_time" content="2023-12-30T07:12:07.000Z">
-<meta property="article:modified_time" content="2024-03-25T09:05:59.316Z">
+<meta property="article:modified_time" content="2024-04-16T13:39:39.917Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled.png">
 
-<link rel="canonical" href="http://example.com/2023/12/29/NLP/LLM/PagedAttention%EF%BC%9AvLLM/">
+<link rel="canonical" href="http://example.com/2023/12/29/NLP/LLM/vLLM%EF%BC%9A%E5%8E%9F%E7%90%86%20PagedAttention&ContinuousBatching/">
 
 
 <script id="page-configurations">
@@ -52,7 +52,7 @@
   };
 </script>
 
-  <title>PagedAttention：vLLM | Yili</title>
+  <title>vLLM：原理 PagedAttention & ContinuousBatching | Yili</title>
   
 
 
@@ -190,7 +190,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/12/29/NLP/LLM/PagedAttention%EF%BC%9AvLLM/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/12/29/NLP/LLM/vLLM%EF%BC%9A%E5%8E%9F%E7%90%86%20PagedAttention&ContinuousBatching/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -203,7 +203,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          PagedAttention：vLLM
+          vLLM：原理 PagedAttention & ContinuousBatching
         </h1>
 
         <div class="post-meta">
@@ -235,14 +235,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.3k</span>
+              <span>1.6k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>7 mins.</span>
+              <span>8 mins.</span>
             </span>
 
         </div>
@@ -349,7 +349,21 @@
 <p>the first-come-first-serve (FCFS) scheduling policy</p>
 <p>问题：随着 request 数量增加，仍然有可能爆显存。</p>
 <p>这时，我们删除哪些 block ？ → all-or-nothing eviction policy  ；删除或者保留整个 sequence  / sequence group( beam search ) 。</p>
-<p>如何重构被删除的 block ？ -&gt; Swapping . 将被删除的内存拷贝到磁盘上 ；等有空闲内存时，重新加载到 gpu 上，继续生成。</p>
+<p>如何重构被删除的 block ？</p>
+<ol>
+<li>
+<p>Swapping . 将被删除的内存拷贝到磁盘上 ；等有空闲内存时，重新加载到 gpu 上，继续生成。</p>
+</li>
+<li>
+<p>Recomputation . 对于有些任务（ 比如 parallel sampling 中并行采样数 n=1 的任务 ），当它们因为资源不足而被抢占时，可以不做 swap，而是直接释放它们的物理块，把它们重新放入等待处理的队列中，等后续资源充足时再重新从 prefill 阶段开始做推理。</p>
+</li>
+</ol>
+<p>举个例子，进行 parallel prompting 时，一个 prompt 生成多个 sequence。<br />
+在若干个推理阶段后，gpu 上的资源不够了，这个 seq_group 不幸被调度器抢占（preemption），它相关的 <code>KV block</code> 也被 swap out 到cpu上。此时所有seq的状态变为swapped。这里要注意，当一个 <code>seq_group</code> 被抢占时，对它的处理有两种方式：</p>
+<ol>
+<li>Swap：如果该 <code>seq_group</code> 下的 <code>seq_num&gt;1</code>，此时会采取swap策略，即把 <code>seq_group</code> 下【所有】seq 的 <code>KV block</code> 从 gpu 上卸载到 cpu 上。（seq数量比较多，直接把算出的 <code>KV block</code> 抛弃，比较可惜）</li>
+<li>Recomputation：如果该 <code>seq_group</code> 下的 <code>seq_num=1</code> ，此时会采取 recomputation 策略，即把该 <code>seq_group</code> 相关的物理块都释放掉，然后将它重新放回 waiting 队列中。等下次它被选中推理时，就是从 prefill 阶段开始重新推理了，因此被称为“重计算”。（seq数量少，重新计算KV block的成本不高）</li>
+</ol>
 <h3 id="distributed-execution"><a class="markdownIt-Anchor" href="#distributed-execution"></a> <strong>Distributed Execution</strong></h3>
 <p><img src="/images/NLP/LLM/vLLM/Untitled4.png" alt="Untitled" /></p>
 <p>Megatron-LM style tensor model parallelism strategy</p>
@@ -449,7 +463,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">338</span>
+          <span class="site-state-item-count">340</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -501,13 +515,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">578k</span>
+    <span title="Symbols count total">583k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">48:11</span>
+    <span title="Reading time total">48:36</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>

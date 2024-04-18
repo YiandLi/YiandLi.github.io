@@ -179,6 +179,196 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20CV/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/12/13/Coding/Sklearn/sklearn%20CV/" class="post-title-link" itemprop="url">sklearn GridSearchCV 与 RandomizedSearchCV 调参</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-12-13 15:23:02" itemprop="dateCreated datePublished" datetime="2021-12-13T15:23:02-08:00">2021-12-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Sklearn/" itemprop="url" rel="index"><span itemprop="name">Sklearn</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>799</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>当使用一些大规模集成的算法时，参数的问题就出来了，比如说 XGBoost的参数大概在20个左右，GBDT的参数个数也在同一个级别，这种时候，会调参和不会调参在同样的数据集上效果可能就是两码事了。</p>
+<h1 id="gridsearchcv"><a class="markdownIt-Anchor" href="#gridsearchcv"></a> GridSearchCV</h1>
+<p>GridSearch和CV，即网格搜索和交叉验证。</p>
+<p>缺点：在面对大数据集和多参数的情况下，非常耗时</p>
+<p>交叉验证：</p>
+<ul>
+<li>将训练数据集划分为K份，K一般为10。</li>
+<li>依次取其中一份为验证集，其余为训练集训练分类器，测试分类器在验证集上的精度。</li>
+<li>取K次实验的平均精度为该分类器的平均精度。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">#分类器使用 xgboost</span><br><span class="line">clf1 = xgb.XGBClassifier()</span><br><span class="line"></span><br><span class="line">#设定网格搜索的xgboost参数搜索范围，值搜索XGBoost的主要6个参数</span><br><span class="line">param_dist = &#123;</span><br><span class="line">        &#x27;n_estimators&#x27;:range(80,200,4),</span><br><span class="line">        &#x27;max_depth&#x27;:range(2,15,1),</span><br><span class="line">        &#x27;learning_rate&#x27;:np.linspace(0.01,2,20),</span><br><span class="line">        &#x27;subsample&#x27;:np.linspace(0.7,0.9,20),</span><br><span class="line">        &#x27;colsample_bytree&#x27;:np.linspace(0.5,0.98,10),</span><br><span class="line">        &#x27;min_child_weight&#x27;:range(1,9,1)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">grid = GridSearchCV(clf1, # 训练的模型</span><br><span class="line">                    param_dist, # param_dist字典类型，放入参数搜索范围</span><br><span class="line">                    cv = 3,</span><br><span class="line">                    scoring = &#x27;neg_log_loss&#x27;, # 精度评价方式设定为“neg_log_loss“</span><br><span class="line">                    n_iter=300, # 训练300次，数值越大，获得的参数精度越大，但是搜索时间越长</span><br><span class="line">                    n_jobs = -1 # 使用所有的CPU进行训练，默认为1，使用1个CPU</span><br><span class="line">                    )</span><br><span class="line"></span><br><span class="line">#在训练集上训练 (x, y)</span><br><span class="line">grid.fit(traindata.values, np.ravel(trainlabel.values))</span><br><span class="line"></span><br><span class="line">best_estimator = grid.best_estimator_  # 返回最优的训练器</span><br><span class="line">print(best_estimator)  # 输出最优训练器的精度</span><br></pre></td></tr></table></figure>
+<p>评分参数 <code>scoring</code> ，可以需要根据实际的评价标准设定：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">import numpy as np</span><br><span class="line">from sklearn.metrics import make_scorer</span><br><span class="line"></span><br><span class="line">def logloss(act, pred):</span><br><span class="line">    epsilon = 1e-15</span><br><span class="line">    pred = sp.maximum(epsilon, pred)</span><br><span class="line">    pred = sp.minimum(1-epsilon, pred)</span><br><span class="line">    ll = sum(act*sp.log(pred) + sp.subtract(1, act)*sp.log(sp.subtract(1, pred)))</span><br><span class="line">    ll = ll * -1.0/len(act)</span><br><span class="line">    return ll</span><br><span class="line"></span><br><span class="line">#这里的greater_is_better参数决定了自定义的评价指标是越大越好还是越小越好</span><br><span class="line">loss  = make_scorer(logloss, greater_is_better=False)</span><br><span class="line">score = make_scorer(logloss, greater_is_better=True)</span><br></pre></td></tr></table></figure>
+<h1 id="randomizedsearchcv"><a class="markdownIt-Anchor" href="#randomizedsearchcv"></a> RandomizedSearchCV</h1>
+<p>以随机在参数空间中采样的方式代替了 <code>GridSearchCV</code><br />
+对于参数的网格搜索，在对于有连续变量的参数时，<code>RandomizedSearchCV</code> 会将其当作一个分布进行采样，这是网格搜索做不到的。<br />
+它的搜索能力取决于设定的<code>n_iter</code>参数，即随机搜索几次</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"># 分类器使用 xgboost</span><br><span class="line">clf1 = xgb.XGBClassifier()</span><br><span class="line"></span><br><span class="line"># 设定搜索的xgboost参数搜索范围，值搜索XGBoost的主要6个参数</span><br><span class="line">param_dist = &#123;</span><br><span class="line">        &#x27;n_estimators&#x27;:range(80,200,4),</span><br><span class="line">        &#x27;max_depth&#x27;:range(2,15,1),</span><br><span class="line">        &#x27;learning_rate&#x27;:np.linspace(0.01,2,20),</span><br><span class="line">        &#x27;subsample&#x27;:np.linspace(0.7,0.9,20),</span><br><span class="line">        &#x27;colsample_bytree&#x27;:np.linspace(0.5,0.98,10),</span><br><span class="line">        &#x27;min_child_weight&#x27;:range(1,9,1)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">grid = RandomizedSearchCV(  clf1,</span><br><span class="line">                            param_dist,</span><br><span class="line">                            cv = 3,</span><br><span class="line">                            scoring = &#x27;neg_log_loss&#x27;,</span><br><span class="line">                            n_iter=300,  # 训练300次，数值越大，获得的参数精度越大，但是搜索时间越长</span><br><span class="line">                            n_jobs = -1)</span><br><span class="line"></span><br><span class="line"># 在训练集上训练</span><br><span class="line">grid.fit(traindata.values,np.ravel(trainlabel.values))</span><br><span class="line"></span><br><span class="line"># 返回最优的训练器</span><br><span class="line">best_estimator = grid.best_estimator_</span><br><span class="line">print(best_estimator)</span><br><span class="line"># 输出最优训练器的精度</span><br><span class="line">print(grid.best_score_)</span><br></pre></td></tr></table></figure>
+<h1 id="ridgecv"><a class="markdownIt-Anchor" href="#ridgecv"></a> RidgeCV</h1>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">from sklearn.linear_model import RidgeCV</span><br><span class="line"># Split the data into training and testing sets</span><br><span class="line">X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)</span><br><span class="line"></span><br><span class="line"># Fit a ridge regression model using cross-validation</span><br><span class="line">model = RidgeCV(alphas=[0.1, 1.0, 10.0],</span><br><span class="line">                cv = KFold(n_splits=5, random_state=1, shuffle=True))</span><br><span class="line">model.fit(X_train, Y_train)</span><br><span class="line"></span><br><span class="line"># Make predictions on the test set</span><br><span class="line">Y_pred = model.predict(X_test)</span><br><span class="line"></span><br><span class="line"># Calculate the mean squared error</span><br><span class="line">test_error = mean_squared_error(Y_test, Y_pred)</span><br><span class="line"></span><br><span class="line"># Report the test error</span><br><span class="line">print(f&quot;Test error: &#123;test_error&#125;&quot;)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h1 id="lassocv"><a class="markdownIt-Anchor" href="#lassocv"></a> LassoCV</h1>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">model = LassoCV(alphas=np.arange(0.1, 2.0, 0.1), cv=KFold(n_splits=5, random_state=1, shuffle=True), max_iter = 1000)</span><br><span class="line">model.fit(train_X, train_Y)</span><br><span class="line">print(&quot;Model info:&quot;, model)</span><br><span class="line">print(&quot;Finally penalty alpha is&quot;, model.alpha_)</span><br><span class="line">print(&quot;Finally test MSE loss is&quot;, mean_squared_error(test_Y, model.predict(test_X)))</span><br><span class="line"></span><br><span class="line">selected_variables = cols[model.coef_ != 0]</span><br><span class="line">print(f&quot;Selected variables w/o standardization: &#123;selected_variables&#125;&quot;)</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20ensemble/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/12/13/Coding/Sklearn/sklearn%20ensemble/" class="post-title-link" itemprop="url">sklearn ensemble</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-12-13 15:23:02" itemprop="dateCreated datePublished" datetime="2021-12-13T15:23:02-08:00">2021-12-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Sklearn/" itemprop="url" rel="index"><span itemprop="name">Sklearn</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="gradientboostingclassifier"><a class="markdownIt-Anchor" href="#gradientboostingclassifier"></a> GradientBoostingClassifier</h2>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/13/Coding/Sklearn/sklearn%20kflod/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1056,203 +1246,6 @@ z^t &amp;= F_v(z^{t-1}, x)
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/09/Coding/Numpy/Numpy%E9%A2%9D%E5%A4%96%E5%87%BD%E6%95%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/12/09/Coding/Numpy/Numpy%E9%A2%9D%E5%A4%96%E5%87%BD%E6%95%B0/" class="post-title-link" itemprop="url">Numpy额外函数</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-12-09 20:19:59" itemprop="dateCreated datePublished" datetime="2021-12-09T20:19:59-08:00">2021-12-09</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/" itemprop="url" rel="index"><span itemprop="name">Data Analysis Package</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/Numpy/" itemprop="url" rel="index"><span itemprop="name">Numpy</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>215</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="digitize"><a class="markdownIt-Anchor" href="#digitize"></a> digitize</h2>
-<p><a target="_blank" rel="noopener" href="https://numpy.org/doc/stable/reference/generated/numpy.digitize.html?highlight=numpy%20digitize#numpy.digitize">官方文档</a><br />
-<code>numpy.digitize(x, bins, right = False)</code>：定位数值在分组中的区间位置索引。</p>
-<h3 id="参数"><a class="markdownIt-Anchor" href="#参数"></a> 参数</h3>
-<p><code>x</code>：array_like, Input array to be binned<br />
-<code>bins</code>：array_like, Array of bins. 需要是一维单调的。<br />
-<code>right</code>：bool，指示区间包含小数值还是大数值。False为包含小不包含大，True反之。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">                order of bins   returned index i satisfies</span><br><span class="line">right = False     increasing      bins[i-1] &lt;= x &lt; bins[i]</span><br><span class="line">right = True      increasing      bins[i-1] &lt; x &lt;= bins[i]</span><br><span class="line">right = False     decreasing      bins[i-1] &gt; x &gt;= bins[i]</span><br><span class="line">right = True      decreasing      bins[i-1] &gt;= x &gt; bins[i]</span><br></pre></td></tr></table></figure>
-<br >
-<h3 id="例子"><a class="markdownIt-Anchor" href="#例子"></a> 例子</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt;x = np.array([0.2, 6.4, 3.0, 1.6])</span><br><span class="line">&gt;&gt;&gt; bins = np.array([0.0, 1.0, 2.5, 4.0, 10.0])</span><br><span class="line">&gt;&gt;&gt; inds = np.digitize(x, bins)</span><br><span class="line">&gt;&gt;&gt; inds</span><br><span class="line">array([1, 4, 3, 2])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; for n in range(x.size):</span><br><span class="line">&gt;&gt;&gt;   print(bins[inds[n]-1], &quot;&lt;=&quot;, x[n], &quot;&lt;&quot;, bins[inds[n]])</span><br><span class="line">0.0 &lt;= 0.2 &lt; 1.0</span><br><span class="line">4.0 &lt;= 6.4 &lt; 10.0</span><br><span class="line">2.5 &lt;= 3.0 &lt; 4.0</span><br><span class="line">1.0 &lt;= 1.6 &lt; 2.5</span><br></pre></td></tr></table></figure>
-<h3 id="原理补充"><a class="markdownIt-Anchor" href="#原理补充"></a> 原理/补充</h3>
-<p>是根据<code>np.searchsorted</code>实现的:<br />
-<code>np.digitize(x, bins, right=True)</code> == <code>np.searchsorted(bins, x, side='left')</code></p>
-<h2 id="where-返回"><a class="markdownIt-Anchor" href="#where-返回"></a> where 返回</h2>
-<p><code>data['cabin_missing'] = np.where(data['Cabin'].isnull(), 1, 0)</code><br />
-区别在于使用后面指定的1,0。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/09/Coding/Pandas/Int303Pandas_2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/12/09/Coding/Pandas/Int303Pandas_2/" class="post-title-link" itemprop="url">Int303Pandas_dummy</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-12-09 17:35:11" itemprop="dateCreated datePublished" datetime="2021-12-09T17:35:11-08:00">2021-12-09</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/" itemprop="url" rel="index"><span itemprop="name">Data Analysis Package</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/Pandas/" itemprop="url" rel="index"><span itemprop="name">Pandas</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>312</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="one-hot表示"><a class="markdownIt-Anchor" href="#one-hot表示"></a> one-hot表示</h2>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">pandas.get_dummies( data,</span><br><span class="line">                    prefix=None, </span><br><span class="line">                    prefix_sep=&#x27;_&#x27;, </span><br><span class="line">                    dummy_na=False, </span><br><span class="line">                    columns=None, </span><br><span class="line">                    sparse=False, </span><br><span class="line">                    drop_first=False, </span><br><span class="line">                    dtype=None)</span><br></pre></td></tr></table></figure>
-<p><code>data</code>：array-like, Series, or <strong>DataFrame</strong><br />
-<code>dummy_na</code>：Add a column to indicate NaNs, if False NaNs are ignored.<br />
-<code>prefix</code>：str, list of str, or dict of str, default None。数量和需要被one-hot转化的属性数量相同，并且在结果中依次替换前缀。<br />
-<code>colums</code>：list-like, default None。指定需要被转化为one-hot的列名<br />
-<br></p>
-<p>示例</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; d = pd.DataFrame(&#123;&quot;age&quot;: [12,21,33], </span><br><span class="line">                      &quot;job&quot;: [&#x27;a&#x27;,&#x27;b&#x27;,&#x27;c&#x27;], </span><br><span class="line">                      &quot;wage&quot;:[&quot;&gt;50&quot;,&quot;&gt;50&quot;,&quot;&lt;50&quot;]&#125;)</span><br><span class="line">&gt;&gt;&gt; d</span><br><span class="line">	age	job	wage</span><br><span class="line">0	12	a	&gt;50</span><br><span class="line">1	21	b	&gt;50</span><br><span class="line">2	33	c	&lt;50</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; pd.get_dummies(d)</span><br><span class="line">	age	job_a	job_b	job_c	wage_&lt;50	wage_&gt;50</span><br><span class="line">0	12	    1	    0	    0	    0	        1</span><br><span class="line">1	21	    0	    1	    0	    0	        1</span><br><span class="line">2	33	    0	    0	    1	    1	        0</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; pd.get_dummies(d, columns=[&#x27;wage&#x27;])</span><br><span class="line">	age	 job	wage_&lt;50	wage_&gt;50</span><br><span class="line">0	12	  a	      0	            1</span><br><span class="line">1	21	  b	      0	            1</span><br><span class="line">2	33	  c	      1	            0</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; pd.get_dummies(d, prefix=[&#x27;col1&#x27;, &#x27;col2&#x27;])</span><br><span class="line"></span><br><span class="line">    age	col1_a	col1_b	col1_c	 col2_&lt;50   col2_&gt;50</span><br><span class="line">0   12	     1	     0	     0	        0       1</span><br><span class="line">1   21	     0	     1	     0	        0       1</span><br><span class="line">2   33	     0	     0	     1	        1       0</span><br></pre></td></tr></table></figure>
-<br>
-<p>这里注意，数字类型的参数值不会被变形为one-hot形式。<br />
-可以先转换为<code>str</code>类型，然后再调用函数。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; d = pd.DataFrame(&#123;&quot;age&quot;: [12,21,33], </span><br><span class="line">                      &quot;job&quot;: [&#x27;a&#x27;,&#x27;b&#x27;,&#x27;c&#x27;], </span><br><span class="line">                      &quot;wage&quot;:[&quot;&gt;50&quot;,&quot;&gt;50&quot;,&quot;&lt;50&quot;]&#125;)</span><br><span class="line">&gt;&gt;&gt; d[&#x27;age&#x27;]= d[&#x27;age&#x27;].astype(str)</span><br><span class="line">&gt;&gt;&gt; pd.get_dummies(d)</span><br><span class="line">	age_12	age_21	age_33	job_a	job_b	job_c	wage_&lt;50	wage_&gt;50</span><br><span class="line">0	    1       0	    0	    1	    0	    0	    0	            1</span><br><span class="line">1	    0       1	    0	    0	    1	    0	    0	            1</span><br><span class="line">2	    0       0	    1	    0	    0	    1	    1	            0</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1321,7 +1314,7 @@ z^t &amp;= F_v(z^{t-1}, x)
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">338</span>
+          <span class="site-state-item-count">340</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1373,13 +1366,13 @@ z^t &amp;= F_v(z^{t-1}, x)
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">578k</span>
+    <span title="Symbols count total">583k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">48:11</span>
+    <span title="Reading time total">48:36</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
