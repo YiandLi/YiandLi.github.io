@@ -179,6 +179,136 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/06/machine_learninng/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/KNN%20algorithm/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/06/machine_learninng/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/KNN%20algorithm/" class="post-title-link" itemprop="url">KNN algorithm</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-06 22:27:19" itemprop="dateCreated datePublished" datetime="2021-04-06T22:27:19-07:00">2021-04-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>739</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><strong>K近邻算法</strong></p>
+<h3 id="描述"><a class="markdownIt-Anchor" href="#描述"></a> 描述</h3>
+<ol>
+<li>首先设定参数为k</li>
+<li>将新数据的每个特征与样本数据中的每个特征进行比较，选出样本数据中与新数据差异最小(这里可以用距离表示)的k个实例。</li>
+<li>然后，用这k个实例中出现次数最多的分类来作为新数据的分类。</li>
+</ol>
+<h3 id="代码实现"><a class="markdownIt-Anchor" href="#代码实现"></a> 代码实现</h3>
+<h4 id="归一化特征值-standardization"><a class="markdownIt-Anchor" href="#归一化特征值-standardization"></a> 归一化特征值 Standardization</h4>
+<ul>
+<li>问题：如果我们选用的距离度量为欧式距离，如果数据预先没有经过归一化，那么那些绝对值大的特征值在欧式距离计算的时候起了决定性作用。</li>
+<li>描述：
+<ol>
+<li>梯度下降法求解的模型一般需要归一化。</li>
+<li>一般关注特征值的具体值的模型需要归一化处理，而一般关注特征值的分布情况的则无需归一化。</li>
+</ol>
+</li>
+<li>公式：
+<ol>
+<li><strong>Min-Max/Linear normalization 线性函数归一化</strong>： newValue = (oldValue - min) / (max - min) ，最终结果的值域为 [0, 1]</li>
+<li><strong>Z-score normalization 零均值归一化</strong>： newValue = (oldValue - 均值) / 标准差 , 最终结果值域为 [-1, 1]</li>
+<li><strong>Sum normalization 特征归一化</strong>：newValue = oldValue / featureSum, featureSum是指所有实例的该特征值的和， 最终结果值域为 [0, 1]</li>
+</ol>
+</li>
+<li>线性函数归一化 代码实现：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">## 归一化特征值：消除特征之间量级不同导致的影响</span><br><span class="line">def autoNom(dataSet):</span><br><span class="line">    # 得到最大最小值</span><br><span class="line">    mini = dataSet.min(0)</span><br><span class="line">    max = dataSet.max(0)</span><br><span class="line">    # 极差</span><br><span class="line">    ranges = max - mini</span><br><span class="line">    m = dataSet.shape[0]    # m为行数</span><br><span class="line">    # 生成与最小值之差组成的矩阵</span><br><span class="line">    normDataSet = dataSet - tile(mini, (m, 1))</span><br><span class="line">    # 将最小值之差除以范围组成矩阵</span><br><span class="line">    normDataSet = normDataSet / tile(ranges, (m, 1))  # element wise divide</span><br><span class="line">    return normDataSet, ranges, mini</span><br></pre></td></tr></table></figure>
+<h4 id="手写识别系统"><a class="markdownIt-Anchor" href="#手写识别系统"></a> 手写识别系统</h4>
+<ul>
+<li>数据准备：需要将一个32*32的图片向量化，即<strong>img2vector</strong>。步骤为将所有行都拼接在首行尾部，最终得到1*1024的一个向量。</li>
+<li>数据划分：通常使用90%的数据作为训练样本，10%的数据作为测试样本。而测试样本是随机选择的</li>
+</ul>
+<h4 id="得到前k个数据"><a class="markdownIt-Anchor" href="#得到前k个数据"></a> 得到前k个数据</h4>
+<p>numpy.ndarry的argsort()函数可以返回一个数组，其中从前到后一次表示了将原数组从小到大排序后的idx值。</p>
+<h3 id="超参数"><a class="markdownIt-Anchor" href="#超参数"></a> 超参数</h3>
+<p>Theoretical： <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>→</mo><mi mathvariant="normal">∞</mi></mrow><annotation encoding="application/x-tex">k \rightarrow \infty</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">→</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord">∞</span></span></span></span> and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mi>k</mi><mi>n</mi></mfrac><mo>→</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\frac kn\rightarrow 0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.2251079999999999em;vertical-align:-0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801079999999999em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">→</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span><br />
+Thumb： $k \lt \sqrt n $<br />
+可以使用验证集来确定k的数量</p>
+<h3 id="优点"><a class="markdownIt-Anchor" href="#优点"></a> 优点</h3>
+<ol>
+<li>无需训练</li>
+</ol>
+<h3 id="弊端"><a class="markdownIt-Anchor" href="#弊端"></a> 弊端</h3>
+<ol>
+<li>在面对庞大的数据时，当特征数量很多时，knn算法的执行效率不高。<br />
+被称为 <strong>高维诅咒 Curse of Dimensionality</strong>，所以可以通过<strong>主成分分析方法 principal component analysis</strong>，或者<strong>特征选择  feature selection</strong>操作。</li>
+<li>knn算法无法给出任何数据的基础结构信息。因为，我们无法得知平均实例样本和典型实例样本的特征。</li>
+<li>In large dimension Euclidean distance is not useful anymore —&gt; <strong>cosine similarity</strong></li>
+<li>对缺失数据敏感，所以我们需要处理缺失值。</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/08/Coding/Pandas/Pandas-plot/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1983,195 +2113,6 @@ ALBEF 在每个 iteration 训练的时候，文本部分的 Encoder 模型要 fo
 <p>第2种是冻住编码器特征做评估 (Frozen-feature Evaluation) 任务，CoCa 模型训练好之后会得到一个 backbone encoder，对于不同任务只是 pooler 的 query 不一样。也就是只需要重新学 query token 即可。</p>
 <p>第3种是视频动作识别 (Video Action Recognition) 任务，CoCa 模型分别将每一帧输入共享图像编码器，如下图6所示。CoCa 模型额外使用交叉熵损失函学习了一个 attentional_pooler，它的输入是1个 query 和所有的空间和时间特征 token。</p>
 <p><img src="https://pic4.zhimg.com/80/v2-01c2da4ea60d7fcd190a0d5a48649dab_720w.webp" alt="" /></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/03/MySQL%20info/mysql%20%E4%BA%8B%E5%8A%A1/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/03/03/MySQL%20info/mysql%20%E4%BA%8B%E5%8A%A1/" class="post-title-link" itemprop="url">mysql 事务 Transaction</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-03-03 22:49:21" itemprop="dateCreated datePublished" datetime="2021-03-03T22:49:21-08:00">2021-03-03</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.1k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>6 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>定义：</p>
-<ul>
-<li>是一组操作的集合，是一个不可分割的工作单位。</li>
-<li>会把所有的操作作为一个整体一起向系统提交或者撤销；即这些操作要么同时成功，要么同时失败。</li>
-</ul>
-<p>只有使用了 <strong>Innodb</strong> 数据库引擎的数据库或表才支持事务。</p>
-<p>流程：</p>
-<ol>
-<li>开启事务</li>
-<li>执行事务内部操作，如果发成异常，则回滚事务</li>
-<li>提交事务，此时数据库才会更新，而且是一次性更新所有事务内部的操作</li>
-</ol>
-<p>好处：保证了数据的完整性和一致性</p>
-<h2 id="回滚"><a class="markdownIt-Anchor" href="#回滚"></a> 回滚</h2>
-<h3 id="查看-设置事务提交方式"><a class="markdownIt-Anchor" href="#查看-设置事务提交方式"></a> 查看 / 设置事务提交方式</h3>
-<p>查看提交方式，默认为自动提交。所有指令都直接提交，所以无法回滚。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT @@autocommit;</span><br><span class="line">&gt;&gt;&gt; 1</span><br></pre></td></tr></table></figure>
-<p>修改提交方式为手动：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">`SET @@autocommit=0;`</span><br></pre></td></tr></table></figure>
-<p>有两种方式支持回滚</p>
-<ol>
-<li>设置提交方式为 <strong>手动</strong>，无论做出什么修改都要<code>commit</code>/<code>rollback</code>，并且可以多次回滚。</li>
-<li>开启事务方式，支持回滚一次。</li>
-</ol>
-<h3 id="手动提交事务"><a class="markdownIt-Anchor" href="#手动提交事务"></a> 手动提交事务</h3>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SELECT @@autocommit;</span><br><span class="line">&gt;&gt;&gt; 1</span><br><span class="line"></span><br><span class="line"># 设置手动回滚</span><br><span class="line">SET @@autocommit=0;</span><br><span class="line"></span><br><span class="line"># 提交事务</span><br><span class="line">COMMIT;</span><br><span class="line"></span><br><span class="line"># ... 一些sql操作命令，数据是改变的，但是还没有提交</span><br><span class="line"></span><br><span class="line"># 回滚事务</span><br><span class="line">ROLLBACK;</span><br></pre></td></tr></table></figure>
-<p>这个 ROLLBACK 不会清楚缓存，可以回滚多次。<br />
-这种方式不会自动修改数据，必须要 COMMIT，或者 ROLLBACK。</p>
-<h3 id="自动提交模式下开启事务"><a class="markdownIt-Anchor" href="#自动提交模式下开启事务"></a> 自动提交模式下开启事务</h3>
-<p><code>START TRANSACTION;</code>或者<code>BEGIN;</code></p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">SELECT @@autocommit;</span><br><span class="line">&gt;&gt;&gt; 1</span><br><span class="line"></span><br><span class="line"># 开启事务</span><br><span class="line">START TRANSACTION;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># ... 一些sql操作命令，数据改变，但是还没有提交</span><br><span class="line"></span><br><span class="line"># 回滚事务，此次生效，回滚成功</span><br><span class="line">ROLLBACK;</span><br><span class="line"></span><br><span class="line"># 提交事务，和上面的回滚事务只能选一个</span><br><span class="line">COMMIT;</span><br><span class="line"></span><br><span class="line"># ... 一些sql操作命令，数据改变</span><br><span class="line"></span><br><span class="line"># 第二次回滚事务，此次无法生效，缓存被清除了</span><br><span class="line">ROLLBACK;</span><br></pre></td></tr></table></figure>
-<p>也就是说这种方式，仍然是自动修改数据，但是支持回滚，但是只能回滚一次，其实就是事务结束了。<br />
-如果指定<code>START TRANSACTION</code>，则会立即启动一个事务，并且必须通过显式<code>COMMIT</code>或<code>ROLLBACK</code>来结束该事务。</p>
-<h2 id="事务四大特性acid"><a class="markdownIt-Anchor" href="#事务四大特性acid"></a> 事务四大特性（ACID）</h2>
-<ol>
-<li>原子性（Atomicity）：事务中的操作是不可分割的，是一个原子。要么全成功，要么全失败。</li>
-<li>一致性（Consistency）：事务完成前后，数据需要一致，比如金额总额一致。</li>
-<li>隔离性（Isolation）：两个操作并发执行时，相互不影响。</li>
-<li>持久性（Durability）：事务一旦提交或者回滚对数据库的改变就是永久的。</li>
-</ol>
-<h2 id="并发事务引发的问题"><a class="markdownIt-Anchor" href="#并发事务引发的问题"></a> 并发事务引发的问题</h2>
-<p>博客：<a target="_blank" rel="noopener" href="https://www.geeksforgeeks.org/concurrency-problems-in-dbms-transactions/">Concurrency problems in DBMS Transactions</a><br />
-两个事务 A，B在同时操作一个表时，引发的问题。</p>
-<p>分类：</p>
-<ul>
-<li>脏读(Temporary Update Problem / Dirty read problem)：一个事务读取到<strong>另一个事务还没有提交</strong>的数据。</li>
-<li>不可重复读(Unrepeatable Read Problem)：一个事务先后读取同一条数据，但是两次读取的记录不同。</li>
-<li>幻读(Phantom Read Problem)：一个事务查询数据时，没有查询到数据行，然后决定插入。（这时另一个并发进程在执行插入）但是在插入时，发现已经存在。</li>
-</ul>
-<h2 id="事务隔离界别"><a class="markdownIt-Anchor" href="#事务隔离界别"></a> 事务隔离界别</h2>
-<p>为了解决事务引发的问题</p>
-<table>
-<thead>
-<tr>
-<th>隔离级别名称</th>
-<th></th>
-<th>会出现脏读</th>
-<th>会出现不可重复读</th>
-<th>会出现幻读</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Read Uncommitted</td>
-<td>可以读到其他事务<strong>修改过但是还没有提交</strong>的数据</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-</tr>
-<tr>
-<td>Read Committed</td>
-<td>只能读到其他事务<strong>已经提交</strong>的数据</td>
-<td></td>
-<td>✓</td>
-<td>✓</td>
-</tr>
-<tr>
-<td>Repeatable Read <br>(<strong>Default</strong>)</td>
-<td>事务B只能在事务A修改并提交过数据后，自己也提交事务后，<br> 才能读到事务B修改的数据。</td>
-<td></td>
-<td></td>
-<td>✓</td>
-</tr>
-<tr>
-<td>Serializable</td>
-<td>事务之间通过一个接一个串行地执行<br>通过加锁实现（读锁和写锁）</td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h3 id="命令"><a class="markdownIt-Anchor" href="#命令"></a> 命令</h3>
-<p>查看事务隔离级别：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT @@TRANSACTION_ISOLATION</span><br></pre></td></tr></table></figure>
-<p>设置事务隔离级别：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SET [GLOBAL | SESSION] TRANSACTION</span><br><span class="line">    ISOLATION LEVEL [LEVEL]</span><br><span class="line"></span><br><span class="line">LEVEL: &#123;</span><br><span class="line">     REPEATABLE READ</span><br><span class="line">   | READ COMMITTED</span><br><span class="line">   | READ UNCOMMITTED</span><br><span class="line">   | SERIALIZABLE</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><code>SESSION</code>：</p>
-<ul>
-<li>对当前会话的所有后续的事务有效</li>
-<li>该语句可以在已经开启的事务中间执行，但不会影响当前正在执行的事务</li>
-<li>如果在事务之间执行，则对后续的事务有效。</li>
-</ul>
-<p><code>GLOBAL</code>：全局级别，对全局所有的子视图都会被修改，但是已经存在的视图不会被修改。<br />
-不指定的话，则设置当前视图下的下一个没开始的事务。</p>
 
       
     </div>

@@ -179,7 +179,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Pytorch_lightning/2.Callbacks/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Pytorch_lightning/1.%E7%AE%80%E4%BB%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -193,7 +193,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2021/02/08/Coding/Pytorch_lightning/2.Callbacks/" class="post-title-link" itemprop="url">Pytorch_lightning 2.Callbacks</a>
+            <a href="/2021/02/08/Coding/Pytorch_lightning/1.%E7%AE%80%E4%BB%8B/" class="post-title-link" itemprop="url">Pytorch_lightning 1.intro</a>
         </h2>
 
         <div class="post-meta">
@@ -225,7 +225,247 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>101</span>
+              <span>2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>10 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><code>pytorch_lightning</code> 库<br />
+reference： <a target="_blank" rel="noopener" href="https://blog.csdn.net/u013250861/article/details/123591130"></a></p>
+<p>和 <code>torch</code> 版本匹配：<a target="_blank" rel="noopener" href="https://lightning.ai/docs/pytorch/latest/versioning.html#pytorch-support">Compatibility matrix</a></p>
+<p>代码类型分类：</p>
+<ol>
+<li>研究代码（ model，loss，optimizer ） -&gt; <code>pytorch_lightning.LightningModule</code></li>
+<li>工程代码（ early stopping、16位精度、GPUs分布训练 ） -&gt; <code>pytorch_lightning.Trainer</code></li>
+<li>非必要代码（ log，tensor board ） -&gt; <code>EarlyStopping.callbacks</code></li>
+</ol>
+<h1 id="lightningmodule"><a class="markdownIt-Anchor" href="#lightningmodule"></a> LightningModule</h1>
+<p>是 <code>torch.nn.Module</code> 的子类，本质上也是一个模型，但不同的是，<code>LightningModule</code> 围绕 <code>torch.nn.Module</code> 做了很多功能性的补充：</p>
+<ol>
+<li>模型</li>
+<li>训练/验证/测试 数据</li>
+<li>优化器</li>
+<li>训练/验证/测试 计算</li>
+</ol>
+<p>一般我们是自定义一个类继续继承 LightningModule 类</p>
+<p>重要方法：<br />
+<code>**_step</code>,<code>on_**_batch/epoch_start</code>,<code>on_**_batch/epoch_end</code>, …</p>
+<p>封装流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">outs = []</span><br><span class="line">for batch in data:</span><br><span class="line">    out = training_step(batch)</span><br><span class="line">    outs.append(out)</span><br><span class="line">on_train_epoch_end(outs)</span><br></pre></td></tr></table></figure>
+<h2 id="lightningmoduleinit"><a class="markdownIt-Anchor" href="#lightningmoduleinit"></a> LightningModule.<strong>init</strong>()</h2>
+<p>即然 <code>LightningModule</code> 仍然是一个模型，那么仍然需要初始化模型结构，也可以重写 <code>forward()</code> 方法，在推理时使用。</p>
+<h2 id="训练时不需要生命直接使用的监控参数"><a class="markdownIt-Anchor" href="#训练时不需要生命直接使用的监控参数"></a> 训练时不需要生命直接使用的监控参数</h2>
+<p><code>self.current_epoch</code></p>
+<h2 id="training_stepself-batch-batch_idx"><a class="markdownIt-Anchor" href="#training_stepself-batch-batch_idx"></a> training_step(self, batch, batch_idx)</h2>
+<p>输入参数为：<br />
+batch 为从 train_dataloader 中返回的每一个 batch 的数据，已经被放入 <code>device</code> 中了，batch 中不一定全都是Tensor，还可以是别的，他会默认将所有 <code>Torch.Tensor</code> 类型数据 放入 device 中。<br />
+batch_idx 为目前 batch 的索引。</p>
+<p>返回值：<br />
+Tensor - The loss tensor ，代码内部会自动调用这个返回 loss 的 <code>loss.backward()</code><br />
+dict - A dictionary. Can include any keys, but must include the key ‘loss’ -&gt; <code>loss.backward()</code>，没loss这个batch就被跳过了。<br />
+None - Training will skip to the next batch，没loss这个batch就被跳过了。</p>
+<h2 id="validation_stepself-batch-batch_idx"><a class="markdownIt-Anchor" href="#validation_stepself-batch-batch_idx"></a> validation_step(self, batch, batch_idx)</h2>
+<p>可以没有返回值<br />
+使用 <code>self.log(&quot;val_loss&quot;, val_loss)</code> 来标记该loss，当然也可以是一些评价指标，用于指导 <a target="_blank" rel="noopener" href="https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.callbacks.ModelCheckpoint.html#modelcheckpoint">ModelCheckpoint</a> 来保存模型。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 初始化`ModelCheckpoint`回调，并设置要监控的量</span><br><span class="line">checkpoint_callback = ModelCheckpoint(monitor=&#x27;val_loss&#x27;)</span><br><span class="line"></span><br><span class="line"># 将该callback 放到 callback list 中，作为参数传入</span><br><span class="line">trainer = Trainer(callbacks=[checkpoint_callback])</span><br></pre></td></tr></table></figure>
+<h2 id="test_stepself-batch-batch_idx"><a class="markdownIt-Anchor" href="#test_stepself-batch-batch_idx"></a> test_step(self, batch, batch_idx)</h2>
+<p>模型在训练时候，是不会进行 test 的，需要我们自己手动调用。<br />
+即通过模型的 <code>trainer.test(model=autoencoder, dataloaders=test_loader)</code> 方法进行。</p>
+<h2 id="configure_optimizers-优化器定义"><a class="markdownIt-Anchor" href="#configure_optimizers-优化器定义"></a> configure_optimizers: 优化器定义</h2>
+<p>返回一个优化器，或数个优化器，或两个List（优化器，Scheduler）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">def configure_optimizers(self):</span><br><span class="line">    ...</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    return opt # 自动调用返回的一个 optimizer</span><br><span class="line"></span><br><span class="line">    return generator_opt, disriminator_opt # 依次调用两个 optimizer</span><br><span class="line"></span><br><span class="line">    return [gen_opt, dis_opt], [gen_sched, dis_sched]  # optimizer 和 scheduler 的情况</span><br></pre></td></tr></table></figure>
+<h1 id="trainer"><a class="markdownIt-Anchor" href="#trainer"></a> Trainer</h1>
+<p>default_root_dir：默认存储地址。所有的实验变量和权重全部会被存到这个文件夹里面。推荐是，每个模型有一个独立的文件夹。每次重新训练会产生一个新的version_x子文件夹。</p>
+<p>max_epochs：最大训练周期数。trainer = Trainer(max_epochs=1000)<br />
+min_epochs：至少训练周期数。当有Early Stop时使用。<br />
+auto_scale_batch_size：在进行任何训练前自动选择合适的batch size。<br />
+precision : int：精确度。正常是32，使用16可以减小内存消耗<br />
+fast_dev_run : bool： 如果设定为true，会只执行一个batch的train, val 和 test，然后结束。仅用于debug。</p>
+<p>enable_progress_bar=True：tqdm 输出，默认开始，还是关上吧，太丑了，<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/59455268/how-to-disable-progress-bar-in-pytorch-lightning">同时自己带的这种log方式本身就有 bug</a> ，没必要用。<br />
+logger=True：是否使用默认的 logger ，并且保存，我选择不！见上条，一起给关了。但是关上后还是可以用 <code>log</code>方法控制 hook，只是不输出了，只需要保留 <code>validation_step</code> 的 <code>self.log(key,val)</code> 就行了。</p>
+<h2 id="构造函数"><a class="markdownIt-Anchor" href="#构造函数"></a> 构造函数</h2>
+<p>调用 <code>pl.Trainer()</code> 实例，参数为：</p>
+<h2 id="eval"><a class="markdownIt-Anchor" href="#eval"></a> eval</h2>
+<h3 id="频率"><a class="markdownIt-Anchor" href="#频率"></a> 频率</h3>
+<p>默认为每1个epoch校验一次 : <code>trainer = Trainer(check_val_every_n_epoch=1)</code><br />
+每训练单个epoch的 25% 校验一次（传入float）:  <code>trainer = Trainer(val_check_interval=0.25)</code><br />
+每训练100个batch校验一次（传入int）： <code>trainer = Trainer(val_check_interval=100)</code><br />
+每次 eval 时，使用多少 eval 数据： <code>val_percent_check=1.0</code> 默认 1.0 ， 可以使用一个 float 类型变量表示百分比。</p>
+<h3 id="sanity-check"><a class="markdownIt-Anchor" href="#sanity-check"></a> Sanity Check</h3>
+<p><a target="_blank" rel="noopener" href="https://lightning.ai/docs/pytorch/latest/common/trainer.html#num-sanity-val-steps">https://lightning.ai/docs/pytorch/latest/common/trainer.html#num-sanity-val-steps</a><br />
+for the bug: <a target="_blank" rel="noopener" href="https://github.com/mindslab-ai/faceshifter/issues/5">https://github.com/mindslab-ai/faceshifter/issues/5</a><br />
+默认情况下，会在训练开始之前进行 2 steps of validation ，来确保 valid 是正确的，防止训练后 eval 程序出现 bug ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># default used by the Trainer</span><br><span class="line">trainer = Trainer(num_sanity_val_steps=2)</span><br><span class="line"></span><br><span class="line"># turn it off</span><br><span class="line">trainer = Trainer(num_sanity_val_steps=0)</span><br><span class="line"></span><br><span class="line"># check all validation data</span><br><span class="line">trainer = Trainer(num_sanity_val_steps=-1)</span><br></pre></td></tr></table></figure>
+<p>但是我训练时候出现bug，数据量大时卡住，于是设置为 0。 -&gt;  <a target="_blank" rel="noopener" href="https://github.com/mindslab-ai/faceshifter/issues/5">https://github.com/mindslab-ai/faceshifter/issues/5</a></p>
+<h2 id="datasets-设定"><a class="markdownIt-Anchor" href="#datasets-设定"></a> datasets 设定</h2>
+<p>如果自行设定 dataloader 的话，需要在 fit 方法中调用参数 <code>train_dataloaders</code> 和 <code>val_dataloaders</code>:<br />
+<code>trainer.fit(autoencoder, train_dataloaders=train_loader, val_dataloaders=valid_loader)</code></p>
+<h1 id="checkpoint"><a class="markdownIt-Anchor" href="#checkpoint"></a> checkpoint</h1>
+<p>ckpt内部保存了：<br />
+16-bit scaling factor (if using 16-bit precision training)<br />
+Current epoch<br />
+Global step<br />
+LightningModule’s state_dict<br />
+State of all optimizers<br />
+State of all learning rate schedulers<br />
+State of all callbacks (for stateful callbacks)<br />
+State of datamodule (for stateful datamodules)<br />
+The hyperparameters (init arguments) with which the model was created<br />
+The hyperparameters (init arguments) with which the datamodule was created<br />
+State of Loops</p>
+<p>Trainer 自动保存最后一个 epoch 结束的模型</p>
+<p>直接使用 <code>MyLightningModule.load_from_checkpoint(path.ckpt)</code> 来读取模型，在直接读取时，还可以传入 <code>__init__</code> 的参数来覆盖重写保存的参数。</p>
+ <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">MyLightningModule</span>(<span class="title class_ inherited__">LightningModule</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, learning_rate, another_parameter, *args, **kwargs</span>):</span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        self.save_hyperparameters()  <span class="comment"># 自动保存传入的参数到 checkpoint 字典中 --&gt; checkpoint[&quot;hyper_parameters&quot;]</span></span><br></pre></td></tr></table></figure>
+<p>注意，最好加上 <code>self.save_hyperparameters()</code>：saves the arguments passed into the LightningModule init<br />
+这样直接 <code>model = MyLightningModule.load_from_checkpoint(checkpoint_path=&quot;epoch=1-step=1760.ckpt&quot;)</code> 就行了，不然后面容易出现 bug 。</p>
+<p>Resume training state，重新开始训练：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">model = LitModel()</span><br><span class="line">trainer = Trainer()</span><br><span class="line"></span><br><span class="line"># automatically restores model, epoch, step, LR schedulers, etc...</span><br><span class="line">trainer.fit(model, ckpt_path=&quot;some/path/to/my_checkpoint.ckpt&quot;)</span><br></pre></td></tr></table></figure>
+<h2 id="比较"><a class="markdownIt-Anchor" href="#比较"></a> 比较</h2>
+<ol>
+<li>
+<p>不加 <code>save_weights_only=True</code>，不加<code>self.save_hyperparameters()</code><br />
+epoch, global_step, pytorch-lightning_version, state_dict, loops<br />
+callbacks, optimizer_states, lr_schedulers</p>
+</li>
+<li>
+<p>加 <code>save_weights_only=True</code>，不加<code>self.save_hyperparameters()</code><br />
+epoch, global_step, pytorch-lightning_version, state_dict, loops</p>
+</li>
+<li>
+<p>不加 <code>save_weights_only=True</code>，加<code>self.save_hyperparameters()</code><br />
+epoch, global_step, pytorch-lightning_version, state_dict, loops +<br />
+callbacks, optimizer_states, lr_schedulers,<br />
+hparams_name, hyper_parameters</p>
+</li>
+<li>
+<p>加 <code>save_weights_only=True</code>，加<code>self.save_hyperparameters()</code><br />
+epoch, global_step, pytorch-lightning_version, state_dict, loops +<br />
+hparams_name, hyper_parameters</p>
+</li>
+</ol>
+<p>结论：<br />
+<code>self.save_hyperparameters()</code> -》  +<code>hparams_name</code>, <code>hyper_parameters</code> ，不受 <code>save_weights_only</code> 控制<br />
+<code>save_weights_only=True</code> -》 -<code>callbacks, optimizer_states, lr_schedulers</code> ，不受 <code>self.save_hyperparameters()</code> 控制</p>
+<p>不加 <code>save_weights_only=True</code> 是为了保存训练相关配置信息，得以继续训练。<br />
+加<code>self.save_hyperparameters()</code> 是为了能够直接初始化模型（ 很建议加上去 ），lightning load 权重比较麻烦，见下文。</p>
+<h2 id="加载模型的几种方法"><a class="markdownIt-Anchor" href="#加载模型的几种方法"></a> 加载模型的几种方法</h2>
+<p>因为上面没有加  <code>self.save_hyperparameters()</code> ，导致只保存了模型参数，而没有保存其他的初始化参数，导致需要先初始化模型，然后根据 ckpt 更新参数。</p>
+<h3 id="方法-1"><a class="markdownIt-Anchor" href="#方法-1"></a> 方法 1</h3>
+<p>两段式方法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">autoencoder = PLModelload_from_checkpoint(checkpoint_path=&quot;checkpoints/epoch=1-step=1760.ckpt&quot;,  # 然后导入，注意需要穿入 超参数</span><br><span class="line">                                encoder=encoder,</span><br><span class="line">                                hyper_parameters=hyper_parameters,</span><br><span class="line">                                handshaking_tagger=handshaking_tagger,</span><br><span class="line">                                tag_size=tag_size)</span><br></pre></td></tr></table></figure>
+<p>先使用 ckpt 创建，然后使用传入的参数覆盖。</p>
+<h3 id="方法2"><a class="markdownIt-Anchor" href="#方法2"></a> 方法2</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">autoencoder = LitAutoEncoder(encoder, hyper_parameters, handshaking_tagger, tag_size) <span class="comment"># 首先初始化</span></span><br><span class="line">autoencoder.load_state_dict(checkpoint[<span class="string">&quot;state_dict&quot;</span>])</span><br><span class="line"><span class="comment"># list(autoencoder.rel_extractor.encoder.parameters())[-1][:10] # for test</span></span><br></pre></td></tr></table></figure>
+<p>使用最原始的方式进行导入</p>
+<h1 id="log和return-loss到底在做什么"><a class="markdownIt-Anchor" href="#log和return-loss到底在做什么"></a> Log和return loss到底在做什么</h1>
+<p>training_step，还是validation_step，test_step返回值都是loss，或者包含 loss 的字典。</p>
+<p>返回的loss</p>
+<ol>
+<li>用于进行反向传播 ( train 中 )</li>
+<li>会被默认用一个list收集起来 （用于 xxx_epoch_end 中的汇总 log） 。</li>
+</ol>
+<p>现在改版(v2.0.0)了，无法使用 <code>training_epoch_end</code> ，需要自己手动去放入到一个字典中。</p>
+<p>而 <code>self.log</code> 则是针对 TensorBoard（默认方式） 的输出，同时用于指导ModelCheckpoint。<br />
+是TensorBoard等log记录器，对于每个log的标量，都会有一个相对应的横坐标，它可能是batch number或epoch number。而on_step就表示把这个log出去的量的横坐标表示为当前batch，而on_epoch则表示将log的量在整个epoch上进行累积后log，横坐标为当前epoch。</p>
+<p><code>return log_dict</code>：和log函数唯一的区别就是，name和value变量由一个字典替换。表示同时log多个值。如：<br />
+python values = {‘loss’: loss, ‘acc’: acc, …, ‘metric_n’: metric_n} self.log_dict(values)</p>
+<p>方法参数：</p>
+<ul>
+<li><code>n_step</code>就表示把这个log出去的量的横坐标表示为当前batch，而<code>on_epoch</code>则表示将log的量在整个epoch上进行累积后log，横坐标为当前epoch。</li>
+<li><code>reduce_fx</code>： 在 <code>training_step</code> 调用时，每次调用都会将当前步的结构进行存储/打印<br />
+而 <code>validation_step, test_step</code>调用时，会存储起来，在 epoch 结束时打印一次平均，如果不想平均，则可以通过 <code>reduce_fx</code> 参数进行设置：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># default function</span><br><span class="line">self.log(..., reduce_fx=&quot;mean&quot;)  # &#123;min,max,sum&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>batch_size</code>：在设置<code>on_epoch</code>时，操作的底数是什么。</li>
+<li><code>enable_graph=False</code>：是否同时保留计算图</li>
+<li><code>prog_bar</code>：是否也在命令行显示出来</li>
+</ul>
+<h1 id="gpu-设置"><a class="markdownIt-Anchor" href="#gpu-设置"></a> GPU 设置</h1>
+<p><a target="_blank" rel="noopener" href="https://lightning.ai/docs/pytorch/stable/accelerators/gpu.html">https://lightning.ai/docs/pytorch/stable/accelerators/gpu.html</a></p>
+<p>通过 Trainer 的三个参数进行设置，默认情况下为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># run on as many GPUs as available by default</span><br><span class="line">trainer = Trainer(accelerator=&quot;auto&quot;, devices=&quot;auto&quot;, strategy=&quot;auto&quot;)</span><br><span class="line"># equivalent to</span><br><span class="line">trainer = Trainer()</span><br></pre></td></tr></table></figure>
+<p><code>devices</code>：设置使用哪些设备，详见：<a target="_blank" rel="noopener" href="https://lightning.ai/docs/pytorch/stable/accelerators/gpu_basic.html#choosing-gpu-devices">Choosing GPU devices</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Python/functools%E5%B7%A5%E5%85%B7%E5%8C%85/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/02/08/Coding/Python/functools%E5%B7%A5%E5%85%B7%E5%8C%85/" class="post-title-link" itemprop="url">functools工具包</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-08 22:10:47" itemprop="dateCreated datePublished" datetime="2021-02-08T22:10:47-08:00">2021-02-08</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>146</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
@@ -244,17 +484,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="earlystopping"><a class="markdownIt-Anchor" href="#earlystopping"></a> EarlyStopping</h1>
-<p>默认在每一个  validation epoch 结束后进行判断</p>
-<p><code>from lightning.pytorch.callbacks.early_stopping import EarlyStopping</code></p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">EarlyStopping(monitor=&quot;val_loss&quot;, mode=&quot;min&quot;)</span><br><span class="line">EarlyStopping(monitor=&quot;val_accuracy&quot;, min_delta=0.00, patience=3, verbose=False, mode=&quot;max&quot;)</span><br></pre></td></tr></table></figure>
-<p>额外的参数：</p>
-<ol>
-<li>stopping_threshold，一旦被监控的目标大于等于这个值，终止训练</li>
-<li>divergence_threshold，一旦被监控的目标小于等于这个值，终止训练</li>
-<li>check_finite，当被监控的值为 NaN 或者 infinite 时，终止训练</li>
-</ol>
-
+          <p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/xiaobingqianrui/p/8606410.html">Python之functools库</a></p>
+<p>用途：操作其他函数的函数。</p>
+<h1 id="partial"><a class="markdownIt-Anchor" href="#partial"></a> partial</h1>
+<p>当一个函数有很多参数，但是其中一部分参数的值在每次调用时都是一样的，这时可以使<code>partial</code>类对其封装，来预先设定/冻结这些参数的值。<br />
+有点像动态地设置函数的形式参数的值。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">from functools import partial</span><br><span class="line">def fun(arg1, arg2,arg3,arg4):</span><br><span class="line">    return arg1+arg2+arg3+arg4</span><br><span class="line"></span><br><span class="line"># 如果参数arg1, arg2, arg3 一直保持不变，可以使用</span><br><span class="line"># 使用partial对象将这些不变的参数冻结起来</span><br><span class="line">nochangeparm = partial(fun,1,2,3)</span><br><span class="line">print (nochangeparm(4))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; 10</span><br></pre></td></tr></table></figure>
       
     </div>
 
@@ -592,7 +827,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/02/Coding/Python/github-pycharm/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -606,7 +841,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2021/02/02/Coding/Python/github-pycharm/" class="post-title-link" itemprop="url">github 推送</a>
+            <a href="/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/" class="post-title-link" itemprop="url">staticmethod & classmethod</a>
         </h2>
 
         <div class="post-meta">
@@ -628,7 +863,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
                 </span>
                   , 
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Github/" itemprop="url" rel="index"><span itemprop="name">Github</span></a>
+                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
                 </span>
             </span>
 
@@ -638,14 +873,14 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.8k</span>
+              <span>511</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>9 mins.</span>
+              <span>3 mins.</span>
             </span>
 
         </div>
@@ -657,19 +892,34 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
     <div class="post-body" itemprop="articleBody">
 
       
-          <ul>
-<li>github 推送不成功：如何解除绑定<br />
-直接删除所有git文件，然后重新提交。</li>
+          <p>一般来说，要使用某个类的方法，需要先实例化一个对象再调用方法。<br />
+而使用 <code>@staticmethod</code> 或 <code>@classmethod</code>，就可以不需要实例化，直接 <code>类名.方法名()</code> 来调用。</p>
+<h2 id="区别"><a class="markdownIt-Anchor" href="#区别"></a> 区别</h2>
+<p>一般来说，Class 内部的 Method 首个参数必须是表示类本身的 self（cls） 参数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">def annotate_events(self, tokens: List[str], events: List[Event])</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>@staticmethod</code> 为静态方法装饰器，不需要表示自身对象的 self 和自身类的 cls 参数，就跟使用函数一样。
+<ul>
+<li>如果内部需要调用这个类的一些属性方法，则只能直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 。</li>
+<li>但是如果调用正常的类方法的话，不会默认传入 <code>self</code> 参数，则需要额外参数 <code>类名</code> 作为第一个参数。</li>
 </ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find . -name &quot;.git&quot; | xargs rm -Rf</span><br></pre></td></tr></table></figure>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/02/02/Coding/Python/github-pycharm/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        print(A.a)  # &quot;a&quot;</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;)) # 这里需要传入类名 A</span><br><span class="line">        print(A.foo2(&#x27;mamq&#x27;))</span><br><span class="line">            # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br></pre></td></tr></table></figure>
+<br>
+<ul>
+<li><code>@classmethod</code> 类方法装饰器，也不需要 self 参数，但第一个参数需要是表示自身类的 cls 参数。
+<ul>
+<li>如果内部需要调用这个类的一些属性方法，除了直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 外，还可以用 <code>cls()</code> 先初始化类，再来调用类的属性，类的方法，实例化对象等，避免硬编码。</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        # print(A.a)  # 正常</span><br><span class="line">        # print(A.foo2(A, &#x27;mamq&#x27;))</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;))  # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(self.a)</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br><span class="line"></span><br><span class="line">    @classmethod</span><br><span class="line">    def foo3(cls, name):</span><br><span class="line">        # print(&#x27;hello&#x27;, name)</span><br><span class="line">        print(cls.a)</span><br><span class="line">        print(cls().a) # 两者相同，都能运行</span><br><span class="line"></span><br><span class="line">        print(cls.foo1(&quot;f1&quot;))</span><br><span class="line">        print(cls().foo1(&quot;f1&quot;)) # 两者</span><br><span class="line"></span><br><span class="line">        print(cls.foo2(name)) # 报错，普通方法传入的是 self，而不是 class，所以需要实例化</span><br><span class="line">        print(cls().foo2(name))</span><br></pre></td></tr></table></figure>
+<h2 id="self-和-cls"><a class="markdownIt-Anchor" href="#self-和-cls"></a> self 和 cls</h2>
+<p><code>cls</code> 和 <code>self</code> 其实只是一种命名习惯习惯, 是在 PEP8中定义的。<br />
+<code>cls</code> 表示类本身，所以需要实例化。<br />
+<code>self</code> 表示类的实例化，直接调用就好。</p>
+
       
     </div>
 
@@ -809,7 +1059,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/02/Coding/Python/github-pycharm/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -823,7 +1073,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/" class="post-title-link" itemprop="url">staticmethod & classmethod</a>
+            <a href="/2021/02/02/Coding/Python/github-pycharm/" class="post-title-link" itemprop="url">github 推送</a>
         </h2>
 
         <div class="post-meta">
@@ -845,7 +1095,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
                 </span>
                   , 
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
+                  <a href="/categories/Coding/Github/" itemprop="url" rel="index"><span itemprop="name">Github</span></a>
                 </span>
             </span>
 
@@ -855,14 +1105,14 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>511</span>
+              <span>1.8k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>3 mins.</span>
+              <span>9 mins.</span>
             </span>
 
         </div>
@@ -874,34 +1124,19 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>一般来说，要使用某个类的方法，需要先实例化一个对象再调用方法。<br />
-而使用 <code>@staticmethod</code> 或 <code>@classmethod</code>，就可以不需要实例化，直接 <code>类名.方法名()</code> 来调用。</p>
-<h2 id="区别"><a class="markdownIt-Anchor" href="#区别"></a> 区别</h2>
-<p>一般来说，Class 内部的 Method 首个参数必须是表示类本身的 self（cls） 参数。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">def annotate_events(self, tokens: List[str], events: List[Event])</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>@staticmethod</code> 为静态方法装饰器，不需要表示自身对象的 self 和自身类的 cls 参数，就跟使用函数一样。
-<ul>
-<li>如果内部需要调用这个类的一些属性方法，则只能直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 。</li>
-<li>但是如果调用正常的类方法的话，不会默认传入 <code>self</code> 参数，则需要额外参数 <code>类名</code> 作为第一个参数。</li>
+          <ul>
+<li>github 推送不成功：如何解除绑定<br />
+直接删除所有git文件，然后重新提交。</li>
 </ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        print(A.a)  # &quot;a&quot;</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;)) # 这里需要传入类名 A</span><br><span class="line">        print(A.foo2(&#x27;mamq&#x27;))</span><br><span class="line">            # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br></pre></td></tr></table></figure>
-<br>
-<ul>
-<li><code>@classmethod</code> 类方法装饰器，也不需要 self 参数，但第一个参数需要是表示自身类的 cls 参数。
-<ul>
-<li>如果内部需要调用这个类的一些属性方法，除了直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 外，还可以用 <code>cls()</code> 先初始化类，再来调用类的属性，类的方法，实例化对象等，避免硬编码。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        # print(A.a)  # 正常</span><br><span class="line">        # print(A.foo2(A, &#x27;mamq&#x27;))</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;))  # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(self.a)</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br><span class="line"></span><br><span class="line">    @classmethod</span><br><span class="line">    def foo3(cls, name):</span><br><span class="line">        # print(&#x27;hello&#x27;, name)</span><br><span class="line">        print(cls.a)</span><br><span class="line">        print(cls().a) # 两者相同，都能运行</span><br><span class="line"></span><br><span class="line">        print(cls.foo1(&quot;f1&quot;))</span><br><span class="line">        print(cls().foo1(&quot;f1&quot;)) # 两者</span><br><span class="line"></span><br><span class="line">        print(cls.foo2(name)) # 报错，普通方法传入的是 self，而不是 class，所以需要实例化</span><br><span class="line">        print(cls().foo2(name))</span><br></pre></td></tr></table></figure>
-<h2 id="self-和-cls"><a class="markdownIt-Anchor" href="#self-和-cls"></a> self 和 cls</h2>
-<p><code>cls</code> 和 <code>self</code> 其实只是一种命名习惯习惯, 是在 PEP8中定义的。<br />
-<code>cls</code> 表示类本身，所以需要实例化。<br />
-<code>self</code> 表示类的实例化，直接调用就好。</p>
-
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find . -name &quot;.git&quot; | xargs rm -Rf</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/02/02/Coding/Python/github-pycharm/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1370,122 +1605,6 @@ eg. <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.or
 <p>通常一些tokenizer会将内部的 token tokenize 成后者，比如 BART，Roberta。所以这里使用：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">token_id = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(&#x27;apple&#x27;,add_prefix_space=True))</span><br></pre></td></tr></table></figure>
 <p>先使用<code>add_prefix_space=True</code>进行 tokenize，将 <code>apple</code> 转换为 <code>Ġapple</code>，然后再得到 <code>token_id</code>。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/01/16/MySQL%20info/mysql%20%E5%87%BD%E6%95%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/01/16/MySQL%20info/mysql%20%E5%87%BD%E6%95%B0/" class="post-title-link" itemprop="url">mysql 函数</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2020-01-16 21:38:59" itemprop="dateCreated datePublished" datetime="2020-01-16T21:38:59-08:00">2020-01-16</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>475</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="字符串函数"><a class="markdownIt-Anchor" href="#字符串函数"></a> 字符串函数</h2>
-<p>MySQL 内置了很多字符串函数：</p>
-<ol>
-<li><code>concat(s1, s2, ..., sn)</code></li>
-<li><code>lower()</code>，<code>upper()</code>：转换大小写</li>
-<li><code>lpad(str,n,pad)</code>，<code>rpad(str,n,pad)</code>：左/右填充，用字符 pad 对 str 的左/右进行填充，填充到长度为 n。</li>
-<li><code>trim(str)</code>：去掉头尾空格</li>
-<li><code>substring(str, start, len)</code></li>
-</ol>
-<h2 id="数值函数"><a class="markdownIt-Anchor" href="#数值函数"></a> 数值函数</h2>
-<ol>
-<li><code>ceil(x)</code> 向上取整</li>
-<li><code>floor(x)</code> 向下取整</li>
-<li><code>mod(x,y)</code> 表示 x/y 的余数，即 x%y</li>
-<li><code>rand()</code> 返回(0,1)内的随机数</li>
-<li><code>round(x,y)</code> 求 x 的四舍五入的值，保留 y 位小数</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">-- 生成一个六位数的随机验证码</span><br><span class="line">select lpad(round(rand() * 1000000, 0), 6, 0);</span><br></pre></td></tr></table></figure>
-<h2 id="日期函数"><a class="markdownIt-Anchor" href="#日期函数"></a> 日期函数</h2>
-<p><code>curdate()</code>：返回当前日期<br />
-<code>curtime()</code>：返回当前时间<br />
-<code>now()</code>：返回当前日期和时间<br />
-<code>year(date)</code>,<code>month(date)</code>,<code>day(date)</code>：获取传入的date的年月日<br />
-<code>date_add(date, interval [num] type)</code>：返回date之后<code>interval [num] type</code>的日期。<code>interval [num] type</code>是固定写法，<code>[num]</code>是数值，<code>type</code>为单位，可以是<code>day / month / year / ...</code><br />
-<code>datediff(date1, date2)</code>：返回两个日期之间的差值 <code>date1-date2</code>，返回的单位是 天。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">-- 查询所有员工的入职天数，然后根据入职天数倒序排列</span><br><span class="line">select *, datadiff(curdate(), in_time) as diff_day</span><br><span class="line">from emp</span><br><span class="line">order by diff_day desc;</span><br></pre></td></tr></table></figure>
-<h2 id="流程控制函数"><a class="markdownIt-Anchor" href="#流程控制函数"></a> 流程控制函数</h2>
-<p><code>if(value, t, f)</code>：如果 <code>value==true</code>，则返回 <code>t</code>，否则返回 <code>f</code>。<br />
-<code>ifnull(value1, value2)</code>：如果 <code>value1!=Null</code>，则返回 <code>value1</code>；否则返回 <code>value2</code>。<br />
-<code>case when [val1] then [res1] ... else [default] end</code>：如果 <code>val1==True</code>，返回 <code>res1</code>，否则返回 <code>default</code> 默认值。<br />
-<code>case [expr] when [val1] then [res1] ... else [default] end</code>：如果 <code>expr==val1</code>，返回 <code>res1，否则返回</code> <code>default</code> 默认值。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">-- 查询员工姓名和员工地址 ，（地址：北京/上海 -》一线城市，其他为二线城市</span><br><span class="line">select</span><br><span class="line">    name,</span><br><span class="line">    (case when place in (&#x27;北京&#x27;,&#x27;上海&#x27;) then &#x27;一线城市&#x27; else &#x27;二线城市&#x27; end) as &#x27;工作地址&#x27;</span><br><span class="line">from user;</span><br><span class="line"></span><br><span class="line">-- 或者</span><br><span class="line">select</span><br><span class="line">    name,</span><br><span class="line">    (case place when &#x27;北京&#x27; then &#x27;一线城市&#x27; when &#x27;上海&#x27; then &#x27;一线城市&#x27; else &#x27;二线城市&#x27; end) as &#x27;工作地址&#x27;</span><br><span class="line">from user;</span><br></pre></td></tr></table></figure>
 
       
     </div>

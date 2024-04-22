@@ -179,117 +179,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/02/machine_learninng/process%20Data/Layer%20Normalization/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/02/machine_learninng/process%20Data/Layer%20Normalization/" class="post-title-link" itemprop="url">Layer Normalization</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-02 20:57:46" itemprop="dateCreated datePublished" datetime="2022-03-02T20:57:46-08:00">2022-03-02</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>475</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_39228381/article/details/107939602">https://blog.csdn.net/weixin_39228381/article/details/107939602</a></p>
-<p>Layer normalization 求的是最后一个维度，即每个token 768 的 mean/sqrt，是在 hidden_state/-1 维度上求的 。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># NLP Example</span></span><br><span class="line">batch, sentence_length, embedding_dim = <span class="number">20</span>, <span class="number">5</span>, <span class="number">10</span></span><br><span class="line">embedding = torch.randn(batch, sentence_length, embedding_dim)</span><br><span class="line">layer_norm = nn.LayerNorm(embedding_dim)</span><br><span class="line"><span class="comment"># Activate module</span></span><br><span class="line">embedding = layer_norm(embedding)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 看这里</span></span><br><span class="line">embedding[<span class="number">0</span>,<span class="number">0</span>,:].mean() <span class="comment"># 0</span></span><br><span class="line">embedding[<span class="number">0</span>,<span class="number">0</span>,:].std(unbiased=<span class="literal">False</span>) <span class="comment"># 1</span></span><br></pre></td></tr></table></figure>
-<p>归一化完每一个 token representation 都是 0 均值，1 标准差。</p>
-<h2 id="layer-normalization"><a class="markdownIt-Anchor" href="#layer-normalization"></a> Layer Normalization</h2>
-<p>BN 是对一个 batch 数据的每个 hidden_size index 进行 Norm 处理；<br />
-但 LN 是对单个数据的指定维度进行 Norm 处理，与batch无关。同时不需要根据训练集统计整个集合的均值和方差。但是同样需要最后一步的偏移操作，即同样有两个可以训练的量。</p>
-<p><strong>Why Not BN ？</strong></p>
-<p>使用了 Norm 之后，目标维度内，相对大小是有意义的，但是不同维度之间就无法比较了，也就是没有相对大小了。<br />
-所以，如果使用 BN，则不同句子的相同位置 token 之间的差距仍然是有可比性的，但是没有什么用；但是同一个句子不同 token 之间就无法进行比较了，那么后面的 Attention 也就不可用了。</p>
-<p><strong>作用：和 BN 差不多</strong></p>
-<ol>
-<li>解决 ICS 协变量转移 的问题</li>
-<li>加速网络收敛</li>
-<li>防止梯度爆炸或弥散</li>
-</ol>
-<h2 id="代码"><a class="markdownIt-Anchor" href="#代码"></a> 代码</h2>
-<p>LayerNorm中不会像BatchNorm那样跟踪统计全局的均值方差，因此<code>train()</code>和<code>eval()</code>对LayerNorm没有影响。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">torch.nn.LayerNorm(</span><br><span class="line">        normalized_shape: Union[int, List[int], torch.Size],</span><br><span class="line">        eps: float = 1e-05,</span><br><span class="line">        elementwise_affine: bool = True)</span><br></pre></td></tr></table></figure>
-<ul>
-<li>normalized_shape：LN 的维度，一定要包含最后一维。控制 LN 的 pool 的选择和 weight 和 bias 变量的尺寸。</li>
-<li>eps：分母正则项</li>
-<li>elementwise_affine：是否包含可以训练的参数</li>
-</ul>
-<h2 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> Reference</h2>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/liuxiao214/article/details/81037416">有论文地址：BatchNormalization、LayerNormalization、InstanceNorm、GroupNorm、SwitchableNorm总结</a></li>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_39228381/article/details/107939602">pytorch LayerNorm参数详解，计算过程</a></li>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_37541097/article/details/117653177">复现代码：Layer Normalization解析</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/395811291/answer/2170049248">transformer 为什么使用 layer normalization，而不是其他的归一化方法？</a></li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/02/machine_learninng/process%20Data/Batch%20Normalization/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -473,6 +362,117 @@ from the perspective of <code>self.bn</code> the batch size is <code>seq_size*ba
 <li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/521535855">超细节的 BatchNorm/BN/LayerNorm/LN 知识点</a></li>
 <li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/439116200">深入理解Pytorch的BatchNorm操作（含部分源码）</a></li>
 </ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/02/machine_learninng/process%20Data/Layer%20Normalization/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/02/machine_learninng/process%20Data/Layer%20Normalization/" class="post-title-link" itemprop="url">Layer Normalization</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-02 20:57:46" itemprop="dateCreated datePublished" datetime="2022-03-02T20:57:46-08:00">2022-03-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Machine-Learning/" itemprop="url" rel="index"><span itemprop="name">Machine Learning</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>475</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>2 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_39228381/article/details/107939602">https://blog.csdn.net/weixin_39228381/article/details/107939602</a></p>
+<p>Layer normalization 求的是最后一个维度，即每个token 768 的 mean/sqrt，是在 hidden_state/-1 维度上求的 。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># NLP Example</span></span><br><span class="line">batch, sentence_length, embedding_dim = <span class="number">20</span>, <span class="number">5</span>, <span class="number">10</span></span><br><span class="line">embedding = torch.randn(batch, sentence_length, embedding_dim)</span><br><span class="line">layer_norm = nn.LayerNorm(embedding_dim)</span><br><span class="line"><span class="comment"># Activate module</span></span><br><span class="line">embedding = layer_norm(embedding)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 看这里</span></span><br><span class="line">embedding[<span class="number">0</span>,<span class="number">0</span>,:].mean() <span class="comment"># 0</span></span><br><span class="line">embedding[<span class="number">0</span>,<span class="number">0</span>,:].std(unbiased=<span class="literal">False</span>) <span class="comment"># 1</span></span><br></pre></td></tr></table></figure>
+<p>归一化完每一个 token representation 都是 0 均值，1 标准差。</p>
+<h2 id="layer-normalization"><a class="markdownIt-Anchor" href="#layer-normalization"></a> Layer Normalization</h2>
+<p>BN 是对一个 batch 数据的每个 hidden_size index 进行 Norm 处理；<br />
+但 LN 是对单个数据的指定维度进行 Norm 处理，与batch无关。同时不需要根据训练集统计整个集合的均值和方差。但是同样需要最后一步的偏移操作，即同样有两个可以训练的量。</p>
+<p><strong>Why Not BN ？</strong></p>
+<p>使用了 Norm 之后，目标维度内，相对大小是有意义的，但是不同维度之间就无法比较了，也就是没有相对大小了。<br />
+所以，如果使用 BN，则不同句子的相同位置 token 之间的差距仍然是有可比性的，但是没有什么用；但是同一个句子不同 token 之间就无法进行比较了，那么后面的 Attention 也就不可用了。</p>
+<p><strong>作用：和 BN 差不多</strong></p>
+<ol>
+<li>解决 ICS 协变量转移 的问题</li>
+<li>加速网络收敛</li>
+<li>防止梯度爆炸或弥散</li>
+</ol>
+<h2 id="代码"><a class="markdownIt-Anchor" href="#代码"></a> 代码</h2>
+<p>LayerNorm中不会像BatchNorm那样跟踪统计全局的均值方差，因此<code>train()</code>和<code>eval()</code>对LayerNorm没有影响。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">torch.nn.LayerNorm(</span><br><span class="line">        normalized_shape: Union[int, List[int], torch.Size],</span><br><span class="line">        eps: float = 1e-05,</span><br><span class="line">        elementwise_affine: bool = True)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>normalized_shape：LN 的维度，一定要包含最后一维。控制 LN 的 pool 的选择和 weight 和 bias 变量的尺寸。</li>
+<li>eps：分母正则项</li>
+<li>elementwise_affine：是否包含可以训练的参数</li>
+</ul>
+<h2 id="reference"><a class="markdownIt-Anchor" href="#reference"></a> Reference</h2>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/liuxiao214/article/details/81037416">有论文地址：BatchNormalization、LayerNormalization、InstanceNorm、GroupNorm、SwitchableNorm总结</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_39228381/article/details/107939602">pytorch LayerNorm参数详解，计算过程</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_37541097/article/details/117653177">复现代码：Layer Normalization解析</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/395811291/answer/2170049248">transformer 为什么使用 layer normalization，而不是其他的归一化方法？</a></li>
+</ul>
 
       
     </div>
@@ -867,6 +867,104 @@ Pipeline方法下的关系分类，同一个句子会有多个不同的实体对
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/02/14/Bug/%E7%8E%AF%E5%A2%83%E9%97%AE%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/02/14/Bug/%E7%8E%AF%E5%A2%83%E9%97%AE%E9%A2%98/" class="post-title-link" itemprop="url">bug note 2</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-02-14 15:57:32" itemprop="dateCreated datePublished" datetime="2022-02-14T15:57:32-08:00">2022-02-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>78</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <ul>
+<li>
+<p>安装<br />
+pip3 安装报错：<code>权限不够: '/usr/local/lib64/python3.6</code><br />
+在安装包前面加上 <code>--user</code> ： <code>pip3 install --user glove-python-binary==0.2.0</code></p>
+</li>
+<li>
+<p>pytorch lightning的导入出错，使用 <code>pytorch_lightning</code> ：</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">import pytorch_lightning as pl</span><br><span class="line">from pytorch_lightning.callbacks import ModelCheckpoint</span><br></pre></td></tr></table></figure>
+<ul>
+<li>SSL 环境问题，出现在 clip 包下载模型</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Only for error:  urllib.error.URLError: &lt;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED]</span></span><br><span class="line"><span class="keyword">import</span> ssl</span><br><span class="line">ssl._create_default_https_context = ssl._create_unverified_context</span><br><span class="line"><span class="comment"># =======</span></span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/02/14/Bug/bug_note1/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -956,104 +1054,6 @@ Pipeline方法下的关系分类，同一个句子会有多个不同的实体对
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">print(torch.isinf(logits).any() or torch.isneginf(logits).any() or torch.isnan(logits).any())</span><br></pre></td></tr></table></figure>
 <p>本地测试，可以 <code>mbb = mbb.to(dtype=torch.float16)</code> 来测试 <code>NaN</code> ，<code>inf</code> 应该没关系，但是需要注意</p>
 
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/02/14/Bug/%E7%8E%AF%E5%A2%83%E9%97%AE%E9%A2%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/02/14/Bug/%E7%8E%AF%E5%A2%83%E9%97%AE%E9%A2%98/" class="post-title-link" itemprop="url">bug note 2</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-02-14 15:57:32" itemprop="dateCreated datePublished" datetime="2022-02-14T15:57:32-08:00">2022-02-14</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>78</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <ul>
-<li>
-<p>安装<br />
-pip3 安装报错：<code>权限不够: '/usr/local/lib64/python3.6</code><br />
-在安装包前面加上 <code>--user</code> ： <code>pip3 install --user glove-python-binary==0.2.0</code></p>
-</li>
-<li>
-<p>pytorch lightning的导入出错，使用 <code>pytorch_lightning</code> ：</p>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">import pytorch_lightning as pl</span><br><span class="line">from pytorch_lightning.callbacks import ModelCheckpoint</span><br></pre></td></tr></table></figure>
-<ul>
-<li>SSL 环境问题，出现在 clip 包下载模型</li>
-</ul>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Only for error:  urllib.error.URLError: &lt;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED]</span></span><br><span class="line"><span class="keyword">import</span> ssl</span><br><span class="line">ssl._create_default_https_context = ssl._create_unverified_context</span><br><span class="line"><span class="comment"># =======</span></span><br></pre></td></tr></table></figure>
       
     </div>
 
