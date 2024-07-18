@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":20,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Adaptive RAG Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity https:&#x2F;&#x2F;github.com&#x2F;starsuzi&#x2F;Adaptive-RAG 该项目也被整合进入 LlamaIndex:Adaptive_RAG， LangGrap">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RAG 策略 1 ：Adaptive RAG">
+<meta property="og:url" content="http://example.com/2024/05/10/NLP/RAG/RAG%E7%AD%96%E7%95%A51Adaptive/index.html">
+<meta property="og:site_name" content="Yili">
+<meta property="og:description" content="Adaptive RAG Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity https:&#x2F;&#x2F;github.com&#x2F;starsuzi&#x2F;Adaptive-RAG 该项目也被整合进入 LlamaIndex:Adaptive_RAG， LangGrap">
+<meta property="og:locale">
+<meta property="og:image" content="https://mmbiz.qpic.cn/mmbiz_png/jT5Sp7MICPwQwZMDRCQwSicjM2DVsibT96pyLYDgsBLcbj9nyibvRlUxeyWebjI17ZRtemvLychqCCicBIm8vBNLlQ/640?wx_fmt=png&amp;from=appmsg&amp;tp=wxpic&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/Bs1RWVyw08Ra0wgNtT6J8KlPKl7R4QYIDujh3vJa4Xo.original.fullsize.png">
+<meta property="article:published_time" content="2024-05-10T06:18:52.000Z">
+<meta property="article:modified_time" content="2024-07-18T15:32:44.447Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://mmbiz.qpic.cn/mmbiz_png/jT5Sp7MICPwQwZMDRCQwSicjM2DVsibT96pyLYDgsBLcbj9nyibvRlUxeyWebjI17ZRtemvLychqCCicBIm8vBNLlQ/640?wx_fmt=png&amp;from=appmsg&amp;tp=wxpic&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1">
+
+<link rel="canonical" href="http://example.com/2024/05/10/NLP/RAG/RAG%E7%AD%96%E7%95%A51Adaptive/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-Hans'
+  };
+</script>
+
+  <title>RAG 策略 1 ：Adaptive RAG | Yili</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Yili</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Suggest Google Chrome for better math Reading.</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/05/10/NLP/RAG/RAG%E7%AD%96%E7%95%A51Adaptive/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          RAG 策略 1 ：Adaptive RAG
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2024-05-10 14:18:52" itemprop="dateCreated datePublished" datetime="2024-05-10T14:18:52+08:00">2024-05-10</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/RAG/" itemprop="url" rel="index"><span itemprop="name">RAG</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>657</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="adaptive-rag"><a class="markdownIt-Anchor" href="#adaptive-rag"></a> Adaptive RAG</h1>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.14403">Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/starsuzi/Adaptive-RAG">https://github.com/starsuzi/Adaptive-RAG</a></p>
+<p>该项目也被整合进入 LlamaIndex:Adaptive_RAG， LangGraph:Adaptive_RAG， ReAct:Adaptive_RAG 。</p>
+<span id="more"></span>
+<p><img src="https://mmbiz.qpic.cn/mmbiz_png/jT5Sp7MICPwQwZMDRCQwSicjM2DVsibT96pyLYDgsBLcbj9nyibvRlUxeyWebjI17ZRtemvLychqCCicBIm8vBNLlQ/640?wx_fmt=png&amp;from=appmsg&amp;tp=wxpic&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1" alt="" /></p>
+<p>将问题根据 complexity 划分为三个档位：</p>
+<ul>
+<li>简单（Non Retrieval for QA）：并不需要检索，可以直接返回。</li>
+<li>中等（Single-step Approach for QA）：只需要单步检索即可获取支持回复的文档信息。</li>
+<li>困难（Multi-step Approach for QA）：需要多步、复杂的检索才能得到答案。</li>
+</ul>
+<p>这里使用 T5 作为分类模型，分别对比了 small / medium / large 三个不同的版本。</p>
+<p>训练这个分类模型使用到的数据集：<br />
+目前没有 query-complexity pairs 的数据集，所以需要自己构造。<br />
+对一个 query，作者将其分别进行三个方案尝试得到答案，分别为非检索生成，单步检索生成，多步检索生成，正好对应了complexity三个档位，然后区分方案为：</p>
+<ul>
+<li>使用非检索方案就得到正确结果的query标为简单。</li>
+<li>单步检索和多步检索均能得到结果的，出于节省成本，优先考虑单步检索，所以标为中等。</li>
+<li>只有多步检索才能回答对的，那就标困难。</li>
+<li>默认情况下，在单步检索的数据集（single-hop datasets）下的数据默认都是中等，多步检索数据集（multi-hop datasets）下没预测对的会默认是困难。</li>
+</ul>
+<p>评测数据集：</p>
+<ul>
+<li>Single-hop QA：1) SQuAD v1.1 (Rajpurkar et al., 2016), 2) Natural Questions (Kwiatkowski et al., 2019), and 3) TriviaQA (Joshi et al., 2017).</li>
+<li>Multi-hop QA：1) MuSiQue (Trivedi et al., 2022a), 2) HotpotQA (Yang et al., 2018), and 3) 2WikiMultiHopQA (Ho et al., 2020)</li>
+</ul>
+<p>实验：</p>
+<ol>
+<li>效果比 Self-RAG 要好得多。</li>
+<li>单独看训练的分类模型，效果其实很不好：<br />
+<img src="https://cdn.mathpix.com/snip/images/Bs1RWVyw08Ra0wgNtT6J8KlPKl7R4QYIDujh3vJa4Xo.original.fullsize.png" style="zoom: 30%;"/><br />
+比较震惊的还是这个效果下对最终RAG系统仍旧有收益，说明这个系统对有没有这个分类插件，应该是敏感的，但是对分类效果不那么敏感。</li>
+</ol>
+<h1 id="frugalgpt"><a class="markdownIt-Anchor" href="#frugalgpt"></a> frugalGPT</h1>
+<p><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2305.05176">FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance</a></p>
+<p>用于降低成本</p>
+<ol>
+<li>Prompt Adaptation
+<ol>
+<li>Demonstration Selection：删除不重要的 demonstration</li>
+<li>Query Concatenation：如果两个连续的 query 中有共享的 demonstration，则将其合并</li>
+</ol>
+</li>
+<li>LLM Approximation
+<ol>
+<li>构造一个 query，response 字典，先匹配当前 query，如果已经有答案，就不需要再次让 LLM 推理了。</li>
+<li>Model Fine-Tuning：蒸馏 GPT4，来提升小模型的能力</li>
+</ol>
+</li>
+<li>LLM Cascade：同一个 query，先让小尺寸的模型回答，如果回答的没问题，直接输出，如果回答错误，才用比较大的模型进行回复。</li>
+</ol>
+<h1 id="crag"><a class="markdownIt-Anchor" href="#crag"></a> CRAG</h1>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2024/05/09/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/Gecko/" rel="prev" title="Gecko">
+      <i class="fa fa-chevron-left"></i> Gecko
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2024/07/01/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/%E5%8F%AC%E5%9B%9E/%E5%8F%8C%E5%A1%94%E5%8F%AC%E5%9B%9E/%E5%8D%8E%E4%B8%BA_Sparcode/" rel="next" title="2023 - 华为 Sparcode - VQ 思想">
+      2023 - 华为 Sparcode - VQ 思想 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#adaptive-rag"><span class="nav-number">1.</span> <span class="nav-text"> Adaptive RAG</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#frugalgpt"><span class="nav-number">2.</span> <span class="nav-text"> frugalGPT</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#crag"><span class="nav-number">3.</span> <span class="nav-text"> CRAG</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description">A foolish, slow learner.</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">349</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">39</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/YiandLi" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;YiandLi" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.zhihu.com/people/yiliiiii" title="Zhihu → https:&#x2F;&#x2F;www.zhihu.com&#x2F;people&#x2F;yiliiiii" rel="noopener" target="_blank"><i class="fab fa-zhihu fa-fw"></i>Zhihu</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">Symbols count total: </span>
+    <span title="Symbols count total">599k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">Reading time total &asymp;</span>
+    <span title="Reading time total">49:56</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
