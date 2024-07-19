@@ -30,7 +30,7 @@
 <meta property="og:image" content="http://example.com/images/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E7%94%9F%E6%88%90/LCREC0.png">
 <meta property="og:image" content="http://example.com/images/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E7%94%9F%E6%88%90/LCREC1.png">
 <meta property="article:published_time" content="2024-07-11T02:21:00.000Z">
-<meta property="article:modified_time" content="2024-07-13T08:09:38.644Z">
+<meta property="article:modified_time" content="2024-07-18T17:06:38.699Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E7%94%9F%E6%88%90/LCREC0.png">
 
@@ -268,8 +268,8 @@
 </ol>
 </li>
 </ol>
-<h2 id="learning-item-indices-for-semantic-integration"><a class="markdownIt-Anchor" href="#learning-item-indices-for-semantic-integration"></a> <em>Learning Item Indices for Semantic Integration</em></h2>
-<h3 id="vector-quantization-indexing"><a class="markdownIt-Anchor" href="#vector-quantization-indexing"></a> <em>Vector Quantization Indexing</em></h3>
+<h2 id="learning-item-indices-for-semantic-integration"><a class="markdownIt-Anchor" href="#learning-item-indices-for-semantic-integration"></a> Learning Item Indices for Semantic Integration</h2>
+<h3 id="vector-quantization-indexing"><a class="markdownIt-Anchor" href="#vector-quantization-indexing"></a> Vector Quantization Indexing</h3>
 <p>how to represent an item with index IDs (called <em>item indices</em>)？</p>
 <p>作者没有使用原始的 doc one-hot id，而是使用 vector quantization 将 item 映射为 a small number of discrete indices ；同时每个 index 可以被不同的 doc 共享。</p>
 <ol>
@@ -302,7 +302,7 @@
 <li>no conflicts in item indices</li>
 <li>the established semantic spaces of item indices should be aligned with the semantics of LLMs</li>
 </ol>
-<h3 id="conflict-mitigation-via-uniform-semantic-mapping"><a class="markdownIt-Anchor" href="#conflict-mitigation-via-uniform-semantic-mapping"></a> <em>Conflict Mitigation via Uniform Semantic Mapping</em></h3>
+<h3 id="conflict-mitigation-via-uniform-semantic-mapping"><a class="markdownIt-Anchor" href="#conflict-mitigation-via-uniform-semantic-mapping"></a> Conflict Mitigation via Uniform Semantic Mapping</h3>
 <p>可能会存在现象：lead to index conflicts among items within the same leaf node ，即叶子分布不均匀，存在某些叶子节点被赋予多个 item</p>
 <p>[23], [38] 添加了一个补充的 id，比如两个 item 被映射为<code>[ 32,33,1 ]</code> ，那么此时增加一个额外的 id 分别表示两个 item ： <code>[ 32,33,1, ***0*** ]</code> 和 <code>[ 32,33,1, ***1*** ]</code> 。</p>
 <p>作者这里用了  conflict mitigation method 来防止叶子节点有很多 item ，作者这里的方法就是让 item 均匀分散在 codebook 最后一层，提出  a uniform distribution constraint</p>
@@ -315,10 +315,10 @@
 <p>作者先训练模型，然后再构建 index，构建 index 的过程中，中间 H-1 层都是直接贪心得到对应的 code ，只有最后一层是使用上面的 SinkhornKnopp algorithm 来判别 code 。</p>
 <h2 id="aligning-language-and-collaborative-semantics-in-llms"><a class="markdownIt-Anchor" href="#aligning-language-and-collaborative-semantics-in-llms"></a> <em>Aligning Language and Collaborative Semantics in LLMs</em></h2>
 <p>构建好 index 之后，首先要将 index 加入 LLM 的词表中，但是这些 index id 都是 OOV ，为了对齐 language and collaborative semantics ，作者设计了一序列的  semantic alignment tasks 。</p>
-<h3 id="1-sequential-item-prediction"><a class="markdownIt-Anchor" href="#1-sequential-item-prediction"></a> <em>1) Sequential Item Prediction</em></h3>
+<h3 id="1-sequential-item-prediction"><a class="markdownIt-Anchor" href="#1-sequential-item-prediction"></a> 1) Sequential Item Prediction</h3>
 <p>设计了 personalized recommendation instructions ，LLM 的输入为交互历史和这个指令，预测下一个 item id 。</p>
 <figure class="highlight jsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Instruction</span>:</span><br><span class="line"><span class="title class_">Here</span> are the user’s historical <span class="attr">interactions</span>:</span><br><span class="line">	&lt;a_-<span class="number">124</span>&gt;&lt;b_192&gt;&lt;c_41&gt;&lt;d_17&gt;,</span><br><span class="line">	...,</span><br><span class="line">	&lt;a_82&gt;&lt;b_-<span class="number">59</span>&gt;&lt;c_191&gt;&lt;d_66&gt;,</span><br><span class="line">	<span class="keyword">try</span> to recommend another item to the user. <span class="title class_">Note</span> that the historical interactions are arranged <span class="keyword">in</span> chronological order.</span><br><span class="line"></span><br><span class="line"><span class="title class_">Response</span>:</span><br><span class="line">&lt;a_112&gt;&lt;b_32&gt;&lt;c_5&gt;&lt;d_175&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="2-explicit-index-language-alignment"><a class="markdownIt-Anchor" href="#2-explicit-index-language-alignment"></a> <em>2) Explicit Index-Language Alignment</em></h3>
+<h3 id="2-explicit-index-language-alignment"><a class="markdownIt-Anchor" href="#2-explicit-index-language-alignment"></a> 2) Explicit Index-Language Alignment</h3>
 <p>目前，相似 item 的共享语义只能体现在相同的前缀上，作者认为这是一种弱约束关系。</p>
 <p>为了强化相似 item 的 item id 语义，又提出两个 index-item 对齐任务。</p>
 <ol>
@@ -331,8 +331,8 @@
  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Instruction:</span><br><span class="line">Please tell me what item &lt;a_66&gt;&lt;b_197&gt;&lt;c_-236&gt;&lt;d_223&gt; is called, along with a brief description of it.</span><br><span class="line"></span><br><span class="line">Response:</span><br><span class="line">Item Title: Pok´emon Moon - Nintendo 3DS \n</span><br><span class="line">Item Description: Pok´emon Moon will launch in the ... become a Pok´emon Champion!</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 </li>
 </ol>
-<h3 id="3-implicit-recommendation-oriented-alignment"><a class="markdownIt-Anchor" href="#3-implicit-recommendation-oriented-alignment"></a> <em>3) Implicit Recommendation-oriented Alignment</em></h3>
-<p><em><strong>a) Asymmetric item prediction :</strong></em> 真正推理时，模型是根据 lastN item id 预测 next item id，是对称的，这里作者引入非对称的预测结构。</p>
+<h3 id="3-implicit-recommendation-oriented-alignment"><a class="markdownIt-Anchor" href="#3-implicit-recommendation-oriented-alignment"></a> 3) Implicit Recommendation-oriented Alignment</h3>
+<p><em>a) Asymmetric item prediction :</em> 真正推理时，模型是根据 lastN item id 预测 next item id，是对称的，这里作者引入非对称的预测结构。</p>
 <p>choice 1：用 description / title 替代  next item id</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">**Instruction:**</span><br><span class="line">Based on the user’s historical interactions:</span><br><span class="line">&lt;a_38&gt;&lt;b_94&gt;&lt;c_198&gt;&lt;d_59&gt;,...,&lt;a_-190&gt;&lt;b_60&gt;&lt;c_94&gt;&lt;d_86&gt;,</span><br><span class="line">try to predict the title of the item that the user may need next.</span><br><span class="line"></span><br><span class="line">**Response:**</span><br><span class="line">NBA 2K16 - PlayStation 4</span><br></pre></td></tr></table></figure>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">**Instruction:**</span><br><span class="line">Here is the item interaction history of the user:</span><br><span class="line">&lt;a_38&gt;&lt;b_94&gt;&lt;c_198&gt;&lt;d_59&gt;,...,&lt;a_-190&gt;&lt;b_60&gt;&lt;c_94&gt;&lt;d_86&gt;, please tell me what features he expects from his next item.</span><br><span class="line"></span><br><span class="line">**Response:**</span><br><span class="line">The NBA 2K franchise is ... cover of your choice into the front of box.</span><br></pre></td></tr></table></figure>
@@ -359,7 +359,7 @@
 enabling the LLM to understand the joint language and collaborative semantics within the index sequence and accurately extract user preferences.</p>
 </blockquote>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">**Instruction:**</span><br><span class="line">Utilizing the ordered list of the user’s historical interaction items as a reference, please make an informed estimation of the user’s preferences.</span><br><span class="line">The historical interactions are as follows: &lt;a_227&gt;&lt;b_186&gt;&lt;c_52&gt;&lt;d_166&gt;,...,&lt;a_-120&gt;&lt;b_208&gt;&lt;c_146&gt;&lt;d_153&gt;.</span><br><span class="line"></span><br><span class="line">**Response:**</span><br><span class="line">The user has recently been playing a game that ... with more data storage and/or higher data processing capabilities.</span><br></pre></td></tr></table></figure>
-<h2 id="training-and-inference"><a class="markdownIt-Anchor" href="#training-and-inference"></a> <em>Training and Inference</em></h2>
+<h2 id="training-and-inference"><a class="markdownIt-Anchor" href="#training-and-inference"></a> Training and Inference</h2>
 <p>Backbone ： Llama</p>
 <p>Title + Description Embedding → Avg Pooling</p>
 <p>Level of item indices = 4 , each level consisting of 256 codebook vectors, each vector has a dimension of 32.</p>
