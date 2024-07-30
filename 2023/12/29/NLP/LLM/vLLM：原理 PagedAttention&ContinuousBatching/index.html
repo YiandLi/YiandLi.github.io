@@ -35,7 +35,7 @@
 <meta property="og:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled3.png">
 <meta property="og:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled4.png">
 <meta property="article:published_time" content="2023-12-29T15:12:07.000Z">
-<meta property="article:modified_time" content="2024-04-16T13:39:39.917Z">
+<meta property="article:modified_time" content="2024-07-30T15:03:46.486Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/NLP/LLM/vLLM/Untitled.png">
 
@@ -235,14 +235,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.6k</span>
+              <span>2.1k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>8 mins.</span>
+              <span>10 mins.</span>
             </span>
 
         </div>
@@ -370,6 +370,32 @@
 <p>an SPMD (Single Program Multiple Data) execution schedule</p>
 <p>不同 node 共享同一个 manager  ； 张量并行模式下，每个 gpu 只存储对应 head 的 KV cache 。</p>
 <p>不同的 gpu 不需要在内存管理上同步，只需要在生成开始的时候从 manager 处得到内存管理信息即可 。</p>
+<h3 id="整体调度流程"><a class="markdownIt-Anchor" href="#整体调度流程"></a> <strong>整体调度流程</strong></h3>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/692540949">图解大模型计算加速系列：vLLM源码解析2，调度器策略(Scheduler)</a></p>
+<ul>
+<li><strong>waiting队列</strong>中的数据都没有做过prefill，每个seq_group下只有1个seq（prompt）</li>
+<li><strong>running队列</strong>中存放着上一个推理阶段被送去做推理的所有seq_group</li>
+<li><strong>swapped队列</strong>中存放着之前调度阶段中被抢占的seq_group</li>
+</ul>
+<p><strong>running队列中的seq_group不一定能继续在本次调度中被选中做推理</strong>，这是因为gpu上KV cache的使用情况一直在变动，以及waiting队列中持续有新的请求进来的原因。<br />
+所以调度策略的职责就是要根据这些变动，对送入模型做推理的数据做动态规划。</p>
+<p>因为存在 FCFS 策略，所以总体优先级为：<em><strong>running &gt; swapped &gt; waiting</strong></em></p>
+<p>调度流程为：</p>
+<p>一个 step 中 <strong>所有的 seq_group</strong> 要么都是正在 generate（from running / swapped），要么都是正在 prefill （from waiting）。</p>
+<ul>
+<li>
+<p><strong>如果当前swapped队列为空，那就去检查是否能从waiting队列中调度seq_group，直到不满足调度条件为止（gpu空间不足，或waiting队列已为空等）</strong>。</p>
+<p><strong>此时，1个推理阶段中，所有的seq_group都处在prefill阶段。</strong></p>
+</li>
+<li>
+<p><strong>如果当前swapped队列非空，或者无法从waiting队列中调度任何seq_group时：</strong></p>
+<ul>
+<li>检查是否能从running队列中调度seq_group，直到不满足调度条件为止。</li>
+<li>若本次无新的被抢占的seq_group，且swapped队列非空，就检查是否能从swapped队列中调度seq_group，直到不满足调度条件为止。</li>
+</ul>
+<p><strong>此时，1个推理阶段中，所有的seq_group要么全来自running队列，要么来自running + swapped队列，它们都处在decode阶段。</strong></p>
+</li>
+</ul>
 
     </div>
 
@@ -450,7 +476,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#pagedattentionvllm"><span class="nav-number">1.</span> <span class="nav-text"> PagedAttention：vLLM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#method"><span class="nav-number">1.1.</span> <span class="nav-text"> Method</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pagedattention"><span class="nav-number">1.1.1.</span> <span class="nav-text"> PagedAttention</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kv-cache-manager"><span class="nav-number">1.1.2.</span> <span class="nav-text"> KV Cache Manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#other-decoding-scenarios"><span class="nav-number">1.1.3.</span> <span class="nav-text"> Other Decoding Scenarios</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scheduling-and-preemption"><span class="nav-number">1.2.</span> <span class="nav-text"> Scheduling and Preemption</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#distributed-execution"><span class="nav-number">1.2.1.</span> <span class="nav-text"> Distributed Execution</span></a></li></ol></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#pagedattentionvllm"><span class="nav-number">1.</span> <span class="nav-text"> PagedAttention：vLLM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#method"><span class="nav-number">1.1.</span> <span class="nav-text"> Method</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pagedattention"><span class="nav-number">1.1.1.</span> <span class="nav-text"> PagedAttention</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kv-cache-manager"><span class="nav-number">1.1.2.</span> <span class="nav-text"> KV Cache Manager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#other-decoding-scenarios"><span class="nav-number">1.1.3.</span> <span class="nav-text"> Other Decoding Scenarios</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scheduling-and-preemption"><span class="nav-number">1.2.</span> <span class="nav-text"> Scheduling and Preemption</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#distributed-execution"><span class="nav-number">1.2.1.</span> <span class="nav-text"> Distributed Execution</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E8%B0%83%E5%BA%A6%E6%B5%81%E7%A8%8B"><span class="nav-number">1.2.2.</span> <span class="nav-text"> 整体调度流程</span></a></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -463,7 +489,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">349</span>
+          <span class="site-state-item-count">352</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -515,13 +541,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">599k</span>
+    <span title="Symbols count total">602k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">49:56</span>
+    <span title="Reading time total">50:12</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
