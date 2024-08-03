@@ -179,6 +179,281 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/3.%20Torch%20%E6%9E%84%E9%80%A0%E6%A8%A1%E5%9E%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Coding/Pytorch/3.%20Torch%20%E6%9E%84%E9%80%A0%E6%A8%A1%E5%9E%8B/" class="post-title-link" itemprop="url">3. 构造模型</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:46:59" itemprop="dateCreated datePublished" datetime="2021-09-22T23:46:59+08:00">2021-09-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>16 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>知乎教程：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/340453841">https://zhuanlan.zhihu.com/p/340453841</a><br />
+CSDN：<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_23981335/article/details/103683737">https://blog.csdn.net/qq_23981335/article/details/103683737</a><br />
+<code>torch.nn</code>提供了所有的神经网络层。所有的模型和层都是<code>nn.Module</code>的子类。<br />
+torch中的神经网络是Module模块组成的Module模块。</p>
+<h2 id="定义训练设备"><a class="markdownIt-Anchor" href="#定义训练设备"></a> 定义训练设备</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">device = &#x27;cuda&#x27; if torch.cuda.is_available() else &#x27;cpu&#x27;</span><br><span class="line">print(&#x27;Using &#123;&#125; device&#x27;.format(device))</span><br></pre></td></tr></table></figure>
+<h2 id="模型的参数"><a class="markdownIt-Anchor" href="#模型的参数"></a> 模型的参数</h2>
+<ul>
+<li>
+<p>神经网络内部的许多层都是参数化的，比如权重w和偏置b。<br />
+<code>nn.Module</code>对象自动跟踪所有内部的参数，可以通过模型的<code>parameters()</code>和<code>named_parameter()</code>方法来获取模型的所有参数。</p>
+</li>
+<li>
+<p><code>nn.Parameter</code>：是<code>torch.tensor</code>的子类，默认<code>requires_grad=True</code>，并且绑定到了该模型的<code>.parameters()</code>字典中。</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">class Mnist_Logistic(nn.Module):</span><br><span class="line">    def __init__(self):</span><br><span class="line">        super(Mnist_Logistic, self).__init__()</span><br><span class="line">        self.weights = nn.Parameter(torch.randn(784, 10) / math.sqrt(784))</span><br><span class="line">        self.bias = nn.Parameter(torch.zeros(10))</span><br></pre></td></tr></table></figure>
+<p>和普通的<code>tensor(.. ,requires_grad=True)</code>不同的在于，<code>Parameter</code>对象是Module的一部分，即如果只是Tensor的话，这个张量虽然参与了计算，但是需要单独更新：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">weights -= weights.grad * lr</span><br><span class="line">bias -= bias.grad * lr</span><br></pre></td></tr></table></figure>
+<p>但是，如果使用<code>Parameter()</code>实例进行包装，则直接对<code>model.parameters()</code>字典进行更新即可。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">with torch.no_grad():</span><br><span class="line">    for p in model.parameters(): p -= p.grad * lr</span><br></pre></td></tr></table></figure>
+<h2 id="定义模型"><a class="markdownIt-Anchor" href="#定义模型"></a> 定义模型</h2>
+<p><code>nn.Module</code>是PyTorch体系下所有神经网络模块的基类。<br />
+<img src="https://pic2.zhimg.com/80/v2-bacaa829d1fd6c3dca94c3311f5383d1_1440w.jpg" alt="" /></p>
+<p>通过继承<code>nn.Module</code>来定义神经网络，并且通过其<code>_init__()</code>方法初始化神经网络中的<code>module</code>，<code>parameter</code>和<code>buffer</code>。<br />
+每一个<code>nn.Module</code>子类，即模型，都需要实现<code>forward()</code>方法来操作输入数据。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">class NeuralNetwork(nn.Module):</span><br><span class="line">    def __init__(self):</span><br><span class="line">        super(NeuralNetwork, self).__init__()</span><br><span class="line">        self.flatten = nn.Flatten()</span><br><span class="line">        self.linear_relu_stack = nn.Sequential(</span><br><span class="line">            nn.Linear(28*28, 512),</span><br><span class="line">            nn.ReLU(),</span><br><span class="line">            nn.Linear(512, 512),</span><br><span class="line">            nn.ReLU(),</span><br><span class="line">            nn.Linear(512, 10),</span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">    def forward(self, x):</span><br><span class="line">        x = self.flatten(x)</span><br><span class="line">        logits = self.linear_relu_stack(x)</span><br><span class="line">        return logits</span><br><span class="line"></span><br><span class="line">#将模型放入设备中</span><br><span class="line">model = NeuralNetwork().to(device)</span><br><span class="line">print(model)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">NeuralNetwork(</span><br><span class="line">  (flatten): Flatten(start_dim=1, end_dim=-1)</span><br><span class="line">  (linear_relu_stack): Sequential(</span><br><span class="line">    (0): Linear(in_features=784, out_features=512, bias=True)</span><br><span class="line">    (1): ReLU()</span><br><span class="line">    (2): Linear(in_features=512, out_features=512, bias=True)</span><br><span class="line">    (3): ReLU()</span><br><span class="line">    (4): Linear(in_features=512, out_features=10, bias=True)</span><br><span class="line">  )</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>模型进行前向传播时，除了<code>forward()</code>方法之外，还会有一些底层的运算。<br />
+所以在得到输出时，不要直接调用模型的<code>forward()</code>方法，而是使用<code>output = model(input)</code>的形式。</li>
+</ul>
+<h3 id="__dict__-实例变量"><a class="markdownIt-Anchor" href="#__dict__-实例变量"></a> <code>__dict__</code> 实例变量</h3>
+<p><code>model.__dict__</code>保存了模型的所有实例变量的键值对。</p>
+<h3 id="属性添加"><a class="markdownIt-Anchor" href="#属性添加"></a> 属性添加</h3>
+<ul>
+<li><code>add_module(name, module)</code>：增加子神经网络模块，更新 <code>self._modules</code>。<br />
+初始化类型为<code>nn.Module</code>。</li>
+<li><code>register_parameter(name, param)</code>：增加通过BP更新的 parameters ，更新 <code>self._parameters</code>。<br />
+初始化类型为<code>nn.Parameter</code>。</li>
+<li><code>register_buffer(name, tensor, persistent=True)</code>：增加不通过 BP 更新的 buffer，更新 <code>self._buffers</code><br />
+初始化类型为<code>torch.Tensor</code>或者 <code>None</code>。<br />
+默认<code>persistent=True</code>时，会将该buffer添加到模型的<code>state_dict</code>中。<br />
+当<code>persistent=False</code>时，会更新到<code>self._non_persistent_buffers_set</code>中。</li>
+</ul>
+<p><strong>这三个方法中的name属性需要非空并且不包含<code>'.'</code>。</strong><br />
+这 3 个函数都会:</p>
+<ul>
+<li>先检查 self.<strong>dict</strong> 中是否包含对应的属性字典以确保  <code>nn.Module</code> 被正确初始化。</li>
+<li>然后检查属性的 <code>name</code> 是否合法</li>
+<li>同时还会检查他们是否已经存在于要修改的属性字典中</li>
+</ul>
+<br>
+<p>不过更常见的是使用<code>self.xxx = xxx</code>添加<code>module</code>和<code>parameter</code>。这种方式本质上会调用 <code>nn.Module</code> 重载的函数<code>__setattr__</code>。<br />
+在调用在增加 <code>self._parameters</code>，<code>self._modules</code> 的时候，会预先调用 <code>remove_from</code> 函数从其余私有属性中删除对应的 name。<br />
+这说明 <strong><code>self.dict</code>，<code>self._buffers</code>，<code>self._parameters</code>，<code>self._modules</code> 中的属性名是互斥的</strong> 。</p>
+<ul>
+<li>buffer是内存中的一个常量，在后向传播的过程中<strong>不会</strong>被更新，在模型保存和加载时，可以被写入和读出。<br />
+例子：批次归一化层中的平均值和方差。<br />
+对于buffer而言：<code>register_buffer()</code>用于<strong>新添加</strong>Buffer：<code>self.xxx = xxx</code>只能将<code>self._buffers</code>中已有的 buffer 重新赋值为 <code>None</code> 或者 <code>tensor</code>。</li>
+</ul>
+<blockquote>
+<p><code>self.xxxx = torch.Tensor()</code> 是一种不被推荐的行为，因为这样新增的 attribute 既不属于 <code>self._parameters</code>，也不属于 <code>self._buffers</code>，而会被视为普通的 attribute ，在将模块进行状态转换的时候，<code>self.xxxx</code> 会被遗漏进而导致 device 或者 type 不一样的 bug。</p>
+</blockquote>
+<h3 id="属性删除"><a class="markdownIt-Anchor" href="#属性删除"></a> 属性删除</h3>
+<p>属性的删除通过重载的<code>__delattr__(name)</code> 来实现。</p>
+<h2 id="快速构造网络"><a class="markdownIt-Anchor" href="#快速构造网络"></a> 快速构造网络</h2>
+<p><code>nn.Sequential</code>是一个module容器，输入输入会按照顺序依次经过容器内所有的moduel。<br />
+里面可以放模型，也可以直接放置层。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">seq_modules = nn.Sequential(</span><br><span class="line">    flatten,</span><br><span class="line">    layer1,</span><br><span class="line">    nn.ReLU(),</span><br><span class="line">    nn.Linear(20, 10)</span><br><span class="line">)</span><br><span class="line">input_image = torch.rand(3,28,28)</span><br><span class="line">logits = seq_modules(input_image)</span><br></pre></td></tr></table></figure>
+<h2 id="重新初始化-模型参数"><a class="markdownIt-Anchor" href="#重新初始化-模型参数"></a> 重新初始化 模型参数</h2>
+<p>Linear层参考：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/tangjunjun/p/13731276.html">https://www.cnblogs.com/tangjunjun/p/13731276.html</a><br />
+<code>layer.weight.data = target_tensor</code> 无效，这里选择<code>copy_()</code>方法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">classifier.weight[0].data.copy_(id_to_emb[i])   # 使用 &#x27;=&#x27; 赋值方法无效，遂用 `copy_()`</span><br></pre></td></tr></table></figure>
+<h2 id="模型的方法"><a class="markdownIt-Anchor" href="#模型的方法"></a> 模型的方法</h2>
+<h3 id="获取模型基本信息"><a class="markdownIt-Anchor" href="#获取模型基本信息"></a> 获取模型基本信息</h3>
+<ul>
+<li><code>__get_name()</code>：获取类名</li>
+<li><code>__repr__()</code>：输出该Module中所有SubModule的信息并且one item per line</li>
+<li><code>__dir__()</code>：<br />
+输出该Module中包含的所有<code>self.__class__</code>、<code>self.__dict__.keys()</code>、<code>self._parameters.keys()</code>、<code>self._modules.keys()</code>以及<code>self._buffers.keys()</code>，并且会通过<code>key for key in keys if not key[0].isdigit()</code>来消除不合法的Python变量名称的属性。</li>
+<li><code>__getattr__(self, name)</code>：获取给定name的Module类中的成员，返回一个具体的module类。</li>
+<li><code>__setattr__(self, name, value)</code>：设置属性</li>
+</ul>
+<h3 id="获取内部层和参数"><a class="markdownIt-Anchor" href="#获取内部层和参数"></a> 获取内部层和参数</h3>
+<ul>
+<li><code>modules()</code>：返回一个包含 当前模型 所有模块的<strong>迭代器</strong>(母模型+子模型)。重名的模块只被返回一次(children()也是)。<br />
+如何理解重名：地址不同的，即不是新构建的，下面的submoudle1和submoudle2虽然结构一致，但是是新构建的，参数不同，所以不是重名的。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">class Model(nn.Module):</span><br><span class="line">    def __init__(self):</span><br><span class="line">        super(Model, self).__init__()</span><br><span class="line">        submodule = nn.Conv2d(10, 20, 4)</span><br><span class="line">        self.submodule1 = nn.Conv2d(10, 10, 4)</span><br><span class="line">        self.submodule2 = nn.Conv2d(10, 10, 4)</span><br><span class="line">        # 统一模块不同名称</span><br><span class="line">        self.add_module(&quot;conv&quot;, submodule)</span><br><span class="line">        self.add_module(&quot;conv1&quot;, submodule)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">modules = Model().modules()</span><br><span class="line">for _, i in enumerate(modules):</span><br><span class="line">    print(i)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; </span><br><span class="line">Model(</span><br><span class="line">  (submodule1): Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (submodule2): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv1): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">)</span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br></pre></td></tr></table></figure>
+<ul>
+<li>
+<p><code>children()</code>：返回子模型的迭代器，即上面的部分去除母模型。</p>
+</li>
+<li>
+<p><code>parameters()</code>：返回模型的参数（张量形式）迭代器，可以看作<code>named_parameters()</code>返回元组的参数部分。</p>
+</li>
+<li>
+<p><code>buffers()</code>：调用 <code>self.named_buffers()</code> 并返回模型<strong>缓存</strong>。</p>
+</li>
+<li>
+<p><code>named_buffers()</code>：返回 <code>self._buffers</code> 中的 <code>name</code> 和 <code>buffer</code> 元组。</p>
+</li>
+<li>
+<p><code>named_children()</code></p>
+</li>
+<li>
+<p><code>named_modules(memo=None, prefix='')</code></p>
+</li>
+<li>
+<p><code>named_parameters()</code>：返回 <code>self._parameters</code>中的<code>name</code>和<code>parameter</code>元组。</p>
+</li>
+</ul>
+<p>上述方法都不会返回重复的对象。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">============================================================</span><br><span class="line">&gt;&gt;&gt; Model().modules()</span><br><span class="line"></span><br><span class="line">Model(</span><br><span class="line">  (submodule1): Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (submodule2): Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv1): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">)</span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; Model().named_modules()</span><br><span class="line"></span><br><span class="line">(&#x27;&#x27;, Model(</span><br><span class="line">  (submodule1): Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (submodule2): Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">  (conv1): Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">))</span><br><span class="line">(&#x27;submodule1&#x27;, Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">(&#x27;submodule2&#x27;, Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">(&#x27;conv&#x27;, Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">============================================================</span><br><span class="line">&gt;&gt;&gt; Model().children()</span><br><span class="line"></span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line">Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; Model().named_children()</span><br><span class="line"></span><br><span class="line">(&#x27;submodule1&#x27;, Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">(&#x27;submodule2&#x27;, Conv2d(10, 10, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">(&#x27;conv&#x27;, Conv2d(10, 20, kernel_size=(4, 4), stride=(1, 1)))</span><br><span class="line">============================================================</span><br><span class="line">&gt;&gt;&gt; Model().parameters()</span><br><span class="line"></span><br><span class="line">Parameter containing:</span><br><span class="line">tensor( .... , requires_grad=True)</span><br><span class="line">Parameter containing:</span><br><span class="line">tensor( .... , requires_grad=True)</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; Model().named_parameters():</span><br><span class="line"></span><br><span class="line">(&#x27;submodule1.weight&#x27;, Parameter containing:</span><br><span class="line">tensor( .... , requires_grad=True)</span><br><span class="line">(&#x27;...&#x27;, tensor(..., ...))</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>可以看到，返回的都是一个迭代器对象。而带<code>named-</code>的前缀方法的迭代对象都是一个元组，每个元组对象有两个元素，名称和具体的Parameter对象。而我们在分布添加到optimizer中的，就是这个具体的Parameter对象。</p>
+</blockquote>
+<h3 id="训练状态的转换"><a class="markdownIt-Anchor" href="#训练状态的转换"></a> 训练状态的转换</h3>
+<p>nn.Module 通过 <code>self.training</code> 来区分训练和测试两种状态，使得模块可以在训练和测试时有不同的 <code>forward</code> 行为。<br />
+nn.Module 通过 <code>self.train()</code> 和 <code>self.eval()</code> 来修改训练和测试状态，其中 <code>self.eval</code> 直接调用了 <code>self.train(False)</code>，而 <code>self.train()</code> 会修改 <code>self.training</code> 并通过 <code>self.children()</code> 来调整所有子模块的状态。</p>
+<ul>
+<li><code>train((mode=True)</code> ：只对<code>Dropout</code>和<code>BatchNorm</code>有效。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">def train(self: T, mode: bool = True) -&gt; T:</span><br><span class="line">    self.training = mode</span><br><span class="line">    for module in self.children():</span><br><span class="line">        module.train(mode)</span><br><span class="line">    return self</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>eval()</code> == <code>train(False)</code>：只对<code>Dropout</code>和<code>BatchNorm</code>有效。</li>
+</ul>
+<h3 id="梯度的处理"><a class="markdownIt-Anchor" href="#梯度的处理"></a> 梯度的处理</h3>
+<p>默认情况下，<code>parameter.require_grad()=True</code>，可以使用<code>requires_grad_()</code>方法和<code>zero_grad()</code>方法来设置梯度。<br />
+源码来看， <code>requires_grad_(self: T, requires_grad: bool)</code>会遍历Module内的所有Parameter，并且对其设置<code>requires_grad_(requires_grad:bool)</code>方法。<br />
+而<code>zero_grad()</code>方法最后是对<code>self.parameters()</code>中的每个元素使用了<code>.zero_()</code>方法进行清空。</p>
+<h3 id="__applyfn与applyfn方法"><a class="markdownIt-Anchor" href="#__applyfn与applyfn方法"></a> <code>__apply(fn)</code>与<code>apply(fn)</code>方法</h3>
+<p><code>nn.Module</code> 实现了如下 8 个常用<strong>函数</strong>将模块转变成不同的<strong>数据类型</strong>、并且转移到<strong>CPU/ GPU</strong>上。</p>
+<ol>
+<li><code>CPU</code>：将所有 parameters 和 buffer 转移到 CPU 上</li>
+<li><code>type</code>：将所有 parameters 和 buffer 转变成另一个类型</li>
+<li><code>CUDA</code>：将所有 parameters 和 buffer 转移到 GPU 上</li>
+<li><code>float</code>：将所有浮点类型的 parameters 和 buffer 转变成 float32 类型</li>
+<li><code>double</code>：将所有浮点类型的 parameters 和 buffer 转变成 double 类型</li>
+<li><code>half</code>：将所有浮点类型的 parameters 和 buffer 转变成 float16 类型</li>
+<li><code>bfloat16</code>：将所有浮点类型的 parameters 和 buffer 转变成 bfloat16 类型</li>
+<li><code>to</code>：移动模块或/和改变模块的类型<br></li>
+</ol>
+<p>这些转换参数的数据类型(dtype)，转移数据位置(cpu/gpu)等操作最终都是通过<code>self._apply(function)</code>来实现的。function 一般是 lambda 表达式或其他自定义函数。</p>
+<ul>
+<li><code>self._apply(function)</code>函数做了三件事：
+<ol>
+<li>对<code>self.children()</code>中的子module进行递归调用：<code>module._apply(fn)</code>，最后处理到到下面两步。</li>
+<li>对<code>self._parameters</code>中的<code>param.data</code>及其<code>param.gradient</code>通过 function 进行处理：<br />
+<code>param.data=fn(param)</code>和<code>param.grad.data=fn(param.grad)</code>。<br />
+在更改这两个值时，会使用<code>compute_should_use_set_data( param, fn(param) )</code>函数来判断是否原地修改。</li>
+<li>对<code>self._buffers</code>中的 buffer 逐个通过 function 来进行处理：<code>self._buffers[key]=fn(buf)</code></li>
+</ol>
+</li>
+<li><code>self.apply(fn)</code>：只是简单地递归调用了 <code>self.children()</code> 去处理自己以及子模块：<code>module.apply(fn)</code></li>
+<li>应用：常用<code>apply</code>方法和自定义的<code>init_weights(moudle)</code>方法重新初始化参数：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">@torch.no_grad()</span><br><span class="line">def init_weights(m):</span><br><span class="line">    print(m)</span><br><span class="line">    if type(m) == nn.Linear:</span><br><span class="line">        m.weight.fill_(1.0)</span><br><span class="line">        print(m.weight)</span><br><span class="line">s</span><br><span class="line">net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))</span><br><span class="line">net.apply(init_weights)</span><br></pre></td></tr></table></figure>
+<h3 id="自定义模型权重"><a class="markdownIt-Anchor" href="#自定义模型权重"></a> 自定义模型权重</h3>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/dss_dssssd/article/details/83990511">https://blog.csdn.net/dss_dssssd/article/details/83990511</a></p>
+<h2 id="模块的保存和加载"><a class="markdownIt-Anchor" href="#模块的保存和加载"></a> 模块的保存和加载</h2>
+<p>PyTorch 集成了 Python 自带的<code>pickle</code>包对模块和tensor进行「序列化」和「反序列化」。<br />
+本质上是把tensor的信息，包括数据类型和存储位置，以及数据等转化为字符串。随后将这些字符串通过 文件IO操作进行存储，这个过程可逆。</p>
+<h3 id="保存整个模型"><a class="markdownIt-Anchor" href="#保存整个模型"></a> 保存整个模型</h3>
+<p>和上面的方法一样，不同的是，我们住需要将原本的状态字典参数换成换成整个模型<code>model</code>即可。而加载时，则无需实例化。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 保存</span><br><span class="line">torch.save(model, &#x27;model.pth&#x27;)</span><br><span class="line"># 加载</span><br><span class="line">torch.load(&#x27;model.pth&#x27;)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>缺点：PyTorch 的模块实现依赖于具体的 PyTorch 版本，所以版本不同时，载入整个模型可能会报错。</li>
+</ul>
+<h3 id="只保存权重参数"><a class="markdownIt-Anchor" href="#只保存权重参数"></a> 只保存权重参数</h3>
+<p>PyTorch模型的参数被保存在一个状态字典<code>state_dict</code>中，这个字典保存了所有参数的名称和tensor值。<br />
+我们可以通过<code>torch.save</code>方法来保存这个字典。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.save(model.state_dict(), &#x27;model_weights.pth&#x27;, pickle_module=pickle, pickle_protocol=2)</span><br></pre></td></tr></table></figure>
+<p>参数<code>pickle</code>是默认的，传入的是序列化的库；<code>pickle_protocol</code>是pickle协议，一共有5个可选版本。</p>
+<p>为了加载模型的权重参数，首先要创建一个相同的模型实例，然后调用其<code>load_state_dict()</code>方法加载参数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ckpt = torch.load(&#x27;model_weights.pth&#x27;, map_location=None)</span><br><span class="line">model.load_state_dict(ckpt)</span><br></pre></td></tr></table></figure>
+<p>参数<code>map_location</code>是tensor存储位置的映射。<br />
+根据<code>save()</code>调用时候模型存储位置不同，该参数的选择也不同：</p>
+<ol>
+<li>如果存储时，模型在保存在CPU上，则直接默认即可。</li>
+<li>如果存储时，模型保存在GPU上，则加载时程序默认是先将模型加载到CPU上，然后转移到保存编号（“cuda:0” …）的GPU上。<br />
+这时，如果加载的设备没有GPU，或者GPU的设备编号不支持（单卡设备加载了&quot;cuda:1&quot;的模型），则会报错。<br />
+解决方法是：设置<code>map_location='cpu'</code>，这样就先将模型加载到CPU上，后续调用<code>to()</code>进行设备转移。</li>
+</ol>
+<h3 id="优化器的保存"><a class="markdownIt-Anchor" href="#优化器的保存"></a> 优化器的保存</h3>
+<p>训练过程中，不仅需要保存模型，我们也要保存 optimizer，支持继续训练。</p>
+<p>optimizer 本身也带有状态字典 <code>state_dict</code> ，存储了当前学习率，梯度的指数移动平均等。通过调用<code>state_dict()</code>方法和<code>load_state_dict()</code>方法，可以让optimizer对象输出和载入相关的状态字典。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># 信息</span><br><span class="line">save_info =  &#123;</span><br><span class="line">  &quot;iter_num&quot; : iter_name ,</span><br><span class="line">  &quot;optimizer&quot; : optimizer.state_dict() ,</span><br><span class="line">  &quot;model&quot; : model.state_dict() ,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"># 保存信息</span><br><span class="line">torch.save(save_info, save_path)</span><br><span class="line"></span><br><span class="line"># 先初始化</span><br><span class="line">optimizer = ...</span><br><span class="line">model = ...</span><br><span class="line"></span><br><span class="line"># 载入信息</span><br><span class="line">save_info = torch.load(save_path)</span><br><span class="line">optimizer.load_state_dict(save_info[&quot;optimizer&quot;])</span><br><span class="line">model.load_state_dict(save_info[&quot;model&quot;])</span><br></pre></td></tr></table></figure>
+<h2 id="hook"><a class="markdownIt-Anchor" href="#hook"></a> Hook</h2>
+<p>用于不改变网络，获取运行过程中的信息，比如参数和梯度值等。从而诊断网络的问题，分析可行性。</p>
+<h2 id="直接输出模型参数量"><a class="markdownIt-Anchor" href="#直接输出模型参数量"></a> 直接输出模型参数量</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">def print_variables(model, pattern=&quot;&quot;, log=True):</span><br><span class="line"># 支持 re 使用 pattern 选择</span><br><span class="line">    flags = []</span><br><span class="line"></span><br><span class="line">    for (name, var) in model.named_parameters():</span><br><span class="line">        if re.search(pattern, name):</span><br><span class="line">            flags.append(True)</span><br><span class="line">        else:</span><br><span class="line">            flags.append(False)</span><br><span class="line"></span><br><span class="line">    weights = &#123;v[0]: v[1] for v in model.named_parameters()&#125;</span><br><span class="line">    total_size = 0</span><br><span class="line"></span><br><span class="line">    for name in sorted(list(weights)):</span><br><span class="line">        if re.search(pattern, name):</span><br><span class="line">            v = weights[name]</span><br><span class="line">            total_size += v.nelement()</span><br><span class="line"></span><br><span class="line">            if log:</span><br><span class="line">                print(&quot;%s %s&quot; % (name.ljust(60), str(list(v.shape)).rjust(15)))</span><br><span class="line"></span><br><span class="line">    if log:</span><br><span class="line">        print(&quot;Total trainable variables size: %d&quot; % total_size)</span><br><span class="line"></span><br><span class="line">    return flags</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/2.%20Datasets%E5%92%8CDataloaders/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -690,6 +965,109 @@ Dataloader 负责总的调度，<br />
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/09/22/Coding/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/" class="post-title-link" itemprop="url">1.3 torch.tensor 极值和排序</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-09-22 23:08:30" itemprop="dateCreated datePublished" datetime="2021-09-22T23:08:30+08:00">2021-09-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>194</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="argmax-argmin"><a class="markdownIt-Anchor" href="#argmax-argmin"></a> argmax() / argmin()</h2>
+<p><code>tensor.argmax()</code>，传入维度<br />
+<code>torch.argmax()</code>，传入tensor和维度<br />
+返回的是每个维度对应的序号</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.tensor(</span><br><span class="line">            [[0, 1, 2],</span><br><span class="line">            [3, 10, 5],</span><br><span class="line">            [60, 7, 1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(0)</span><br><span class="line">tensor([2, 1, 1])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(1)</span><br><span class="line">tensor([2, 1, 0])</span><br></pre></td></tr></table></figure>
+<h2 id="max-min"><a class="markdownIt-Anchor" href="#max-min"></a> max() / min()</h2>
+<p>返回位置和具体的值，返回的是元组形式。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a.max(1)</span><br><span class="line">torch.return_types.max(</span><br><span class="line">    values=tensor([ 2, 10, 60]),</span><br><span class="line">    indices=tensor([2, 1, 0]))</span><br></pre></td></tr></table></figure>
+<p>使用<code>a.max(1)[1]</code>来得到最大值结果。</p>
+<h2 id="sort"><a class="markdownIt-Anchor" href="#sort"></a> sort()</h2>
+<p><code>tensor.sort()</code> / <code>torch.sort()</code><br />
+排序并且返回一个<code>namedtuple</code>:<code>(values, indices)</code>，即排序后的tensor，和tensor元素的原始位置。</p>
+<p>参数：</p>
+<ul>
+<li><code>dim (int, optional)</code></li>
+<li><code>descending = False (bool, optional)</code>：是否降序，默认为False（升序）</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[ 0,  1,  2],</span><br><span class="line">        [ 3, 10,  5],</span><br><span class="line">        [60,  7,  1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.sort(0)</span><br><span class="line">torch.return_types.sort(</span><br><span class="line">values=tensor([[ 0,  1,  1],</span><br><span class="line">                [ 3,  7,  2],</span><br><span class="line">                [60, 10,  5]]),</span><br><span class="line">indices=tensor([[0, 0, 2],</span><br><span class="line">                [1, 2, 0],</span><br><span class="line">                [2, 1, 1]]))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a = torch.ones(2,3)</span><br></pre></td></tr></table></figure>
+<p>使用<code>a.sort(1)[0]</code>得到排序后结果。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/1.2.%20Torch.tensor%E8%AE%A1%E7%AE%97/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -867,109 +1245,6 @@ batch-mm，不推荐，因为不支持自动broadcast。</p>
 <li>Element-wise Mult</li>
 </ul>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; torch.einsum(&quot;ij,ij-&gt;ij&quot;,a,a)</span><br></pre></td></tr></table></figure>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/22/Coding/Pytorch/1.3.%20Torch.tensor%E6%9E%81%E5%80%BC%E5%92%8C%E6%8E%92%E5%BA%8F/" class="post-title-link" itemprop="url">1.3 torch.tensor 极值和排序</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-22 23:08:30" itemprop="dateCreated datePublished" datetime="2021-09-22T23:08:30+08:00">2021-09-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>194</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="argmax-argmin"><a class="markdownIt-Anchor" href="#argmax-argmin"></a> argmax() / argmin()</h2>
-<p><code>tensor.argmax()</code>，传入维度<br />
-<code>torch.argmax()</code>，传入tensor和维度<br />
-返回的是每个维度对应的序号</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = torch.tensor(</span><br><span class="line">            [[0, 1, 2],</span><br><span class="line">            [3, 10, 5],</span><br><span class="line">            [60, 7, 1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(0)</span><br><span class="line">tensor([2, 1, 1])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.argmax(1)</span><br><span class="line">tensor([2, 1, 0])</span><br></pre></td></tr></table></figure>
-<h2 id="max-min"><a class="markdownIt-Anchor" href="#max-min"></a> max() / min()</h2>
-<p>返回位置和具体的值，返回的是元组形式。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a.max(1)</span><br><span class="line">torch.return_types.max(</span><br><span class="line">    values=tensor([ 2, 10, 60]),</span><br><span class="line">    indices=tensor([2, 1, 0]))</span><br></pre></td></tr></table></figure>
-<p>使用<code>a.max(1)[1]</code>来得到最大值结果。</p>
-<h2 id="sort"><a class="markdownIt-Anchor" href="#sort"></a> sort()</h2>
-<p><code>tensor.sort()</code> / <code>torch.sort()</code><br />
-排序并且返回一个<code>namedtuple</code>:<code>(values, indices)</code>，即排序后的tensor，和tensor元素的原始位置。</p>
-<p>参数：</p>
-<ul>
-<li><code>dim (int, optional)</code></li>
-<li><code>descending = False (bool, optional)</code>：是否降序，默认为False（升序）</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a</span><br><span class="line">tensor([[ 0,  1,  2],</span><br><span class="line">        [ 3, 10,  5],</span><br><span class="line">        [60,  7,  1]])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a.sort(0)</span><br><span class="line">torch.return_types.sort(</span><br><span class="line">values=tensor([[ 0,  1,  1],</span><br><span class="line">                [ 3,  7,  2],</span><br><span class="line">                [60, 10,  5]]),</span><br><span class="line">indices=tensor([[0, 0, 2],</span><br><span class="line">                [1, 2, 0],</span><br><span class="line">                [2, 1, 1]]))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; a = torch.ones(2,3)</span><br></pre></td></tr></table></figure>
-<p>使用<code>a.sort(1)[0]</code>得到排序后结果。</p>
 
       
     </div>
@@ -1366,137 +1641,6 @@ batch-mm，不推荐，因为不支持自动broadcast。</p>
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/09/22/Coding/Numpy/11.%E6%95%B0%E7%BB%84%E7%BB%9F%E8%AE%A1%E5%87%BD%E6%95%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/09/22/Coding/Numpy/11.%E6%95%B0%E7%BB%84%E7%BB%9F%E8%AE%A1%E5%87%BD%E6%95%B0/" class="post-title-link" itemprop="url">11.数组统计函数</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-09-22 14:34:22" itemprop="dateCreated datePublished" datetime="2021-09-22T14:34:22+08:00">2021-09-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/" itemprop="url" rel="index"><span itemprop="name">Data Analysis Package</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/Numpy/" itemprop="url" rel="index"><span itemprop="name">Numpy</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>393</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>NumPy 提供了很多统计函数，用于从数组中查找最小元素，最大元素，百分位标准差和方差等。</p>
-<ul>
-<li><code>numpy.amin(a, axis=None,)</code> ： 计算数组中的元素沿指定轴的最小值。<br />
-<code>numpy.amax(a, axis=None,)</code>：计算数组中的元素沿指定轴的最大值。
-<ul>
-<li><code>axis</code>：不指定时返回数组中最小/大的一个元素。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.array( [ [3,7,5],</span><br><span class="line">                    [8,4,3], </span><br><span class="line">                    [2,4,9] ] ) </span><br><span class="line">&gt;&gt;&gt; np.amax(a)</span><br><span class="line">9</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.amin(a,1)</span><br><span class="line">[3 3 2]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.amin(a,0)</span><br><span class="line">[2 4 3]</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>numpy.ptp(a, axis=None, ..)</code>：计算数组中元素最大值与最小值的差 <strong>（最大值 - 最小值）</strong> 。</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; np.array([[3,7,5],[8,4,3],[2,4,9]])  </span><br><span class="line">&gt;&gt;&gt; np.ptp(a)</span><br><span class="line">7</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.ptp(a, axis =  1)</span><br><span class="line">[[4 5 7]]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.ptp(a, axis =  0)</span><br><span class="line">[6 3 6]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>
-<p><code>numpy.percentile(a, q, axis=None)</code>：计算百分位数</p>
-<ul>
-<li><code>a</code>: 输入数组</li>
-<li><code>q</code>: 要计算的百分位数，在 0 ~ 100 之间</li>
-<li><code>axis</code>: 沿着它计算百分位数的轴</li>
-</ul>
-</li>
-<li>
-<p><code>numpy.median(a, axis=None)</code>：计算中位数</p>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.array([ [30,65,70],</span><br><span class="line">                   [80,95,10],</span><br><span class="line">                   [50,90,60] ])  </span><br><span class="line">&gt;&gt;&gt; np.median(a)</span><br><span class="line">65.0</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.median(a, axis =  0)</span><br><span class="line">[50. 90. 60.]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.median(a, axis =  1)</span><br><span class="line">[65. 80. 60.]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>
-<p><code>numpy.mean(a, axis=None)</code>：计算平均值<br />
-算术平均值是沿轴的元素的总和除以元素的数量。</p>
-</li>
-<li>
-<p><code>numpy.average(a, axis=None, weights=None, returned=False)</code>：在另一个数组中给出的各自的权重计算数组中元素的加权平均值</p>
-<ul>
-<li><code>axis</code>：该函数可以接受一个轴参数。 如果没有指定轴，则数组会被展开。</li>
-<li><code>weights</code>：不指定权重时，相当于<code>np.mean()</code>函数。</li>
-<li><code>returned</code>：在设置为True时，返回<code>(average, sum_of_weights)</code>元组。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; a = np.arange(6).reshape(3,2)  </span><br><span class="line">&gt;&gt;&gt; wt = np.array([3,5])  </span><br><span class="line">&gt;&gt;&gt; np.average(a, axis =  1, weights = wt)</span><br><span class="line">[0.625 2.625 4.625]</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; np.average(a, axis =  1, weights = wt, returned =  True)</span><br><span class="line">(array([0.625, 2.625, 4.625]), array([8., 8., 8.]))</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>np.std()</code>：标准差</li>
-<li><code>np.var()</code>：方差</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1565,7 +1709,7 @@ batch-mm，不推荐，因为不支持自动broadcast。</p>
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">352</span>
+          <span class="site-state-item-count">353</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1574,6 +1718,10 @@ batch-mm，不推荐，因为不支持自动broadcast。</p>
           
         <span class="site-state-item-count">39</span>
         <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
       </div>
   </nav>
 </div>
@@ -1617,13 +1765,13 @@ batch-mm，不推荐，因为不支持自动broadcast。</p>
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">602k</span>
+    <span title="Symbols count total">603k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:12</span>
+    <span title="Reading time total">50:14</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
