@@ -27,9 +27,18 @@
 <meta property="og:site_name" content="Yili">
 <meta property="og:description" content="来自 Andrej Karpathy 的 yotube 视频： Let’s build the GPT Tokenizer">
 <meta property="og:locale">
-<meta property="article:published_time" content="2024-02-24T16:46:45.000Z">
-<meta property="article:modified_time" content="2024-03-29T01:54:35.668Z">
+<meta property="og:image" content="http://example.com/images/NLP/tknz.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/QUQBw2tp7rA8WCy5pRTx-9iNSc5Oq7AFhzUrj-Mz0AM.original.fullsize.png">
+<meta property="og:image" content="http://example.com/images/NLP/bpe.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/dV9kcswKh69g6FsrnzQ5eGdVh1s0bkUWMRqnmTmjEUs.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/hJgDD5YGWVGadiYEmmAk8WnOXZFbsZCCY-HEBNnj-Bc.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/ISYWZEjn-X3GMq6ESRS3qbtZ9kHEwpaM-Z7W37cSNOo.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/5vwoG09bUF-SO9M-a0lVM7cIaeglpBZ7U87CHgaRAU4.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/52k3ifQn4FWGv9dkLZhh3t1feJnjpkPHZFxajHXdGg4.original.fullsize.png">
+<meta property="article:published_time" content="2024-02-25T08:46:45.000Z">
+<meta property="article:modified_time" content="2024-08-30T01:45:53.681Z">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/NLP/tknz.png">
 
 <link rel="canonical" href="http://example.com/2024/02/25/NLP/Tokenizer/">
 
@@ -205,7 +214,7 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2024-02-25 00:46:45" itemprop="dateCreated datePublished" datetime="2024-02-25T00:46:45+08:00">2024-02-25</time>
+              <time title="Created: 2024-02-25 00:46:45" itemprop="dateCreated datePublished" datetime="2024-02-25T00:46:45-08:00">2024-02-25</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -227,14 +236,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.6k</span>
+              <span>2.4k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>8 mins.</span>
+              <span>12 mins.</span>
             </span>
 
         </div>
@@ -254,36 +263,136 @@
 <li>在训练 tokenizer 时，英文语料多 → 更多的英文 token 在训练时被合并 → 英文 token 数量变多  →  英文序列更短 → 英文的 token 凝练度更高 。</li>
 <li>同时需要的数量小，编码效率更高，节省 max seq len 。</li>
 </ol>
+<h2 id="三种不同粒度的-tokenizer"><a class="markdownIt-Anchor" href="#三种不同粒度的-tokenizer"></a> 三种不同粒度的 tokenizer</h2>
+<ol>
+<li>Word-based：根据一些规则，将 word 和 标点 分开，每一个词都被一个 id 表示。</li>
+</ol>
+<ul>
+<li>优点：符合人的自然语言和直觉</li>
+<li>问题：
+<ul>
+<li>依赖切分规则；</li>
+<li>相同意思的词被划分为不同的token，比如 dog 和 dogs</li>
+<li>词表非常大：可以限制词表大小，但是 unk 就变多了。</li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>Character-based Tokenizers</li>
+</ol>
+<ul>
+<li>优点：可以表示任意（英文）文本，不会出现 word-based 中的 unknown 情况；词表数量小</li>
+<li>缺点：
+<ul>
+<li>信息量非常低，模型性能一般很差</li>
+<li>需要很长的 token 序列</li>
+<li>中文也需要很长的词表</li>
+</ul>
+</li>
+</ul>
+<ol start="3">
+<li>Subword-based Tokenizers：不切分常用词，但是会切分非常用词，使用到词根词缀，符合英语义群，能够充分表意。</li>
+</ol>
+<ul>
+<li>分类：word piece ; (B)BPE ; Uni-gram ; SentencePiece</li>
+</ul>
+<p><img src="/images/NLP/tknz.png" alt="alt text" /></p>
+<img src="https://cdn.mathpix.com/snip/images/QUQBw2tp7rA8WCy5pRTx-9iNSc5Oq7AFhzUrj-Mz0AM.original.fullsize.png" />
 <h2 id="bpe-编码"><a class="markdownIt-Anchor" href="#bpe-编码"></a> BPE 编码</h2>
-<p>做法：</p>
-<p>不断找到频数最高的连续两个 字符 ，进行合并，并且替换 。</p>
-<p>BPE 的本质，为什么需要BPE：</p>
-<p>实现压缩，这样用更少的 token 表示相同的语义</p>
-<p>节省了计算（编码，解码，softmax），显存</p>
-<p>存在一个问题，即一个名词，比如 <code>“dog”</code> 可能会和很多标点符号组合在一起，被组合成多个其他 token，比如 <code>[&quot;dog.&quot;, &quot;, dog&quot;, &quot;dog!&quot;]</code> ，这是不想要的</p>
 <p>从 GPT2 开始使用了 byte-level BPE，但是没有发布训练 Tokenizer 的代码，仅仅 Tokenizer 推理的代码。</p>
-<p><a href="#jump">关于，请点击 ASCII，Unicode 和 UTF-8</a></p>
 <p>Byte-level BPE(BBPE)和Byte-Pair Encoding (BPE) 区别就是初始粒度问题： BPE 是最小词汇是字符级别，而 BBPE是字节级别的：也就是构建词表时将字符映射为对应的 UTF-8 格式，每个字符用不同长度的字节 byte 表示，这样初始词表大小为 256 ，然后进行 BPE 。</p>
 <p>好处是可以跨语言共用词表，显著压缩词表的大小。而坏处就是，对于类似中文这样的语言，一段文字的序列长度会显著增长。因此，BBPE based模型可能比BPE based模型表现的更好。然而，BBPE sequence比起BPE来说略长，这也导致了更长的训练/推理时间。BBPE其实与BPE在实现上并无大的不同，只不过基础词表使用256的字节集。</p>
-<p>GPT2 官方 编码逻辑：</p>
-<p>先使用了  RE 表达式进行拆分，将输入转化为一个一个子字符串。</p>
+<p><img src="/images/NLP/bpe.png" alt="alt text" /><br />
+做法：</p>
+<ol>
+<li>构建基本词表：拆分为 1-gram 的 char 粒度，取 set 得到基本词表。</li>
+<li>不断找到频数最高的连续两个 token ，进行合并，<br />
+然后将新的「合并token」加入字典，并且替换原始的词汇，<br />
+如果原始词表中的 token 已经不出现在语料中了，那么将其从词表中删除，这也是为什么词表大小先变长再变短的原因。</li>
+</ol>
+<p>BPE 的本质，为什么需要BPE：</p>
+<ul>
+<li>实现压缩，这样用更少的 token 表示相同的语义</li>
+<li>节省了计算（编码，解码，softmax），显存</li>
+</ul>
+<p>一个问题，即一个名词，比如 <code>“dog”</code> 可能会和很多标点符号组合在一起，被组合成多个其他 token，比如 <code>[&quot;dog.&quot;, &quot;, dog&quot;, &quot;dog!&quot;]</code> ，这是不想要的。</p>
+<p><a href="#jump">关于，请点击 ASCII，Unicode 和 UTF-8</a></p>
+<p>GPT2 官方拆分逻辑：</p>
+<ul>
+<li>
+<p>先使用了 RE 表达式进行拆分，将输入转化为一个一个子字符串。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">re.<span class="built_in">compile</span>(<span class="string">r&quot;&quot;&quot;&#x27;s|&#x27;t|&#x27;re|&#x27;ve|&#x27;m|&#x27;ll|&#x27;d| ?\p&#123;L&#125;+| ?\p&#123;N&#125;+| ?[^\s\p&#123;L&#125;\p&#123;N&#125;]+|\s+(?!\S)|\s+&quot;&quot;&quot;</span>)</span><br></pre></td></tr></table></figure>
 <p>匹配的顺序为：</p>
+<ol>
+<li>
 <p><code>'s|'t|'re|'ve|'m|'ll|'d</code> be 动词缩写</p>
-<p><code>?\p&#123;L&#125;+</code> 空格可选+word</p>
-<p><code>?\p&#123;N&#125;+</code> 空格可选+数字</p>
-<p><code>?[^\s\p&#123;L&#125;\p&#123;N&#125;]+</code> 空格可选+非数字和work的连续字符串，用于匹配连续的/单独的标点</p>
+</li>
+<li>
+<p><code>?\p&#123;L&#125;+</code> 空格可选 + <strong>word</strong></p>
+</li>
+<li>
+<p><code>?\p&#123;N&#125;+</code> 空格可选 + <strong>数字</strong></p>
+</li>
+<li>
+<p><code>?[^\s\p&#123;L&#125;\p&#123;N&#125;]+</code> 空格可选+ 「not 数字 和 not word」的 连续字符串，用于匹配连续的/单独的标点</p>
+</li>
+<li>
 <p><code>\s+(?!\S)</code> 任意长度的空格（ 长度大于等于2 ；切分时不包含最后一个空格，为前面的 pattern 考虑 ）</p>
+</li>
+<li>
 <p><code>\s+</code> 任意长度的尾随空格（ rstrip 的部分 ）</p>
+</li>
+</ol>
+</li>
+<li>
 <p>然后对照 bpe vocab list 进行编码</p>
+</li>
+<li>
 <p>SentencePiece 是一个用于训练 tokenizer 的库</p>
 <p>在实现 BPE 时候，参数 <code>byte_fallback</code> ，</p>
 <p>开启时，字典中保留 utf 编码，如果出现了不在字典中的字符，则转换为 utf 编码 ，然后根据 utf code 转化为真正的 token id 。</p>
 <p>关闭时，会将不存在在字典中的连续字符转化为 <code>&lt;unk&gt;</code> ，可能会丢失信息。</p>
 <p>LLama 是开启这个参数的，这样不会丢失信息。</p>
+</li>
+</ul>
+<p>缺点：</p>
+<ol>
+<li>如果想要包含所有基本字符，则需要一个很大的基础词汇表。例如，将所有 Unicode 字符都被视为基本字符（如中文）。<br />
+-&gt; BBPE，基础词汇表为 Byte ，大小为 256 。</li>
+<li>仅仅根据频率进行合并，没有考虑单独的独立概率。<br />
+-&gt; word piece</li>
+</ol>
 <h2 id="wordpiece"><a class="markdownIt-Anchor" href="#wordpiece"></a> WordPiece</h2>
-<p>BPE的变种 ；WordPiece基于概率生成新的 sub word 而不是下一最高频字节对；WordPiece 选择使得语言模型概率最大的相邻子词加入词表。</p>
+<p>和 BPE 类似，只不过使用类似「联合概率」的大小而不是频率来合并 token 。</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext> pair得分 </mtext><mo>=</mo><mfrac><mtext> pair出现的次数 </mtext><mrow><mtext> token1出现的次数 </mtext><mo>×</mo><mtext> token2出现的次数 </mtext></mrow></mfrac></mrow><annotation encoding="application/x-tex">\text { pair得分 }=\frac{\text { pair出现的次数 }}{\text { token1出现的次数 } \times \text { token2出现的次数 }}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8777699999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord"> pair</span><span class="mord cjk_fallback">得分</span><span class="mord"> </span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.12966em;vertical-align:-0.7693300000000001em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603299999999998em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> token1</span><span class="mord cjk_fallback">出现的次数</span><span class="mord"> </span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord text"><span class="mord"> token2</span><span class="mord cjk_fallback">出现的次数</span><span class="mord"> </span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> pair</span><span class="mord cjk_fallback">出现的次数</span><span class="mord"> </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.7693300000000001em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p>该算法优先考虑「子词不频繁」但是「整体频繁」的「token对」进行合并 。</p>
+<h2 id="uni-gram"><a class="markdownIt-Anchor" href="#uni-gram"></a> Uni-gram</h2>
+<p>首先初始化一个很大的词表，然后尝试去删除 p% 的 token，使得 loss 增加最小。<br />
+这里每删除一个 token 都会带来一定的 uni-gram loss，所以其实是选择 loss 最小的 p% 个 token 来删除。</p>
+<p>问题：需要计算所有的划分方式，十分耗时，可以采用 Viterbi 算法。</p>
+<h3 id="uni-gram-model"><a class="markdownIt-Anchor" href="#uni-gram-model"></a> Uni-gram model</h3>
+<p>假设 token 都是独立的，则似然概率为：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext> Unigram model : </mtext><mi>P</mi><mo stretchy="false">(</mo><mi>t</mi><mn>1</mn><mo separator="true">,</mo><mi>t</mi><mn>2</mn><mo separator="true">,</mo><mi>t</mi><mn>3</mn><mo separator="true">,</mo><mo>…</mo><mo separator="true">,</mo><mi>t</mi><mi>N</mi><mo stretchy="false">)</mo><mo>=</mo><mi>P</mi><mo stretchy="false">(</mo><mi>t</mi><mn>1</mn><mo stretchy="false">)</mo><mo>×</mo><mi>P</mi><mo stretchy="false">(</mo><mi>t</mi><mn>2</mn><mo stretchy="false">)</mo><mo>×</mo><mi>P</mi><mo stretchy="false">(</mo><mi>t</mi><mn>3</mn><mo stretchy="false">)</mo><mo>×</mo><mo>⋯</mo><mo>×</mo><mi>P</mi><mo stretchy="false">(</mo><mi>t</mi><mi>N</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text { Unigram model : }
+P(t 1, t 2, t 3, \ldots, t N)=P(t 1) \times P(t 2) \times P(t 3) \times \cdots \times P(t N)
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord"> Unigram model : </span></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">t</span><span class="mord">2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">t</span><span class="mord">3</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mord">1</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mord">2</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mord">3</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="minner">⋯</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mclose">)</span></span></span></span></span></p>
+<p>下面看下如何计算 unigram loss</p>
+<img src="https://cdn.mathpix.com/snip/images/dV9kcswKh69g6FsrnzQ5eGdVh1s0bkUWMRqnmTmjEUs.original.fullsize.png" style="zoom: 60%;" />
+<ol>
+<li>初始化词表：一样也是 char level 的</li>
+<li>构建词表：存在的连续的两个 token 进行拼接</li>
+<li>统计词表中每一个 token 的频率。</li>
+<li>然后计算每种情况的所有似然概率，选择似然概率最大的作为其概率。</li>
+</ol>
+<img src="https://cdn.mathpix.com/snip/images/hJgDD5YGWVGadiYEmmAk8WnOXZFbsZCCY-HEBNnj-Bc.original.fullsize.png" style="zoom: 60%;" />
+<img src="https://cdn.mathpix.com/snip/images/ISYWZEjn-X3GMq6ESRS3qbtZ9kHEwpaM-Z7W37cSNOo.original.fullsize.png" style="zoom: 60%;" />
+<p>得到整个语料库的 unigram loss ：<br />
+<img src="https://cdn.mathpix.com/snip/images/5vwoG09bUF-SO9M-a0lVM7cIaeglpBZ7U87CHgaRAU4.original.fullsize.png" style="zoom: 60%;" /></p>
+<p>尝试删去一个 token，并计算对应的 unigram loss，计算删除每一个 token 之后的 loss ：<br />
+<img src="https://cdn.mathpix.com/snip/images/52k3ifQn4FWGv9dkLZhh3t1feJnjpkPHZFxajHXdGg4.original.fullsize.png" /></p>
 <h2 id="sentencepiece"><a class="markdownIt-Anchor" href="#sentencepiece"></a> SentencePiece</h2>
+<p>前三者假设使用空格进行分词，但是很多语言不是空格来分词的。</p>
+<p>SentencePiece 则是将语言看作字节流，也就是看成字节。然后使用 BBPE 或者 Unigram 来构建词表。</p>
 <h1 id="asciiunicode-和-utf-8"><a class="markdownIt-Anchor" href="#asciiunicode-和-utf-8"></a> ASCII，Unicode 和 UTF-8</h1>
 <p><span id="jump"></span></p>
 <p><a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2007/10/ascii_unicode_and_utf-8.html">https://www.ruanyifeng.com/blog/2007/10/ascii_unicode_and_utf-8.html</a></p>
@@ -396,7 +505,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#tokenizer"><span class="nav-number">1.</span> <span class="nav-text"> Tokenizer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#bpe-%E7%BC%96%E7%A0%81"><span class="nav-number">1.1.</span> <span class="nav-text"> BPE 编码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#wordpiece"><span class="nav-number">1.2.</span> <span class="nav-text"> WordPiece</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sentencepiece"><span class="nav-number">1.3.</span> <span class="nav-text"> SentencePiece</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#asciiunicode-%E5%92%8C-utf-8"><span class="nav-number">2.</span> <span class="nav-text"> ASCII，Unicode 和 UTF-8</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ascii"><span class="nav-number">2.1.</span> <span class="nav-text"> ASCII</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unicode"><span class="nav-number">2.2.</span> <span class="nav-text"> Unicode</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#utf-8-unicode-transformation-format-8"><span class="nav-number">2.3.</span> <span class="nav-text"> UTF-8 （Unicode Transformation Format-8）</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#tokenizer"><span class="nav-number">1.</span> <span class="nav-text"> Tokenizer</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E7%A7%8D%E4%B8%8D%E5%90%8C%E7%B2%92%E5%BA%A6%E7%9A%84-tokenizer"><span class="nav-number">1.1.</span> <span class="nav-text"> 三种不同粒度的 tokenizer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bpe-%E7%BC%96%E7%A0%81"><span class="nav-number">1.2.</span> <span class="nav-text"> BPE 编码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#wordpiece"><span class="nav-number">1.3.</span> <span class="nav-text"> WordPiece</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#uni-gram"><span class="nav-number">1.4.</span> <span class="nav-text"> Uni-gram</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#uni-gram-model"><span class="nav-number">1.4.1.</span> <span class="nav-text"> Uni-gram model</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sentencepiece"><span class="nav-number">1.5.</span> <span class="nav-text"> SentencePiece</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#asciiunicode-%E5%92%8C-utf-8"><span class="nav-number">2.</span> <span class="nav-text"> ASCII，Unicode 和 UTF-8</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ascii"><span class="nav-number">2.1.</span> <span class="nav-text"> ASCII</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unicode"><span class="nav-number">2.2.</span> <span class="nav-text"> Unicode</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#utf-8-unicode-transformation-format-8"><span class="nav-number">2.3.</span> <span class="nav-text"> UTF-8 （Unicode Transformation Format-8）</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -409,7 +518,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">354</span>
+          <span class="site-state-item-count">355</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -461,13 +570,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">604k</span>
+    <span title="Symbols count total">608k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:20</span>
+    <span title="Reading time total">50:41</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
