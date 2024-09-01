@@ -30,7 +30,7 @@
 <meta property="og:image" content="https://pic1.zhimg.com/v2-f3590e104be5e3bd9539127adf7d6fa8_b.jpg">
 <meta property="og:image" content="https://pic3.zhimg.com/v2-0f671b2ebdbe6abd28ed4b446879d8fa_b.jpg">
 <meta property="article:published_time" content="2023-02-17T07:26:34.000Z">
-<meta property="article:modified_time" content="2024-07-30T15:15:09.717Z">
+<meta property="article:modified_time" content="2024-09-01T07:59:05.559Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://pic1.zhimg.com/v2-f3590e104be5e3bd9539127adf7d6fa8_b.jpg">
 
@@ -466,11 +466,11 @@ h_2 &amp; 0 &amp; 2 &amp; 0 &amp; 0
 <p>接下来详细推一下</p>
 <ol>
 <li>将所有文章进行切词，jieba 或者 n-gram，同时得到词典 。<br />
-对每个词典中的词进行 hash，hash为64维度的 01 比特编码，也就是 span -&gt; <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><msup><mo stretchy="false">]</mo><mn>6</mn></msup><mn>4</mn></mrow><annotation encoding="application/x-tex">[0,1]^64</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">1</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">6</span></span></span></span></span></span></span></span><span class="mord">4</span></span></span></span> ，词典维度为 <code>[vocab_size, bit_num]</code> 。</li>
+对每个词典中的词进行 hash，hash为64维度的 01 比特编码，也就是 span -&gt; <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><msup><mo stretchy="false">]</mo><mn>64</mn></msup></mrow><annotation encoding="application/x-tex">[0,1]^{64}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">1</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">6</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span> ，词典维度为 <code>[vocab_size, bit_num]</code> 。</li>
 <li>对每个文章的 span 进行 tf-idf 计算，或者其他weight，保留分数最大的 K 个关键词 ，用于表征文档 ；那么每个文档可以表示为 <code>[span_num, 1]</code> ，1 表示 tf-idf 分数 。</li>
 <li>然后每个词的 hash_code 乘以 tf-idf，对应位置bit为1，则直接为 <code>tf-idf_value</code> ，为0则为 <code>- tf-idf_value</code> ，比如这个词 hash code 为 <code>[1,0,1]</code> ，tf-idf 为 3 ，那么这个词就是 <code>[3,-3,3]</code> 。最终每个文档维度为 <code>[span_num, bit_num]</code> 。</li>
 <li>将统一文档中所有的上述表示相加，得到维度为 <code>[bit_num]</code> 的向量。</li>
-<li>将上述向量进行规约，大于0则变成1，小于0则变成0，这样每个文档为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><msup><mo stretchy="false">]</mo><mn>6</mn></msup><mn>4</mn></mrow><annotation encoding="application/x-tex">[0,1]^64</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">1</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">6</span></span></span></span></span></span></span></span><span class="mord">4</span></span></span></span> 。</li>
+<li>将上述向量进行规约，大于0则变成1，小于0则变成0，这样每个文档为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><msup><mo stretchy="false">]</mo><mn>64</mn></msup></mrow><annotation encoding="application/x-tex">[0,1]^{64}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">1</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">6</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span> 。</li>
 <li>于是两两文档可以计算相似度，也就是按照位置异或，同时会有个阀值 T，「值不同的位」数量小于这个 T 则被认为相同。</li>
 </ol>
 <h3 id="向量点积"><a class="markdownIt-Anchor" href="#向量点积"></a> 向量点积</h3>
@@ -820,8 +820,8 @@ h_2 &amp; 0 &amp; 2 &amp; 0 &amp; 0
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2023/02/16/NLP/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D/%E6%96%87%E6%9C%AC%E5%8C%B9%E9%85%8D02/" rel="prev" title="文本匹配02">
-      <i class="fa fa-chevron-left"></i> 文本匹配02
+    <a href="/2023/02/16/NLP/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90/Discourse-AwareGraph-And-Data-Augmentation/" rel="prev" title="对话摘要：Discourse-Aware Graph & Data Augmentation">
+      <i class="fa fa-chevron-left"></i> 对话摘要：Discourse-Aware Graph & Data Augmentation
     </a></div>
       <div class="post-nav-item">
     <a href="/2023/02/17/NLP/%E9%A2%84%E8%AE%AD%E7%BB%83%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/Pre-norm%E5%92%8CPost-norm/" rel="next" title="Pre-norm, Post-norm, RMS Norm, SwiGLU">
@@ -950,13 +950,13 @@ h_2 &amp; 0 &amp; 2 &amp; 0 &amp; 0
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">608k</span>
+    <span title="Symbols count total">611k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:41</span>
+    <span title="Reading time total">50:57</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
