@@ -179,6 +179,142 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E6%96%99%E5%BA%93%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E6%96%99%E5%BA%93%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B/" class="post-title-link" itemprop="url">语料库代码实例</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-23 21:43:31" itemprop="dateCreated datePublished" datetime="2021-04-23T21:43:31-07:00">2021-04-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Intro/" itemprop="url" rel="index"><span itemprop="name">Intro</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>663</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="加载语料库对象"><a class="markdownIt-Anchor" href="#加载语料库对象"></a> 加载语料库对象</h2>
+<p>通过传入分词的txt文档（每句一行，单次使用空格隔开），输出一个特定<code>List&lt; List&lt;IWord&gt; &gt;</code>类语料库对象。</p>
+<ul>
+<li>分词语料库可以使用<code>hanlp</code>中<code>CorpusLoader</code>对象的<code>convert2SentenceList</code>方法加载：</li>
+</ul>
+<ol>
+<li>自定义一个txt文档，充当语料库，使用空格隔开：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">my_cws_corpus.txt&gt;&gt;&gt;</span><br><span class="line"></span><br><span class="line">商品 和 服务</span><br><span class="line">商品 和服 物美价廉</span><br><span class="line">服务 和 货币</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>
+<p><strong>获取<code>CorpusLoader</code>类：</strong><code>CorpusLoader = SafeJClass('com.hankcs.hanlp.corpus.document.CorpusLoader')</code></p>
+</li>
+<li>
+<p>调用其<code>convert2SentenceList</code>方法载入分词语料：<code>sents = CorpusLoader.convert2SentenceList(path)</code><br />
+该方法返回<code>List&lt; List&lt;IWord&gt; &gt;</code>类型，大list中的每个元素都是一个单词列表，每个IWord都是一个单词。</p>
+</li>
+</ol>
+<h2 id="统计n-gram语法"><a class="markdownIt-Anchor" href="#统计n-gram语法"></a> 统计n-gram语法</h2>
+<ol>
+<li><strong>得到库中特定<code>maker</code>类</strong>，用于统计n-gram语法，即统计临近单词组出现的概率</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">NatureDictionaryMaker = SafeJClass(&#x27;com.hankcs.hanlp.corpus.dictionary.NatureDictionaryMaker&#x27;)</span><br><span class="line">maker = NatureDictionaryMaker()</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>
+<p>使用maker类的<code>compute</code>方法统计语料<code>List&lt; List&lt;IWord&gt; &gt;</code>类型：<br />
+<code>maker.compute(sents)</code></p>
+</li>
+<li>
+<p>调用maker类的<code>saveTxtTo</code>方法，传入一个文件名，写入统计结果：<code>maker.saveTxtTo(model_path)</code></p>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># 利用分词词典，构建语法模型</span><br><span class="line">def train_bigram(corpus_path, model_path):</span><br><span class="line">    sents = CorpusLoader.convert2SentenceList(corpus_path)</span><br><span class="line">    for sent in sents:</span><br><span class="line">        for word in sent:</span><br><span class="line">            word.setLabel(&quot;n&quot;)</span><br><span class="line">    maker = NatureDictionaryMaker()</span><br><span class="line">    maker.compute(sents)</span><br><span class="line">    maker.saveTxtTo(model_path)</span><br><span class="line"></span><br><span class="line">train_bigram(path, &#x27;resultDic&#x27;)</span><br></pre></td></tr></table></figure>
+<p>在这里，使用<code>word</code>中的<code>setLabel</code>方法，设置每个单词词性均为名词。</p>
+<ol start="4">
+<li>可以看到输出了三个文件：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">resultDic.tr.txt &gt;&gt;&gt;</span><br><span class="line"></span><br><span class="line">resultDic.txt &gt;&gt;&gt; 一元语法模型</span><br><span class="line"></span><br><span class="line">    和 n 2</span><br><span class="line">    和服 n 1</span><br><span class="line">    商品 n 2</span><br><span class="line">    始##始 begin 3</span><br><span class="line">    服务 n 2</span><br><span class="line">    末##末 end 3</span><br><span class="line">    物美价廉 n 1</span><br><span class="line">    货币 n 1</span><br><span class="line"></span><br><span class="line">resultDic.ngram.txt &gt;&gt;&gt; 二元语法模型</span><br><span class="line"></span><br><span class="line">    和@服务 1</span><br><span class="line">    和@货币 1</span><br><span class="line">    和服@物美价廉 1</span><br><span class="line">    商品@和 1</span><br><span class="line">    商品@和服 1</span><br><span class="line">    始##始@商品 2</span><br><span class="line">    始##始@服务 1</span><br><span class="line">    服务@和 1</span><br><span class="line">    服务@末##末 1</span><br><span class="line">    物美价廉@末##末 1</span><br><span class="line">    货币@末##末 1</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>末##末</code>和<code>始##始</code>分别表示结尾开头，词性也是库定义。</li>
+<li>一元词典中，每行表示<strong>单词，词性，词性的频次</strong><br />
+二元词典中，使用 <strong>@<strong>来分隔两个单词，然后接上</strong>单词的频次</strong></li>
+</ul>
+<h2 id="使用二元语法进行预测解码"><a class="markdownIt-Anchor" href="#使用二元语法进行预测解码"></a> 使用二元语法进行预测/解码</h2>
+<p>预测是指利用模型对句子样本进行推断的过程，即利用模型推断分词序列，也称解码 decode。</p>
+<ul>
+<li>加载模型-&gt;预测<br />
+首先我们已经使用java中的’com.hankcs.hanlp.corpus.dictionary.NatureDictionaryMaker’创建了模型词典，接下来我们需要加载这些词典。<br />
+一元语法使用<code>CoreDictionary</code>类，二元语法使用<code>CoreBiGramTableDictionary</code>类。他们都是静态工具类，无需创建实例。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># 利用语料库进行预测</span><br><span class="line">def load_bigarm(model_path):</span><br><span class="line">    HanLP.Config.CoreDictionaryPath = model_path + &quot;.txt&quot;</span><br><span class="line">    HanLP.Config.BiGramDictionaryPath = model_path + &quot;.ngram.txt&quot;</span><br><span class="line"></span><br><span class="line">    # 引入java类</span><br><span class="line">    CoreDictionary = SafeJClass(&#x27;com.hankcs.hanlp.dictionary.CoreDictionary&#x27;)</span><br><span class="line">    CoreBiGramTableDictionary = SafeJClass(&#x27;com.hankcs.hanlp.dictionary.CoreBiGramTableDictionary&#x27;)</span><br><span class="line"></span><br><span class="line">    # 得到频率</span><br><span class="line">    print(CoreDictionary.getTermFrequency(&quot;商品&quot;))</span><br><span class="line">    print(CoreBiGramTableDictionary.getBiFrequency(&quot;商品&quot;, &quot;和&quot;))</span><br><span class="line"></span><br><span class="line">load_bigarm(&quot;resultDic&quot;)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">2</span><br><span class="line">1</span><br></pre></td></tr></table></figure>
+<p>可以看到“商品”和“商品@和”的频率分别为2，1</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1579,119 +1715,6 @@ IV指登陆词</p>
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/Coding/Transformers/BetterTransformer/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/22/Coding/Transformers/BetterTransformer/" class="post-title-link" itemprop="url">BetterTransformer</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-04-22 14:27:36" itemprop="dateCreated datePublished" datetime="2021-04-22T14:27:36-07:00">2021-04-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Transformers/" itemprop="url" rel="index"><span itemprop="name">Transformers</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>341</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/perf_infer_gpu_many">https://huggingface.co/docs/transformers/perf_infer_gpu_many</a></p>
-<p><a target="_blank" rel="noopener" href="https://pytorch.org/blog/out-of-the-box-acceleration/">https://pytorch.org/blog/out-of-the-box-acceleration/</a></p>
-<p><a target="_blank" rel="noopener" href="https://colab.research.google.com/drive/1Lv2RCG_AT6bZNdlL1oDDNNiwBBuirwI-?usp=sharing"> the Google Colab demo </a></p>
-<p>Converts Transformers models to use <strong>the PyTorch-native fastpath execution</strong>, which calls optimized kernels like Flash Attention under the hood.</p>
-<p>Flash Attention can only be used for models using <strong>fp16</strong> or <strong>bf16</strong> dtype.</p>
-<p>可以加速模型中 encoder layer 的计算，依赖于 fastpath 的实现，即</p>
-<ol>
-<li>Convert layer to faster-calculation version</li>
-</ol>
-<ul>
-<li>
-<p>For Encoder layer : 算子优化，将多个操作进行融合，使用一个内核直接完成 layer 上的变换。</p>
-<ul>
-<li>A base speedup is achieved through the use of <strong>fused kernels</strong> implementing multiple operations more efficiently in <strong>a single kernel</strong>.</li>
-</ul>
-</li>
-<li>
-<p>For Decoder layer : converts all attention operations to use the <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html"><code>torch.nn.functional.scaled_dot_product_attention</code> operator (SDPA)</a>.<br />
-SDPA can also call Flash Attention kernels or memory-efficient kernels under the hood.<br />
-To enable <strong>Flash Attention</strong> or to check that it is available in a given setting (hardware, problem size), use <code>torch.backends.cuda.sdp_kernel</code> as a context manager</p>
-  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">model = AutoModelForCausalLM.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>)</span><br><span class="line"><span class="comment"># convert the model to BetterTransformer</span></span><br><span class="line">model.to_bettertransformer()</span><br><span class="line"></span><br><span class="line">input_text = <span class="string">&quot;Hello my dog is cute and&quot;</span></span><br><span class="line">inputs = tokenizer(input_text, return_tensors=<span class="string">&quot;pt&quot;</span>).to(<span class="string">&quot;cuda&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ++++</span></span><br><span class="line"><span class="keyword">with</span> torch.backends.cuda.sdp_kernel(enable_flash=<span class="literal">True</span>, enable_math=<span class="literal">False</span>, enable_mem_efficient=<span class="literal">False</span>):</span><br><span class="line">    outputs = model.generate(**inputs)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(tokenizer.decode(outputs[<span class="number">0</span>], skip_special_tokens=<span class="literal">True</span>))</span><br></pre></td></tr></table></figure>
-<p>Form more info: <a target="_blank" rel="noopener" href="https://pytorch.org/blog/out-of-the-box-acceleration/">https://pytorch.org/blog/out-of-the-box-acceleration/</a></p>
-</li>
-</ul>
-<ol start="2">
-<li>For Encoder layer: exploits the sparsity due to padded tokens, related to the padding ratio in the input token sequences.<br />
-使用 nested tensors ，new type of torch tensor，可以支持变长的tensor，来避免 padding token 的运算 。</li>
-</ol>
-<p>4bit 训练 + BetterTransformer：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig</span><br><span class="line"></span><br><span class="line">quantization_config = BitsAndBytesConfig(</span><br><span class="line">    load_in_4bit=<span class="literal">True</span>,</span><br><span class="line">    bnb_4bit_compute_dtype=torch.float16</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">tokenizer = AutoTokenizer.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>)</span><br><span class="line">model = AutoModelForCausalLM.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>, quantization_config=quantization_config)</span><br><span class="line"></span><br><span class="line">input_text = <span class="string">&quot;Hello my dog is cute and&quot;</span></span><br><span class="line">inputs = tokenizer(input_text, return_tensors=<span class="string">&quot;pt&quot;</span>).to(<span class="string">&quot;cuda&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> torch.backends.cuda.sdp_kernel(enable_flash=<span class="literal">True</span>, enable_math=<span class="literal">False</span>, enable_mem_efficient=<span class="literal">False</span>):</span><br><span class="line">    outputs = model.generate(**inputs)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(tokenizer.decode(outputs[<span class="number">0</span>], skip_special_tokens=<span class="literal">True</span>))</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1760,7 +1783,7 @@ To enable <strong>Flash Attention</strong> or to check that it is available in a
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">355</span>
+          <span class="site-state-item-count">356</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1812,13 +1835,13 @@ To enable <strong>Flash Attention</strong> or to check that it is available in a
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">611k</span>
+    <span title="Symbols count total">615k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:57</span>
+    <span title="Reading time total">51:17</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>

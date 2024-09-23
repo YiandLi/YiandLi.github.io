@@ -179,6 +179,149 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/" class="post-title-link" itemprop="url">7.1 分布式原语</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-23 17:53:26" itemprop="dateCreated datePublished" datetime="2022-03-23T17:53:26-07:00">2022-03-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>677</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/478953028">Pytorch - 分布式通信原语（附源码）</a></p>
+<p>Torch 分布式训练依赖于 <code>torch.distributed</code> 模式，提供两种通信方式：</p>
+<ol>
+<li><code>point 2 point communication</code>: <code>send</code>,<code>recv</code></li>
+<li><code>collective communication</code>: <code>scatter</code>, <code>broadcast</code>, <code>gather</code>, <code>reduce</code>, <code>all_reduce</code>, <code>all_gather</code></li>
+</ol>
+<p>API-Collective functions: <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#collective-functions">https://pytorch.org/docs/stable/distributed.html#collective-functions</a><br />
+API-Point-to-point communication: <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#point-to-point-communication">https://pytorch.org/docs/stable/distributed.html#point-to-point-communication</a></p>
+<h2 id="broadcast"><a class="markdownIt-Anchor" href="#broadcast"></a> broadcast</h2>
+<p><img src="https://pic4.zhimg.com/80/v2-57d0fbac0d5bf0091d20f34339768d3f_720w.webp" alt="" /></p>
+<p>将某一个 tensor 从 source rank 广播到其他 rank 。</p>
+<p><code>dist.broadcast(tensor, src = 0)</code> ，这是一个 in-place 方法，没有返回值，参数 <code>src</code> 设置哪个 rank 进行 broadcast，默认为 rank 0 。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before broadcast&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line">dist.broadcast(tensor, src = <span class="number">0</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;after broadcast&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<p>首先创建一个张量，广播后这个张量被覆盖。</p>
+<h2 id="scatter"><a class="markdownIt-Anchor" href="#scatter"></a> Scatter</h2>
+<p><img src="https://pic2.zhimg.com/80/v2-c70a767109c9054e96c390498c06bef1_720w.webp" alt="" /></p>
+<p>将一个 tensor 切分并且均匀分布到其他 rank  上。</p>
+<p><code>torch.distributed.scatter(tensor, scatter_list=None, src=0, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：除 src rank 外，其他 rank 获取并且存储 output tensor 的参数</li>
+<li><code>scatter_list</code>：需要进行 scatter 的 tensor list，只有 src rank 才能设置 scatter_list 的值。这个值需要和 dest rank 数量相同。</li>
+<li><code>src</code>：设置哪个 rank 进行 scatter，默认为 rank 0</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before scatter&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line"><span class="keyword">if</span> rank_id == <span class="number">0</span>:</span><br><span class="line">    scatter_list = [torch.tensor([<span class="number">0</span>,<span class="number">0</span>]), torch.tensor([<span class="number">1</span>,<span class="number">1</span>]), torch.tensor([<span class="number">2</span>,<span class="number">2</span>]), torch.tensor([<span class="number">3</span>,<span class="number">3</span>])]</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;scater list:&#x27;</span>, scatter_list)</span><br><span class="line">    dist.scatter(tensor, src = <span class="number">0</span>, scatter_list=scatter_list)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    dist.scatter(tensor, src = <span class="number">0</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;after scatter&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<p>注意上述代码中，<code>scatter_list</code> 类型为 <code>list</code> 。<br />
+一共有4个rank参与了scatter计算，<br />
+计算之前：scatter list为 <code>[0,0], [1,1], [2,2], [3,3]</code>;<br />
+计算之后：rank 按顺序被分配 scatter list 的每一个 tensor，rank0 为 <code>[0,0]</code>，rank1 为 <code>[1, 1]</code>，rank2 为 <code>[2, 2]</code>，rank3 为 <code>[3, 3]</code>;</p>
+<h2 id="gather"><a class="markdownIt-Anchor" href="#gather"></a> gather</h2>
+<p><img src="https://pic2.zhimg.com/80/v2-3221610be4ec9f0bbffe2cb70ecd4191_720w.webp" alt="" /></p>
+<p>和 scatter 相反，将多个元素汇总到同一个rank上。</p>
+<p><code>torch.distributed.gather(tensor, gather_list=None, dst=0, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：所有rank的input tensor</li>
+<li><code>gather_list</code>：dst rank 的 output 结果；只有 dst rank 需要设置；长度需要和 src node 数量一致。</li>
+<li><code>dst</code>：汇总数据的 node id</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(<span class="number">2</span>, dtype=torch.int64) + <span class="number">1</span> + <span class="number">2</span> * rank_id</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;before gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line"><span class="keyword">if</span> rank_id == <span class="number">0</span>:</span><br><span class="line">    gather_list = [torch.zeros(<span class="number">2</span>, dtype=torch.int64) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">4</span>)]</span><br><span class="line">    dist.gather(tensor, dst = <span class="number">0</span>, gather_list=gather_list)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;after gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;gather_list:&#x27;</span>, gather_list)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    dist.gather(tensor, dst = <span class="number">0</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;after gather&#x27;</span>,<span class="string">&#x27; Rank &#x27;</span>, rank_id, <span class="string">&#x27; has data &#x27;</span>, tensor)</span><br></pre></td></tr></table></figure>
+<h2 id="reduce"><a class="markdownIt-Anchor" href="#reduce"></a> reduce</h2>
+<p><img src="https://pic1.zhimg.com/80/v2-49c58e602f1790231b2146f67af843f0_720w.webp" alt="" /></p>
+<p>可以看成是对 gather 的结果求和 。</p>
+<p><code>torch.distributed.reduce(tensor, dst, op=&lt;ReduceOp.SUM: 0&gt;, group=None, async_op=False)</code></p>
+<ul>
+<li><code>tensor</code>：需要进行reduce计算的数据，对于dst rank来说，tensor为最终reduce的结果</li>
+<li><code>dist</code>：接收答案的 rank id</li>
+<li><code>op</code>：聚合算子 ，包含 SUM, PRODUCT, MIN, MAX, BAND, BOR, BXOR 。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tensor = torch.arange(2, dtype=torch.int64) + 1 + 2 * rank_id</span><br><span class="line">print(&#x27;before reudce&#x27;,&#x27; Rank &#x27;, rank_id, &#x27; has data &#x27;, tensor)</span><br><span class="line">dist.reduce(tensor, dst = 3, op=dist.ReduceOp.SUM,)</span><br><span class="line">print(&#x27;after reudce&#x27;,&#x27; Rank &#x27;, rank_id, &#x27; has data &#x27;, tensor)</span><br></pre></td></tr></table></figure>
+<p>注意，这里有个副作用，就是其他 source rank 的 tensor 也会被修改。</p>
+<h2 id="all-gather"><a class="markdownIt-Anchor" href="#all-gather"></a> all-gather</h2>
+<p><img src="https://pic4.zhimg.com/80/v2-a68cdf9a51ee8689969e752b4fa3d107_720w.webp" alt="" /></p>
+<p><code>torch.distributed.all_gather(tensor_list, tensor, group=None, async_op=False)</code> ，每个 rank 都要指定 gather_list 。</p>
+<h2 id="all-reduce"><a class="markdownIt-Anchor" href="#all-reduce"></a> all-reduce</h2>
+<p><img src="https://pic1.zhimg.com/80/v2-2d5a12cc360ef9b4a1d9d5f0ce687288_720w.webp" alt="" /></p>
+<p><code>torch.distributed.all_reduce(tensor, op=&lt;ReduceOp.SUM: 0&gt;, group=None, async_op=False) </code></p>
+<h2 id="ddp-数据并行训练"><a class="markdownIt-Anchor" href="#ddp-数据并行训练"></a> DDP 数据并行训练</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/482557067">https://zhuanlan.zhihu.com/p/482557067</a></p>
+<h2 id="pipeline-并行训练"><a class="markdownIt-Anchor" href="#pipeline-并行训练"></a> pipeline 并行训练</h2>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/483640235">https://zhuanlan.zhihu.com/p/483640235</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/7.%20%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%AD%E7%BB%83/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1123,131 +1266,6 @@ draw negative samples\</p>
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/04/%E5%A4%9A%E6%A8%A1%E6%80%81/cv-tasks/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/04/%E5%A4%9A%E6%A8%A1%E6%80%81/cv-tasks/" class="post-title-link" itemprop="url">cv-tasks</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-04 22:44:21" itemprop="dateCreated datePublished" datetime="2022-03-04T22:44:21-08:00">2022-03-04</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/MultiModal/" itemprop="url" rel="index"><span itemprop="name">MultiModal</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>296</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/465157303">底层视觉任务超详细解读 (目录)</a></p>
-<h1 id="任务"><a class="markdownIt-Anchor" href="#任务"></a> 任务</h1>
-<p>Swin-Transformer，Vit-G</p>
-<ul>
-<li>
-<p>Segmentation：SETR<br />
-对输入的图像进行逐像素的分类，标记出像素级别的物体</p>
-<ul>
-<li>
-<p><strong>语义分割</strong> ：只要将所由人的像素都归为一类</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/greatest-common-divisor-of-strings/?envType=study-plan-v2&amp;envId=leetcode-75">图像语义分割综述</a></li>
-</ul>
-</li>
-<li>
-<p><strong>实例分割</strong> ：还要将不同人的像素归为不同的类。也就是说实例分割比语义分割更进一步。</p>
-</li>
-</ul>
-</li>
-<li>
-<p>2D Detection： <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/482102646">目标检测 - 主流算法介绍 - 从RCNN到DETR</a><br />
-对输入的图像进行物体检测，标注物体在图像上的位置（仅标注其外切矩形），以及该位置上物体属于哪个分类。</p>
-<ul>
-<li>两个子任务：分类，定位（左上角右下角坐标）</li>
-<li>模型类型：
-<ul>
-<li>二阶段模型 (Two Stage) / <strong>滑动窗口分类方法</strong>，先筛选出可能存在物体的候选区域，然后判断候选区域中是否存在目标，精度更高。<br />
-R-CNN（Regions with CNN features）-&gt; Fast R-CNN -&gt; Faster R-CNN -&gt; Vit-<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/311595726/answer/2795362404">FRCNN</a></li>
-<li>一阶段模型 (One Stage)，速度更快。<br />
-SSD(Single Shot multibox-Detector)[4]、<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/183261974">YOLO(You Only Look Once)</a></li>
-</ul>
-</li>
-<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzI5MzUyMjcxNA==&amp;mid=2247501389&amp;idx=1&amp;sn=a762ee82ebf3ea571d35c81e3ac32acf&amp;chksm=ec725a38db05d32e45c108e30f995171074c87b1d11ad2564134a0941bc9427d263b8b216fe8&amp;token=107209320&amp;lang=zh_CN#rd">目标检测 评价指标</a></li>
-</ul>
-</li>
-<li>
-<p>classification</p>
-</li>
-<li>
-<p>深度估计</p>
-</li>
-<li>
-<p>3D Detection目标检测: <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/591349104">https://zhuanlan.zhihu.com/p/591349104</a></p>
-</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1316,7 +1334,7 @@ SSD(Single Shot multibox-Detector)[4]、<a target="_blank" rel="noopener" href="
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">355</span>
+          <span class="site-state-item-count">356</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1368,13 +1386,13 @@ SSD(Single Shot multibox-Detector)[4]、<a target="_blank" rel="noopener" href="
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">611k</span>
+    <span title="Symbols count total">615k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:57</span>
+    <span title="Reading time total">51:17</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>

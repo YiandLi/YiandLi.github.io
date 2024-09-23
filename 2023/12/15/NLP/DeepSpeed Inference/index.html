@@ -28,7 +28,7 @@
 <meta property="og:description" content="推理服务的几个限制条件：">
 <meta property="og:locale">
 <meta property="article:published_time" content="2023-12-16T01:07:43.000Z">
-<meta property="article:modified_time" content="2024-03-11T01:55:09.327Z">
+<meta property="article:modified_time" content="2024-09-08T20:57:46.078Z">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="http://example.com/2023/12/15/NLP/DeepSpeed%20Inference/">
@@ -227,14 +227,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>559</span>
+              <span>1.2k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>3 mins.</span>
+              <span>6 mins.</span>
             </span>
 
         </div>
@@ -280,6 +280,36 @@
 <p>还是按前面的 ZeRO 数据并行方式切，这个模型有 80 层，可以切成 8 组，一张卡 10 层，但是头一张卡没跑完之前后边的卡都得等着，这个显然不好，甚至还不如单卡排队一组一组跑。同时，假如有些模型的计算图本身不规则，不一定能平均分，会造成每一组都不均匀。</p>
 <p>这样切也行，但是太不优雅了。</p>
 <p>DeepSpeed 在推理中则按另一个方式切，即张量并行方式切分。具体到每一层中间，该层中非常耗时耗空间的矩阵乘法，会被平均切到了每一块卡上，如下图所示独立载入参数并单独运行计算，每一层所有节点都结束时通过 all_reduce 操作汇总数据，完成同步，再开始下一层的计算，以此类推。图中分割线上方是一块足够大的卡正常运行模型时的流程，下方是切好之后的运行方式。</p>
+<h1 id="代码"><a class="markdownIt-Anchor" href="#代码"></a> 代码</h1>
+<p><a target="_blank" rel="noopener" href="https://ckblogs.cn/posts/dl/DeepSpeed.html#stage-1-optimizer-state-partitioning">https://ckblogs.cn/posts/dl/DeepSpeed.html#stage-1-optimizer-state-partitioning</a></p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># deepspeed_stage_0.py</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># DeepSpeed automatically sets the LOCAL_RANK environment variable</span></span><br><span class="line"><span class="comment"># to the index of the current device.</span></span><br><span class="line">rank = <span class="built_in">int</span>(os.getenv(<span class="string">&quot;LOCAL_RANK&quot;</span>, <span class="string">&quot;0&quot;</span>))</span><br><span class="line"></span><br><span class="line">model = BloomForCausalLM.from_pretrained(<span class="string">&quot;bigscience/bloom-560m&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 如果我们不显示的指定 zero-stage，将默认使用 stage 0.</span></span><br><span class="line">deepspeed_config = &#123;</span><br><span class="line">    <span class="string">&quot;train_micro_batch_size_per_gpu&quot;</span>: <span class="number">1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">model_engine, _, _, _ = deepspeed.initialize(</span><br><span class="line">    model=model,</span><br><span class="line">    model_parameters=model.parameters(),</span><br><span class="line">    config=deepspeed_config</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Device <span class="subst">&#123;rank&#125;</span> - ZeRO Stage: <span class="subst">&#123;model_engine.zero_optimization_stage()&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+<p>启动使用 deepspeed 命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">deepspeed deepspeed_stage_0.py</span><br></pre></td></tr></table></figure>
+<p>使用 <code>deepspeed.initialize()</code> 处理模型，</p>
+<p>训练时：</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># DeepSpeed automatically sets the WORLD_SIZE environment variable</span></span><br><span class="line"><span class="comment"># to the number of devices participating in the training job.</span></span><br><span class="line">world_size = <span class="built_in">int</span>(os.getenv(<span class="string">&quot;WORLD_SIZE&quot;</span>, <span class="string">&quot;1&quot;</span>))</span><br><span class="line"></span><br><span class="line">tokenizer = AutoTokenizer.from_pretrained(<span class="string">&quot;bigscience/bloom-560m&quot;</span>)</span><br><span class="line">collator = DataCollatorForLanguageModeling(tokenizer, mlm=<span class="literal">False</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># helper function to load the wikitext dataset</span></span><br><span class="line"><span class="comment"># implementation can be found here:</span></span><br><span class="line"><span class="comment"># https://github.com/gnovack/distributed-training-and-deepspeed/blob/main/util.py</span></span><br><span class="line">train_dataset = load_wikitext(tokenizer, collator).select(<span class="built_in">range</span>(<span class="number">64</span>))</span><br><span class="line"></span><br><span class="line">train_dataloader = DataLoader(</span><br><span class="line">    train_dataset,</span><br><span class="line">    batch_size=<span class="number">1</span>,</span><br><span class="line">    shuffle=<span class="literal">False</span>,</span><br><span class="line">    sampler=DistributedSampler(train_dataset, num_replicas=world_size)</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> batch <span class="keyword">in</span> train_dataloader:</span><br><span class="line">    device = torch.device(<span class="string">&quot;cuda&quot;</span>, rank)</span><br><span class="line"></span><br><span class="line">    input_ids = batch[<span class="string">&#x27;input_ids&#x27;</span>].to(device)</span><br><span class="line">    labels = batch[<span class="string">&#x27;labels&#x27;</span>].to(device)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 计算损失</span></span><br><span class="line">    loss = model_engine(input_ids, labels = labels).loss</span><br><span class="line">    <span class="comment"># 反向传播</span></span><br><span class="line">    model_engine.backward(loss)</span><br><span class="line">    <span class="comment"># 优化模型参数</span></span><br><span class="line">    model_engine.step()</span><br></pre></td></tr></table></figure>
+<h2 id="stage-1-optimizer-shard"><a class="markdownIt-Anchor" href="#stage-1-optimizer-shard"></a> Stage 1 : Optimizer Shard</h2>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">deepspeed_config = &#123;</span><br><span class="line">    <span class="string">&quot;train_micro_batch_size_per_gpu&quot;</span>: <span class="number">1</span>,</span><br><span class="line">    <span class="string">&quot;optimizer&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;type&quot;</span>: <span class="string">&quot;Adam&quot;</span>,</span><br><span class="line">        <span class="string">&quot;params&quot;</span>: &#123;</span><br><span class="line">            <span class="string">&quot;lr&quot;</span>: <span class="number">5e-5</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">&quot;zero_optimization&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;stage&quot;</span>: <span class="number">1</span>,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">model_engine, optimizer, _, _ = deepspeed.initialize(</span><br><span class="line">    model=model,</span><br><span class="line">    model_parameters=model.parameters(),</span><br><span class="line">    config=deepspeed_config</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">return_items = [</span><br><span class="line">        engine,</span><br><span class="line">        engine.optimizer,</span><br><span class="line">        engine.training_dataloader,</span><br><span class="line">        engine.lr_scheduler,</span><br><span class="line">    ]</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">tuple</span>(return_items)</span><br></pre></td></tr></table></figure>
+<h2 id="stage-2-grad-shard"><a class="markdownIt-Anchor" href="#stage-2-grad-shard"></a> Stage 2 : Grad Shard</h2>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">deepspeed_config = &#123;</span><br><span class="line">    <span class="string">&quot;train_micro_batch_size_per_gpu&quot;</span>: <span class="number">1</span>,</span><br><span class="line">    <span class="string">&quot;optimizer&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;type&quot;</span>: <span class="string">&quot;Adam&quot;</span>,</span><br><span class="line">        <span class="string">&quot;params&quot;</span>: &#123;</span><br><span class="line">            <span class="string">&quot;lr&quot;</span>: <span class="number">5e-5</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">&quot;zero_optimization&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;stage&quot;</span>: <span class="number">2</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果在启用 ZeRO Stage 2 的情况下执行训练脚本，我们会发现 GPU 内存的峰值略有增加。<br />
+原因：</p>
+<ol>
+<li>对 <code>reduce_bucket_size</code> 的设置，在每次进行反向传播的过程中，梯度被平均放在了各个设备上，在做梯度下降的过程中，会对梯度打包成一个个 chunk ，再进行梯度下降，当然这样做的原因就在于提高效率，但是当打包的尺寸太大时，也会导致显存占用的增加。</li>
+<li>启用 <code>offload_optimizer</code> 配置减少 GPU 内存使用，这个操作的目的是将优化器状态从 GPU 迁移到 CPU 上，但是这个操作也会加大通信时间，而减少 GPU 所占显存。</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;zero_optimization&quot;: &#123;</span><br><span class="line">        &quot;stage&quot;: 2,</span><br><span class="line">        &quot;offload_optimizer&quot;: &#123;</span><br><span class="line">            &quot;device&quot;: &quot;cpu&quot;,</span><br><span class="line">            &quot;pin_memory&quot;: true</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li><code>deepspeed==0.4.4</code> 添加了一个新选项 <code>round_robin_gradients</code></li>
+</ol>
+<h2 id="stage-3-parameter-shard"><a class="markdownIt-Anchor" href="#stage-3-parameter-shard"></a> Stage 3 : Parameter Shard</h2>
+<p>ZeRO Stage 3在 Stage 2 的基础上对模型参数进行了分区。使用 ZeRO Stage 3 训练 BLOOM 560M 模型时，我们会发现与 Stage 2 相比，每个训练步骤后分配的内存从 3.48GB 降至 1.94GB。但 GPU 的峰值却增加到了 7.48GB。</p>
+<p>可以使用 <code>offload_param</code> 将模型参数从 GPU 迁移到 CPU 上</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;zero_optimization&quot;: &#123;</span><br><span class="line">        &quot;stage&quot;: 3,</span><br><span class="line">        &quot;offload_optimizer&quot;: &#123;</span><br><span class="line">            &quot;device&quot;: &quot;cpu&quot;,</span><br><span class="line">            &quot;pin_memory&quot;: true</span><br><span class="line">        &#125;,</span><br><span class="line">         &quot;offload_param&quot;: &#123;</span><br><span class="line">            &quot;device&quot;: &quot;cpu&quot;,</span><br><span class="line">            &quot;pin_memory&quot;: true</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>速度方面（左边比右边快）stage 0（DDP） &gt; stage 1 &gt; stage 2 &gt; stage 2 + offload &gt; stage 3 &gt; stage3 + offload</p>
+<p>GPU内存使用方面（右边比左边更节省GPU内存）stage 0（DDP） &lt; stage 1 &lt; stage 2 &lt; stage 2 + offload &lt; stage 3 &lt; stage 3 + offload</p>
 
     </div>
 
@@ -360,7 +390,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#inference-optimized-transformer-kernels"><span class="nav-number">1.</span> <span class="nav-text"> INFERENCE-OPTIMIZED TRANSFORMER KERNELS</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zero"><span class="nav-number">2.</span> <span class="nav-text"> Zero</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#inference-optimized-transformer-kernels"><span class="nav-number">1.</span> <span class="nav-text"> INFERENCE-OPTIMIZED TRANSFORMER KERNELS</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zero"><span class="nav-number">2.</span> <span class="nav-text"> Zero</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text"> 代码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#stage-1-optimizer-shard"><span class="nav-number">3.1.</span> <span class="nav-text"> Stage 1 : Optimizer Shard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#stage-2-grad-shard"><span class="nav-number">3.2.</span> <span class="nav-text"> Stage 2 : Grad Shard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#stage-3-parameter-shard"><span class="nav-number">3.3.</span> <span class="nav-text"> Stage 3 : Parameter Shard</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -373,7 +403,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">355</span>
+          <span class="site-state-item-count">356</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -425,13 +455,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">611k</span>
+    <span title="Symbols count total">615k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">50:57</span>
+    <span title="Reading time total">51:17</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
