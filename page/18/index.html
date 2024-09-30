@@ -179,6 +179,385 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/25/Coding/Pytorch/11.%20%E5%86%85%E5%AD%98%E7%9B%B8%E5%85%B3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/25/Coding/Pytorch/11.%20%E5%86%85%E5%AD%98%E7%9B%B8%E5%85%B3/" class="post-title-link" itemprop="url">11. 内存相关</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-25 18:53:24" itemprop="dateCreated datePublished" datetime="2022-03-25T18:53:24-07:00">2022-03-25</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>204</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <ol>
+<li>显示当前已经分配的 GPU 内存： <code>torch.cuda.memory_allocated()</code></li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#直接调用返回当前可用内存/显存</span></span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> pynvml</span><br><span class="line"><span class="keyword">import</span> psutil</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_avaliable_memory</span>(<span class="params">device</span>):</span><br><span class="line">    <span class="keyword">if</span> device==torch.device(<span class="string">&#x27;cuda:0&#x27;</span>):</span><br><span class="line">        pynvml.nvmlInit()</span><br><span class="line">        handle = pynvml.nvmlDeviceGetHandleByIndex(<span class="number">0</span>)        <span class="comment"># 0表示第一块显卡</span></span><br><span class="line">        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)</span><br><span class="line">        ava_mem=<span class="built_in">round</span>(meminfo.free/<span class="number">1024</span>**<span class="number">2</span>)</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;current available video memory is&#x27;</span> +<span class="string">&#x27; : &#x27;</span>+ <span class="built_in">str</span>(<span class="built_in">round</span>(meminfo.free/<span class="number">1024</span>**<span class="number">2</span>)) +<span class="string">&#x27; MIB&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">elif</span> device==torch.device(<span class="string">&#x27;cpu&#x27;</span>):</span><br><span class="line">        mem = psutil.virtual_memory()</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&#x27;current available memory is&#x27;</span> +<span class="string">&#x27; : &#x27;</span>+ <span class="built_in">str</span>(<span class="built_in">round</span>(mem.used/<span class="number">1024</span>**<span class="number">2</span>)) +<span class="string">&#x27; MIB&#x27;</span>)</span><br><span class="line">        ava_mem=<span class="built_in">round</span>(mem.used/<span class="number">1024</span>**<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ava_mem</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">buffer_enum, para_enum = <span class="built_in">sum</span>(<span class="built_in">list</span>([ i[<span class="number">1</span>].nelement() <span class="keyword">for</span> i <span class="keyword">in</span> model.named_buffers() ])),  \</span><br><span class="line">                            <span class="built_in">sum</span>(<span class="built_in">list</span>([ i[<span class="number">1</span>].nelement() <span class="keyword">for</span> i <span class="keyword">in</span> model.named_parameters() ]))</span><br><span class="line">buffer_esize, para_esize = <span class="built_in">list</span>(model.named_buffers())[<span class="number">0</span>][<span class="number">1</span>].element_size(), \</span><br><span class="line">                            <span class="built_in">list</span>(model.named_parameters())[<span class="number">0</span>][<span class="number">1</span>].element_size()</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Parameters elements numebr: <span class="subst">&#123;para_enum&#125;</span> , of memory size <span class="subst">&#123;para_esize&#125;</span> each ; totally <span class="subst">&#123; para_enum * para_esize / <span class="number">1024</span> / <span class="number">1024</span> / <span class="number">1024</span>:<span class="number">.4</span>f&#125;</span> GB.&quot;</span> )</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Buffers elements numebr: <span class="subst">&#123;buffer_enum&#125;</span> , of memory size <span class="subst">&#123;buffer_esize&#125;</span> each ; totally <span class="subst">&#123; buffer_enum * buffer_esize / <span class="number">1024</span> / <span class="number">1024</span> / <span class="number">1024</span>:<span class="number">.4</span>f&#125;</span> GB.&quot;</span> )</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>模型：</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">para = <span class="built_in">sum</span>([np.prod(<span class="built_in">list</span>(p.size())) <span class="keyword">for</span> p <span class="keyword">in</span> llama_model.parameters()])</span><br><span class="line">type_size = <span class="built_in">list</span>(llama_model.parameters())[<span class="number">0</span>].element_size()</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;Model &#123;&#125; : params: &#123;:4f&#125;GB of element size &#123;&#125;&#x27;</span>.<span class="built_in">format</span>(llama_model._get_name(), para * type_size / <span class="number">1024</span>**<span class="number">3</span>, type_size))</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/24/Coding/Pytorch/10.%20torch%20%E7%B4%A2%E5%BC%95%EF%BC%8C%E7%AD%9B%E9%80%89%EF%BC%8Cmask/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/24/Coding/Pytorch/10.%20torch%20%E7%B4%A2%E5%BC%95%EF%BC%8C%E7%AD%9B%E9%80%89%EF%BC%8Cmask/" class="post-title-link" itemprop="url">10. torch 索引，筛选，mask</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-24 18:53:24" itemprop="dateCreated datePublished" datetime="2022-03-24T18:53:24-07:00">2022-03-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>208</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>1 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="按照标准筛选"><a class="markdownIt-Anchor" href="#按照标准筛选"></a> 按照标准筛选</h1>
+<p>一般是用于概率矩阵运算或者求loss时，我们想只保留有意义的位置的元素，删除 mask 或者 负数样本。<br />
+可以使用 <code>torch.where</code> 操作得到所有满足条件的 index，然后直接拿出索引的值。</p>
+<p>下面例子中我们按照 attention_mask 进行筛选</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">active_indices = attention_mask.view(-1) == 1</span><br><span class="line">active_indices = torch.where(active_indices == True)[0]</span><br><span class="line">output_embedding_mu = original_embedding_mu.view(-1, self.embedding_dimension)[active_indices]</span><br><span class="line">output_embedding_sigma = original_embedding_sigma.view(-1, self.embedding_dimension)[active_indices]</span><br><span class="line">labels_straightened = labels.view(-1)[active_indices]</span><br></pre></td></tr></table></figure>
+<h1 id="判断每行是否完全一致"><a class="markdownIt-Anchor" href="#判断每行是否完全一致"></a> 判断每行是否完全一致</h1>
+<p>两个相同大小的二维 tensor，我们想判断其对应的每一行是否完全一致，这时需要用到 <code>torch.all()</code> 函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">loss_mask = torch.all(filtered_embedding_mu != repeated_output_embeddings_mu, dim=-1).int()</span><br></pre></td></tr></table></figure>
+<p>相当于先 <code>filtered_embedding_mu != repeated_output_embeddings_mu</code>，然后选择具体的维度 <code>dim</code>，查看该维度上的每个值是否全都是 <code>True</code>。<br />
+根据 <code>dim</code> 不同，可以拓展到多维。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/24/Coding/Pytorch/9.%20TensorBoard/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/24/Coding/Pytorch/9.%20TensorBoard/" class="post-title-link" itemprop="url">9. TensorBoard 可视化</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-24 17:57:05" itemprop="dateCreated datePublished" datetime="2022-03-24T17:57:05-07:00">2022-03-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>617</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><font size=10><strong>torch.utils.tensorboard</strong></font></p>
+<p>启动命令：<code>tensorboard --logdir ./run</code></p>
+<h2 id="环境配置"><a class="markdownIt-Anchor" href="#环境配置"></a> 环境配置</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">pip install tensorflow-tensorboard==1.5.1</span><br><span class="line">pip install tensorboard==1.14.0</span><br></pre></td></tr></table></figure>
+<p>如果提示找不到<code>past</code>包，则需要<code>pip install future</code>。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/03/24/Coding/Pytorch/9.%20TensorBoard/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/23/Coding/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/" class="post-title-link" itemprop="url">8. CUDA</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-03-23 18:53:24" itemprop="dateCreated datePublished" datetime="2022-03-23T18:53:24-07:00">2022-03-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/PyTorch/" itemprop="url" rel="index"><span itemprop="name">PyTorch</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>538</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>3 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>原文：<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/notes/cuda.html#cuda-nn-ddp-instead">pytorch.org/docs/stable/notes/cuda.html</a></p>
+<h1 id="cuda-semantics"><a class="markdownIt-Anchor" href="#cuda-semantics"></a> CUDA SEMANTICS</h1>
+<p><code>torch.cuda</code> 用来设置所选 GPU，所有的 CUDA Tensor 都会默认在该 GPU 上创建，同时对其后续操作不会更改其所属 GPU。<br />
+选定的 GPU 设备可以通过 <code>torch.cuda.device</code> 命令转换。<br />
+可以通过 <code>copy_()</code>，<code>to()</code>，<code>cuda()</code>命令将 tensor 拷贝到其他GPU上。除非设置 peer-to-peer memory access，否则将 tensor 转移到其他 GPU 会报错。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/03/23/Coding/Pytorch/8.%20CUDA%20%E4%B8%80%E7%82%B9%E7%82%B9/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/23/Coding/Pytorch/7.1%20%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E8%AF%AD/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -791,481 +1170,6 @@ draw negative samples\</p>
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/14/NLP/badcase/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/14/NLP/badcase/" class="post-title-link" itemprop="url">badcase</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-14 15:57:32" itemprop="dateCreated datePublished" datetime="2022-03-14T15:57:32-07:00">2022-03-14</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.5k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>7 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>source: <a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/b-7h3phyWRYe_GQnYkAdAA">心法利器[37] | bad case治疗术：认知篇</a></p>
-<h2 id="现状篇"><a class="markdownIt-Anchor" href="#现状篇"></a> 现状篇</h2>
-<ul>
-<li>使用完整的评测集来进行检验，而不是单纯的一两个样本。</li>
-<li>需要一个具有统计意义上的数据集：
-<ul>
-<li>数量上能支撑特定指标的计算足够稳定。</li>
-<li>抽样情况和实际使用的场景尽可能一致。</li>
-<li>质量可靠，足够支撑当前方案的数据集。</li>
-</ul>
-</li>
-<li>指标</li>
-<li>结论</li>
-</ul>
-<h2 id="分析篇"><a class="markdownIt-Anchor" href="#分析篇"></a> 分析篇</h2>
-<p>准确率分错的case，看漏召回的case</p>
-<h3 id="粗看"><a class="markdownIt-Anchor" href="#粗看"></a> 粗看</h3>
-<p>笼统地<strong>大体</strong>上去看，错误的样本都有什么特点，带有那些特征，例如长度、句式等是否有什么特点，又或者是问句等等。<br />
-这个只要通篇看下来，就会有比较明显的特点了，一下子能总结出比较突出的问题。<br />
-快速看快速找到比较大的问题，优点就是快，但问题是你要能粗看的出来才行，所以缺点就是细节问题比较难发现，而且有些问题是比较深层次的，例如同样是问句，但是为什么问句就会出错</p>
-<h3 id="追溯法"><a class="markdownIt-Anchor" href="#追溯法"></a> 追溯法</h3>
-<p>对<strong>一个case</strong>，重现整个训练和预测过程的方法。给定一个bad case，准备好日志，分析预测的每个阶段的分析结果，查看是否符合预期，不符合预期的，大概率这个部分有bug、词典词汇等什么明显的问题了。</p>
-<p>比如，很多问句会被误召回，这时候我们可以查查训练集中带有问句关键词的正负样本的比例是不是有问题，例如正样本远多于负样本，此时模型很可能就会认为只要带有疑问词的就是正类，我们需要加一些带疑问词的负样本进去。</p>
-<h3 id="解决法"><a class="markdownIt-Anchor" href="#解决法"></a> 解决法</h3>
-<p>例如短句预测不正确，而且一般都比较模糊，所以我们考虑的是过滤所有短句，然后再通过白名单的方式补召回，那我们就可以把query归类为短句。</p>
-<h3 id="问题标记"><a class="markdownIt-Anchor" href="#问题标记"></a> 问题标记</h3>
-<p>case是需要我们逐个分析的，后续我们需要对重点问题进行归纳总结，所以case分析往往是需要我们做一些关键的记录。</p>
-<table>
-<thead>
-<tr>
-<th>query</th>
-<th>原因分析</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>关闭</td>
-<td>短句</td>
-</tr>
-<tr>
-<td>今天天气怎么样</td>
-<td>疑问词，关键词拒绝</td>
-</tr>
-<tr>
-<td>你为什么</td>
-<td>疑问词，模糊</td>
-</tr>
-</tbody>
-</table>
-<p>标记的时候注意词汇和问题的统一，方便我们后续统计各个问题的占比，值得注意的是，一个问题是可能有多个解决方法的，我们记得要标记上，统计分析的时候都是要关注的。</p>
-<h3 id="问题统计和归纳"><a class="markdownIt-Anchor" href="#问题统计和归纳"></a> 问题统计和归纳</h3>
-<p>有了上面的标记，我们能很轻易地看拿到各个问题的分布情况，甚至可以总结出来。</p>
-<h2 id="解决篇"><a class="markdownIt-Anchor" href="#解决篇"></a> 解决篇</h2>
-<h3 id="样本的误导"><a class="markdownIt-Anchor" href="#样本的误导"></a> 样本的误导</h3>
-<p>对于一些数据内很浅层直白的信息，模型也会预测的非常直白，例如正类里面有大量含有“怎么”的样本，而负类里面没有，则模型很有可能会把所有带有“怎么”的句子都预测为正类。这个时候就需要负采样了。</p>
-<h3 id="阈值的确定和权衡"><a class="markdownIt-Anchor" href="#阈值的确定和权衡"></a> 阈值的确定和权衡</h3>
-<p>阈值本质是个准入条件，是和模型一起出现的标配，毕竟模型大部分时候只提供意见，要不要采纳还是要通过阈值（参考sigmoid，一般阀值为0.5）。<br />
-阀值变小，召回率变高，精确率下降，我们需要确定一个最佳阈值，对于搜索和对话场景，更多的是需要我们保准确，一般是0.85+，召回率另说。</p>
-<blockquote>
-<p>softmax 呢？相当于双重条件？max+大于阀值</p>
-</blockquote>
-<h3 id="前后处理和预处理"><a class="markdownIt-Anchor" href="#前后处理和预处理"></a> 前后处理和预处理</h3>
-<p>不同的场景和数据的预处理方式会很不同，哪怕是同样的NLP问题，到了细分场景也会有很多不同的操作，共同的可能是对标点的处理，而不同的例如客服场景要把“你好”之类的删除，语音助手要把“小爱同学”、“小布”之类的称呼删除等，重点不在于做了什么，而是要把一些对预测有影响干扰项、不利于预测的因素给去掉，至于哪些是干扰项，请回去看bad case，这些错误样本会告诉你。</p>
-<p>需要把一些肯定确定能快速预测出来的东西给过滤掉，从而提升性能也降低模型的负担，最简单的例如黑白名单，复杂的可以有一些针对业务的规则，例如超短句或者超长句直接拒绝等等，能用规则的尽量用规则，能不用模型的尽量不用模型，模型的不可控性众所周知，我们知道修复bad case的困难性的情况下，没必要太往依赖模型了。</p>
-<p>后处理是指在模型预测以后的一些调整，最直接能想到的就是阈值过滤，但不仅是这些，有的时候需要结合模型的预测打分进行调整，例如关键词抽取领域，需要对预测的重要性分数进行加减分，如句首词和句尾词要提权，对于百科的一些问题，语义相似度的定义可能会和实际应用不同，于是我们也要进行一些过滤，例如“五一节的由来”和“六一节的由来”从语义相似度上来说确实很接近，但是我们不能然你给他们相似，因为“五一节”和“六一节”很不同，所以我们通过“实体约束”来过滤掉他们，当然背后就需要一批实体词典了。</p>
-<h3 id="解决问题的验证和迭代"><a class="markdownIt-Anchor" href="#解决问题的验证和迭代"></a> 解决问题的验证和迭代</h3>
-<p>解决后继续跑分，然后继续分析优化，往复。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/09/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/AT-BDRY/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/09/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/AT-BDRY/" class="post-title-link" itemprop="url">AT-BDRY</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-09 21:06:09" itemprop="dateCreated datePublished" datetime="2022-03-09T21:06:09-08:00">2022-03-09</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/Named-entity-recognition/" itemprop="url" rel="index"><span itemprop="name">Named entity recognition</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.9k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>9 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>论文：<a target="_blank" rel="noopener" href="https://www.ijcai.org/proceedings/2019/0702.pdf">Adversarial Transfer for Named Entity Boundary Detection with Pointer Networks</a></p>
-<h1 id="abstract-and-introduction"><a class="markdownIt-Anchor" href="#abstract-and-introduction"></a> Abstract and Introduction</h1>
-<p>针对 <strong>命名实体边界识别问题/named entity boundary detection</strong> （不对判别实体类别），本文首先提出一种全新的实体边界标注方式（ptr network），然后提出  <strong>AT-BDRY</strong> 模型，应用于 <strong>无标注场景下的 ner 模型迁移</strong>。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/03/09/NLP/%E5%91%BD%E5%90%8D%E5%AE%9E%E4%BD%93%E8%AF%86%E5%88%AB/AT-BDRY/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/08/NLP/%E5%85%B3%E7%B3%BB%E6%8A%BD%E5%8F%96/DGCNN/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/08/NLP/%E5%85%B3%E7%B3%BB%E6%8A%BD%E5%8F%96/DGCNN/" class="post-title-link" itemprop="url">DGCNN</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-08 18:07:31" itemprop="dateCreated datePublished" datetime="2022-03-08T18:07:31-08:00">2022-03-08</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/Relationship-Extraction/" itemprop="url" rel="index"><span itemprop="name">Relationship Extraction</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>5.1k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>26 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>本文内容基本全部来自（复制粘贴）苏神的 DGCNN博客，只是改了改顺序，加入点自己的理解，方便以后回顾，感兴趣的还是看原文：<a target="_blank" rel="noopener" href="https://kexue.fm/archives/5409">基于CNN的阅读理解式问答模型：DGCNN (by 苏剑林)</a>。</p>
-<p>模型已经上线到火焰科技的官网上，可以<a target="_blank" rel="noopener" href="http://www.birdbot.cn/online-factual-qa.html">点击这个链接在线测试</a>。</p>
-<blockquote>
-<p>PS：后来发现，本文的模型其实跟《Fast Reading Comprehension with ConvNets》和《QANET: Combining Local Convolution with Global Self-Attention for Reading Comprehension》这两篇论文“撞车”了，但笔者当初做比赛时，确实从未参考过这两篇论文。当时是从WebQA的论文出发，打算复现WebQA的模型，然后觉得好奇就想试试CNN模型，然后就一发不可收了。</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/03/08/NLP/%E5%85%B3%E7%B3%BB%E6%8A%BD%E5%8F%96/DGCNN/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/03/04/%E5%A4%9A%E6%A8%A1%E6%80%81/cv-Transpose%20Convolution%20Layer/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/04/%E5%A4%9A%E6%A8%A1%E6%80%81/cv-Transpose%20Convolution%20Layer/" class="post-title-link" itemprop="url">cv-Transpose Convolution Layer</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-04 22:44:21" itemprop="dateCreated datePublished" datetime="2022-03-04T22:44:21-08:00">2022-03-04</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/MultiModal/" itemprop="url" rel="index"><span itemprop="name">MultiModal</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>776</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>4 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>一种上采样的工具：</p>
-<ul>
-<li>
-<p>一些插值方法进行处理：基于先验信息，不可学习<br />
-<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_39478403/article/details/105796249">【图像处理】详解 最近邻插值、线性插值、双线性插值、双三次插值</a><br />
-最近邻插值(Nearest neighbor interpolation)<br />
-双线性插值(Bi-Linear interpolation)<br />
-双立方插值(Bi-Cubic interpolation)</p>
-</li>
-<li>
-<p><strong>转置卷积</strong> ：可学习参数形式</p>
-</li>
-</ul>
-<hr />
-<p>来自文章 ：<br />
-《A guide to convolution arithmetic for deep learning》</p>
-<p>博客 ：</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/328891283/answer/717113611">https://www.zhihu.com/question/328891283/answer/717113611</a></li>
-<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/158933003">https://zhuanlan.zhihu.com/p/158933003</a></li>
-</ul>
-<br>
-<p>转置卷积层（Transpose Convolution Layer），在一些文献中也称之为反卷积(De-convolution)和部分跨越卷积(Fractionally-strided Convolution) 。</p>
-<p>从实现上来说，卷积本身是不可逆的，这里的反卷积仅仅是正常卷积 <strong>尺寸</strong> 上的逆向，内容不一定是逆向关系。所以除了提高分辨率，还可以进行风格迁移，理论上只要是 domain 2 domain 的任务，都可以进行。</p>
-<p>一个卷积操作表示一个 <strong>多对一(many-to-one)</strong> 的映射关系。<br />
-而转置卷积层我们表示一个 <strong>一对多(one-to-many)</strong> 的映射关系。</p>
-<p><img src="https://pic4.zhimg.com/80/v2-50890f2e6232b8ef75e69d28ef83a91f_1440w.webp" alt="" /></p>
-<h1 id="从普通卷积讲起"><a class="markdownIt-Anchor" href="#从普通卷积讲起"></a> 从普通卷积讲起</h1>
-<p>假设我们有一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">4\times 4</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">4</span></span></span></span> 的图片，同时也有一个 $3\times 3 $ 的卷积核 （不考虑通道数），步长为 1 ，则最后会得到一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>×</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2 \times 2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">2</span></span></span></span> 的输出。</p>
-<p><img src="https://pic3.zhimg.com/80/v2-d60ef2dbe7a491fecf108e799fb299e2_1440w.webp" alt="" /></p>
-<p>如果我们把每一步的卷积核对应原始图片位置进行 flatten ， 则会得到 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>×</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">1  \times 16</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">6</span></span></span></span> 的矩阵：<br />
-比如在第一步骤中：</p>
-<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>4</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>x</mi><mtext>  </mtext></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>4</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>3</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>3</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>3</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mtext>  </mtext><mover><mo stretchy="true">→</mo><mpadded width="+0.6em" lspace="0.3em"><mrow><mi>f</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>t</mi><mi>e</mi><mi>n</mi></mrow></mpadded></mover><mtext>  </mtext><mrow><mo fence="true">[</mo><mtable rowspacing="0.15999999999999992em" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>4</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>1</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>4</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mstyle mathcolor="red"><mn>3</mn></mstyle></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>x</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mtext>  </mtext><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi></mrow></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow></mrow><annotation encoding="application/x-tex">\begin{bmatrix}{\color{red}1}&amp;{\color{red}  4}&amp;{\color{red}  1}&amp;x\;\\{\color{red}  1}&amp;{\color{red}  4}&amp;{\color{red}  3}&amp;x\\{\color{red}  3}&amp;{\color{red}  3}&amp;{\color{red}  1}&amp;x\\x&amp;x&amp;x&amp;x\end{bmatrix}\;\xrightarrow{flatten}\;\begin{bmatrix}{\color{red}  1}&amp;{\color{red}  4}&amp;{\color{red}  1}&amp;x&amp;{\color{red}  1}&amp;{\color{red}  4}&amp;{\color{red}  3}&amp;x&amp;\;....\end{bmatrix}
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.80303em;vertical-align:-2.15003em;"></span><span class="minner"><span class="mopen"><span class="delimsizing mult"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6529999999999996em;"><span style="top:-1.6499900000000003em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎣</span></span></span><span style="top:-2.79999em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎢</span></span></span><span style="top:-3.3959900000000003em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎢</span></span></span><span style="top:-3.4119800000000002em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎢</span></span></span><span style="top:-4.653em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎡</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.15003em;"><span></span></span></span></span></span></span><span class="mord"><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6500000000000004em;"><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">3</span></span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.1500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6500000000000004em;"><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">4</span></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">4</span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">3</span></span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.1500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6500000000000004em;"><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">3</span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.1500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6500000000000004em;"><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.1500000000000004em;"><span></span></span></span></span></span></span></span><span class="mclose"><span class="delimsizing mult"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.6529999999999996em;"><span style="top:-1.6499900000000003em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎦</span></span></span><span style="top:-2.79999em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎥</span></span></span><span style="top:-3.3959900000000003em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎥</span></span></span><span style="top:-3.4119800000000002em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎥</span></span></span><span style="top:-4.653em;"><span class="pstrut" style="height:3.1550000000000002em;"></span><span class="delimsizinginner delim-size4"><span>⎤</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.15003em;"><span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel x-arrow"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.1081079999999999em;"><span style="top:-3.322em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight x-arrow-pad"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.10764em;">f</span><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">t</span><span class="mord mathnormal mtight">t</span><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">n</span></span></span></span><span class="svg-align" style="top:-2.689em;"><span class="pstrut" style="height:2.7em;"></span><span class="hide-tail" style="height:0.522em;min-width:1.469em;"><svg width='400em' height='0.522em' viewBox='0 0 400000 522' preserveAspectRatio='xMaxYMin slice'><path d='M0 241v40h399891c-47.3 35.3-84 78-110 128
--16.7 32-27.7 63.7-33 95 0 1.3-.2 2.7-.5 4-.3 1.3-.5 2.3-.5 3 0 7.3 6.7 11 20
- 11 8 0 13.2-.8 15.5-2.5 2.3-1.7 4.2-5.5 5.5-11.5 2-13.3 5.7-27 11-41 14.7-44.7
- 39-84.5 73-119.5s73.7-60.2 119-75.5c6-2 9-5.7 9-11s-3-9-9-11c-45.3-15.3-85
--40.5-119-75.5s-58.3-74.8-73-119.5c-4.7-14-8.3-27.3-11-40-1.3-6.7-3.2-10.8-5.5
--12.5-2.3-1.7-7.5-2.5-15.5-2.5-14 0-21 3.7-21 11 0 2 2 10.3 6 25 20.7 83.3 67
- 151.7 139 205zm0 0v40h399900v-40z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.010999999999999899em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.20001em;vertical-align:-0.35001em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size1">[</span></span><span class="mord"><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">4</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">4</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord" style="color:red;">3</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8500000000000001em;"><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.35000000000000003em;"><span></span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size1">]</span></span></span></span></span></span></span></p>
-<p>X 为第一步骤没被卷积计算的部分。</p>
-<p>每一时间步骤的「卷积相对矩阵」为一行，将所有时间步骤的「卷积相对矩阵」全部 flatten 并且拼接在一起，可以得到一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">4\times 16</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">6</span></span></span></span> 的矩阵：</p>
-<p><img src="https://cdn.mathpix.com/snip/images/1F91uCfPW4J3G2dsgAhGkNiBotn4xH8v8-TNppYw964.original.fullsize.png" alt="" /></p>
-<p>相应地，我们也将图片进行 flatten，得到一个 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">16 \times 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">1</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 的矩阵。</p>
-<p>然后相乘，得到了 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">4\times 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 的矩阵，正好对应了 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>×</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2\times 2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">2</span></span></span></span> 的卷积结果。</p>
-<br>
-<p>更一般地：<br />
-使用 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mn>2</mn></msup><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n^2 \times 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.897438em;vertical-align:-0.08333em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> 表示图像 ；<br />
-使用 $\text{time\ step}\ \times\ n^2 $ 的矩阵表示卷积核 ，n 为图片height / weight ；<br />
-最终输出结果为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>time step</mtext><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\text{time\ step}\times 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8623000000000001em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord">time step</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span></p>
-<p>所以，如果可以改变   <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>time step</mtext></mrow><annotation encoding="application/x-tex">\text{time\ step}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8623000000000001em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord">time step</span></span></span></span></span> 那么，就可以改变输出的尺寸。<br />
-而同时如果反过来， output 变成了 input <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>×</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2\times 2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">2</span></span></span></span> ，「卷积相对矩阵」被转置了 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mo>×</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">16 \times 4</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">1</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">4</span></span></span></span> ，那么就可以得到原始图像 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>16</mn><mo>×</mo><mn>4</mn><mo stretchy="false">)</mo><mo>⋅</mo><mo stretchy="false">(</mo><mn>2</mn><mo>×</mo><mn>2</mn><mo>∗</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>16</mn><mo>×</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(16 \times 4)\cdot(2\times 2*1) = (16\times 1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">4</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mclose">)</span></span></span></span></p>
-<p>所以本质上，我们需要学习一个矩阵，大小为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mi>p</mi><mi>u</mi><mi>t</mi><mi>s</mi><mi>i</mi><mi>z</mi><msup><mi>e</mi><mn>2</mn></msup><mo>×</mo><mi>i</mi><mi>n</mi><mi>p</mi><mi>u</mi><msup><mi>t</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">output size ^ 2 \times input ^ 2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.008548em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mord mathnormal">p</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mord mathnormal">s</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.008548em;vertical-align:-0.19444em;"></span><span class="mord mathnormal">i</span><span class="mord mathnormal">n</span><span class="mord mathnormal">p</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> ，即转置矩阵。</p>
-<p>在具体实现上，大多数情况下转置矩阵是用不到卷积矩阵的参数的，只是根据卷积矩阵推导出  一个shape,让网络能够上采样得到之前大小图片。</p>
-<h1 id="超参数"><a class="markdownIt-Anchor" href="#超参数"></a> 超参数</h1>
-<p>关于超参数：<br />
-<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_39478403/article/details/121181904">https://blog.csdn.net/qq_39478403/article/details/121181904</a><br />
-<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_44832832/article/details/128996551">https://blog.csdn.net/qq_44832832/article/details/128996551</a></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1334,7 +1238,7 @@ draw negative samples\</p>
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">356</span>
+          <span class="site-state-item-count">360</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1343,6 +1247,10 @@ draw negative samples\</p>
           
         <span class="site-state-item-count">40</span>
         <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
       </div>
   </nav>
 </div>
@@ -1386,13 +1294,13 @@ draw negative samples\</p>
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">615k</span>
+    <span title="Symbols count total">619k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">51:17</span>
+    <span title="Reading time total">51:33</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>

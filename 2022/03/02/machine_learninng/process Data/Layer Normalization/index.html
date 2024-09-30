@@ -28,7 +28,7 @@
 <meta property="og:description" content="https:&#x2F;&#x2F;blog.csdn.net&#x2F;weixin_39228381&#x2F;article&#x2F;details&#x2F;107939602 Layer normalization 求的是最后一个维度，即每个token 768 的 mean&#x2F;sqrt，是在 hidden_state&#x2F;-1 维度上求的 。 12345678910# NLP Examplebatch, sentence_length, embedd">
 <meta property="og:locale">
 <meta property="article:published_time" content="2022-03-03T04:57:46.000Z">
-<meta property="article:modified_time" content="2024-03-29T03:18:00.962Z">
+<meta property="article:modified_time" content="2024-09-27T22:57:09.672Z">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="http://example.com/2022/03/02/machine_learninng/process%20Data/Layer%20Normalization/">
@@ -223,14 +223,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>475</span>
+              <span>682</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
+              <span>3 mins.</span>
             </span>
 
         </div>
@@ -249,14 +249,29 @@
 <h2 id="layer-normalization"><a class="markdownIt-Anchor" href="#layer-normalization"></a> Layer Normalization</h2>
 <p>BN 是对一个 batch 数据的每个 hidden_size index 进行 Norm 处理；<br />
 但 LN 是对单个数据的指定维度进行 Norm 处理，与batch无关。同时不需要根据训练集统计整个集合的均值和方差。但是同样需要最后一步的偏移操作，即同样有两个可以训练的量。</p>
-<p><strong>Why Not BN ？</strong></p>
-<p>使用了 Norm 之后，目标维度内，相对大小是有意义的，但是不同维度之间就无法比较了，也就是没有相对大小了。<br />
-所以，如果使用 BN，则不同句子的相同位置 token 之间的差距仍然是有可比性的，但是没有什么用；但是同一个句子不同 token 之间就无法进行比较了，那么后面的 Attention 也就不可用了。</p>
+<p><strong>NLP 为什么用 LN 而不是 BN？</strong><br />
+CV 用 BN 很合理，不同 channel 独立进行统计，经过 Norm 后数值独立。</p>
+<p>原因：</p>
+<ol>
+<li>BN抹杀了 token 维度之间的大小关系；LN是保留了一个 token 内不同维度之间的大小关系，这对NLP任务是至关重要的。<br />
+对于NLP或者序列任务来说，一条样本的不同特征，其实就是时序上的变化，这正是需要学习的东西自然不能做归一化抹杀，所以要用LN。</li>
+<li>某个序列的 token 和 batch 内其他序列的 token 没有任何关系，没有必要一起进行变换。反而会抹平样本之间的差异性。</li>
+<li>受到了 batch size 影响，前向和反向传播中，batch统计量及其梯度都不太稳定。</li>
+</ol>
+<p><strong>为什么需要两个可以训练的参数？</strong></p>
+<p>用于缩放和平移归一化后的结果，以确保网络的表达能力不会因归一化而受限。</p>
 <p><strong>作用：和 BN 差不多</strong></p>
 <ol>
-<li>解决 ICS 协变量转移 的问题</li>
-<li>加速网络收敛</li>
-<li>防止梯度爆炸或弥散</li>
+<li>
+<p>解决 ICS 协变量转移 的问题<br />
+把数据拉回标准正态分布，因为神经网络的Block大部分都是矩阵运算，一个向量经过矩阵运算后值会越来越大，为了网络的稳定性，我们需要及时把值拉回正态分布。</p>
+</li>
+<li>
+<p>加速网络收敛</p>
+</li>
+<li>
+<p>防止梯度爆炸或弥散</p>
+</li>
 </ol>
 <h2 id="代码"><a class="markdownIt-Anchor" href="#代码"></a> 代码</h2>
 <p>LayerNorm中不会像BatchNorm那样跟踪统计全局的均值方差，因此<code>train()</code>和<code>eval()</code>对LayerNorm没有影响。</p>
@@ -366,7 +381,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">356</span>
+          <span class="site-state-item-count">360</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -375,6 +390,10 @@
           
         <span class="site-state-item-count">40</span>
         <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
       </div>
   </nav>
 </div>
@@ -418,13 +437,13 @@
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">615k</span>
+    <span title="Symbols count total">619k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">51:17</span>
+    <span title="Reading time total">51:33</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>

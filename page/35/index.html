@@ -179,6 +179,1072 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/03/MySQL%20info/mysql%20%E7%BA%A6%E6%9D%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/03/MySQL%20info/mysql%20%E7%BA%A6%E6%9D%9F/" class="post-title-link" itemprop="url">mysql DDL 约束</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-03 22:49:21" itemprop="dateCreated datePublished" datetime="2021-03-03T22:49:21-08:00">2021-03-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.5k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>7 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="mysql约束"><a class="markdownIt-Anchor" href="#mysql约束"></a> mysql约束</h1>
+<p>是什么：是作用于表中字段上的规则，用于限制存储在表中的数据，属于 DDL 的限制操作。<br />
+为什么：保证数据的正确，有效，完整</p>
+<p>分类：</p>
+<ol>
+<li>非空约束：管理的字段不能存储null值。<code>sname varchar(10) NOT NULL</code></li>
+<li>唯一性约束：存储的字段值不能有重复值，但是可以存储null。<code>email varchar(20) UNIQUE</code>；唯一但是可以为空，并且可以有多个空值，(空和空不相等)。</li>
+<li>主键约束 <code>sid int PRIMARY KEY</code> ，默认非空且唯一</li>
+<li>外键约束：要求外键字段值应该来源于关联表的主键的值，但是可以存储null值。</li>
+<li>默认约束：如果没有指定字段值，则采用默认值 <code>DEFAULT</code></li>
+<li>检查约束（8.0.16版本后）：保证满足某一条件 <code>CHECK</code></li>
+<li>自增：<code>AUTO_INCREMENT</code></li>
+</ol>
+<h2 id="设置方法"><a class="markdownIt-Anchor" href="#设置方法"></a> 设置方法</h2>
+<ol>
+<li>建表时直接设置</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE stu</span><br><span class="line">(</span><br><span class="line">    `id`     int PRIMARY KEY AUTO_INCREMENT COMMENT &#x27;主键&#x27;,</span><br><span class="line">    `name`   varchar(10) NOT NULL UNIQUE COMMENT &#x27;姓名&#x27;,</span><br><span class="line">    `age`    int CHECK ( age &gt; 0 and age &lt;= 120 ),</span><br><span class="line">    `status` char(1) DEFAULT &#x27;1&#x27; COMMENT &#x27;状态&#x27;,</span><br><span class="line">    `gender` char(1) COMMENT &#x27;性别&#x27;</span><br><span class="line">) comment &#x27;用户表&#x27;;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>建表时候在约束区进行设置</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE user2(</span><br><span class="line">    id INT,</span><br><span class="line">    `name` VARCHAR(20),</span><br><span class="line">    PRIMARY KEY (id)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>建后直接设置
+<ul>
+<li>修改 name 的数据类型和约束 -&gt; <code>modify</code></li>
+</ul>
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE stu MODIFY 字段名称 varchar(10) NOT NULL;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>修改 name 的名称，数据类型和约束 -&gt; <code>change</code></li>
+</ul>
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE `表名称` CHANGE 旧字段名称 新字段名称 字段类型 约束;</span><br></pre></td></tr></table></figure>
+和 <code>modify</code> 区别只在于能够修改字段名称。
+<ul>
+<li>增加外键约束：</li>
+</ul>
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE `表名称` ADD UNIQUE (`字段名`)</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="check"><a class="markdownIt-Anchor" href="#check"></a> Check</h2>
+<p><strong>Mysql 并不是强制要求的，即并不支持这个操作</strong>； PostgreSQL 支持。<br />
+如果非要设置这个检查约束，则见 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/wangtianze/p/6700244.html">MySQL关于check约束无效的解决办法</a> 。</p>
+<h3 id="attribute-based-check"><a class="markdownIt-Anchor" href="#attribute-based-check"></a> Attribute-Based Check</h3>
+<p>在声明变量后使用这个 Check 选项</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE Sells</span><br><span class="line">(</span><br><span class="line">    bar   CHAR(20),</span><br><span class="line">    beer  CHAR(20) CHECK ( beer IN</span><br><span class="line">                           (SELECT name FROM Beers)),</span><br><span class="line">    price REAL CHECK ( price &lt;= 5.00 )</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p><code>beer</code>部分中使用了子查询作为 check 的部分 ，对象可以是本表，或者其他的外部表 。</p>
+<p>只有在数据被插入或者更新时，才会 check 。</p>
+<p>如果在 Beers 表格中有个元组被删除了，那么这个 check 约束是不会报错的，是不会自动检查的，和外键不同。</p>
+<h3 id="tuple-based-check"><a class="markdownIt-Anchor" href="#tuple-based-check"></a> Tuple-Based Check</h3>
+<p><code>CHECK</code> 还可以用来约束多个字段，即直接对整个 tuple 进行约束：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE Sells</span><br><span class="line">(</span><br><span class="line">    bar   CHAR(20),</span><br><span class="line">    beer  CHAR(20),</span><br><span class="line">    price REAL,</span><br><span class="line">    CHECK (bar = &#x27;Joe&#x27; OR price &lt;= 5.00)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<h2 id="主键约束"><a class="markdownIt-Anchor" href="#主键约束"></a> 主键约束</h2>
+<ul>
+<li>设置方法见上文</li>
+</ul>
+<h3 id="删除方法"><a class="markdownIt-Anchor" href="#删除方法"></a> 删除方法</h3>
+<p><code>ALTER TABLE user1 DROP PRIMARY KEY;</code></p>
+<p>删除有两种操作，<code>DELETE</code> 和 <code>TRUNCATE</code> 的区别：</p>
+<ul>
+<li><code>DELETE</code> 删除表中的数据，不重置 <code>AUTO_INCREMENT</code> 的值</li>
+<li><code>TRUNCATE</code> 摧毁表，重建表， <code>AUTO_INCREMENT</code> 重置为 1</li>
+</ul>
+<p>如果想自定义id的值,可以使用下面的sql进行设置：<br />
+<code>ALTER TABLE 表名 AUTO_INCREMENT=起始值;</code></p>
+<h3 id="联合约束"><a class="markdownIt-Anchor" href="#联合约束"></a> 联合约束</h3>
+<p>联合多个字段设置为主键约束</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE user4(</span><br><span class="line">    id INT,</span><br><span class="line">    `name` VARCHAR(20),</span><br><span class="line">    PRIMARY KEY (id,`name`)</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">-- 保证id和name字段不为空,然后联合判断唯一性</span><br><span class="line">INSERT INTO user4 VALUES(1,&#x27;tom&#x27;); -- 正常插入</span><br><span class="line">INSERT INTO user4 VALUES(2,&quot;tom&quot;); -- 正常插入</span><br><span class="line">INSERT INTO user4 VALUES(1,&quot;rose&quot;); -- 正常插入</span><br><span class="line">INSERT INTO user4 VALUES(2,&quot;rose&quot;); -- 正常插入</span><br><span class="line">INSERT INTO user4 VALUES(1,&quot;tom&quot;); -- 插入异常:Duplicate entry &#x27;1-tom&#x27; for key &#x27;PRIMARY&#x27;</span><br><span class="line">INSERT INTO user4 VALUES(NULL,&quot;jack&quot;); -- 插入异常:Column &#x27;id&#x27; cannot be null</span><br><span class="line">INSERT INTO user4 VALUES(3,NULL); -- 插入异常:Column &#x27;name&#x27; cannot be null</span><br></pre></td></tr></table></figure>
+<p>联合 unique：<br />
+<code>create table Test (a int, b int, unique(a, b));</code></p>
+<h1 id="外键约束"><a class="markdownIt-Anchor" href="#外键约束"></a> 外键约束</h1>
+<p>被外键索引的主表的键必须要是：1.PRIMARY KEY 或者 2.UNIQUE 。<br />
+给 两张表 建立连接，从而保证数据一致性和完整性。<br />
+<strong>子表</strong>的外键关联了<strong>父表</strong>的主键。</p>
+<p>有两种冲突情况：</p>
+<ol>
+<li>插入外键表格的数据，主键表中没有相对应的数据。 -》 数据库会直接拒绝</li>
+<li>当删除主键表格中的数据时，相连接的外键数据会变成无主的元组。<br />
+可以设置约束，用来实现：如果子表有外键关联一个父表，那么父表：
+<ol>
+<li>无法随意删除其记录（默认）</li>
+<li>删除后子表设置 Null</li>
+<li>删除后子表设置默认值</li>
+<li>子表也删除/更新相应记录。</li>
+</ol>
+</li>
+</ol>
+<p>建立：</p>
+<ol>
+<li>创建时在声明完变量，table括号内，重起一行添加：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CONSTRAINT 外键约束对象名 FOREIGN KEY (外键字段名) REFERENCES 一方表/主表(主键字段名)</span><br></pre></td></tr></table></figure>
+<p>比如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE student_class(</span><br><span class="line">    `id` int PRIMARY KEY AUTO_INCREMENT,</span><br><span class="line">    `studentid` int not null,</span><br><span class="line">    `classid` int not null,</span><br><span class="line">    &lt; CONSTRAINT fkstudentid &gt; FOREIGN KEY (studentid) REFERENCES student(id),</span><br><span class="line">    &lt; CONSTRAINT fkcourseid &gt; FOREIGN KEY (classid) REFERENCES course(id)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p><code>&lt; CONSTRAINT fkstudentid &gt;</code> 可以不加，或者使用 <code>beer CHAR(20) REFERENCES Beers(name)</code> 声明后直接建立外键。</p>
+<p>同时也支持多个字段建立外键：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">create table F(</span><br><span class="line">    a int, b int,</span><br><span class="line">    foreign key (a, b)references P (a, b)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>建后直接设置</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE 多方表</span><br><span class="line">ADD CONSTRAINT 外键约束对象名 FOREIGN KEY(外键字段名)</span><br><span class="line">REFERENCE 一方表/主表(主键字段)</span><br></pre></td></tr></table></figure>
+<p>删除外键</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE 多方表</span><br><span class="line">DROP FOREIGN KEY 外键约束对象名;</span><br></pre></td></tr></table></figure>
+<h2 id="外键约束的删除和更新行为"><a class="markdownIt-Anchor" href="#外键约束的删除和更新行为"></a> 外键约束的删除和更新行为</h2>
+<ul>
+<li>NO ACTION / RESTRICT ：当在「一方表/父表」中更新/删除对应记录时候，首先检查是否有外键，如果有，则「不允许更新」。</li>
+<li>CASCADE：在「一方表/父表」中「更新/删除」对应记录时候，首先检查是否有外键，如果有，则也会「更新/删除」子表记录。</li>
+<li>SET NULL：在「一方表/父表」中「删除」对应记录时候，首先检查是否有外键，如果有，则会将「子表」中的对应值设置为 null。</li>
+<li>SET DEFAULT：在「一方表/父表」中「删除」对应记录时候，首先检查是否有外键，如果有，则会将「子表」中的对应值设置为「DEFAULT 值」（Innodb 不支持）。</li>
+</ul>
+<p>设置方法：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ALTER TABLE 子表名</span><br><span class="line">ADD CONSTRAINT 外键约束对象名</span><br><span class="line">FOREIGN KEY (外键字段) REFERENCES 一方表/父表名 (主表字段名)</span><br><span class="line">ON [UPDATE, DELETE] [更新行为名称 e.g. CASCADE]</span><br></pre></td></tr></table></figure>
+<p>比如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE Sells (</span><br><span class="line">    bar CHAR(20),</span><br><span class="line">    beer CHAR(20),</span><br><span class="line">    price REAL,</span><br><span class="line">    FOREIGN KEY(beer) REFERENCES Beers(name)</span><br><span class="line">    ON DELETE SET NULL ON UPDATE CASCADE );</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/03/MySQL%20info/mysql%20DDL/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/03/MySQL%20info/mysql%20DDL/" class="post-title-link" itemprop="url">mysql DDL Data Definition Language</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-03 22:44:21" itemprop="dateCreated datePublished" datetime="2021-03-03T22:44:21-08:00">2021-03-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>2.2k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>11 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>DDL (Data Definition Language) 数据库定义语言<br />
+用于定义SQL模式、基本表、视图和索引的创建和撤消操作，在建表的时候使用。</p>
+<ul>
+<li>CREATE</li>
+<li>ALTER</li>
+<li>DROP</li>
+<li>TRUNCATE</li>
+<li>COMMIT</li>
+<li>RENAME</li>
+</ul>
+<h3 id="打开与退出"><a class="markdownIt-Anchor" href="#打开与退出"></a> 打开与退出</h3>
+<p>命令行：输入 <code>mysql -u root -p</code>，还可以选添 <code>-P 3306</code> 来设置端口号<br />
+进入后：<code>quit</code>退出</p>
+<h3 id="数据库管理命令"><a class="markdownIt-Anchor" href="#数据库管理命令"></a> 数据库管理命令</h3>
+<ul>
+<li>所有的表文件都存放在data文件夹中</li>
+<li>查看所有数据库名：<code>show databases;</code></li>
+<li>information_schema 存放在内存中，每次都会自动销毁</li>
+<li>创建一个数据库：
+<ol>
+<li><code>create database [if not exists] 数据库名 [default charset utf8mb4];</code><br />
+<code>[if not exists]</code>是可选择的，用来防止报错。<br />
+<code>[default charset utf8]</code>为指定的默认字符集。</li>
+<li>目录下手动新建文件夹也可以</li>
+</ol>
+</li>
+<li>删除一个数据库：<code>drop database 数据库名;</code><br />
+如果表存在则删除表（用于重新创建）：<code>drop table if exists suspects;</code></li>
+<li>使用数据库 <code>use database 数据库名;</code></li>
+<li>查询当前的数据库 <code>select database();</code> 注意加个括号</li>
+</ul>
+<h3 id="表文件管理命令"><a class="markdownIt-Anchor" href="#表文件管理命令"></a> 表文件管理命令</h3>
+<ul>
+<li>
+<p>查看指定的数据库下所有的表文件名：</p>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">use 数据库名;</span><br><span class="line">show tables;</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>在指定数据库下创建表文件：</p>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">use 数据库名;</span><br><span class="line">create table 表文件名(</span><br><span class="line">    字段名 数据类型名 [comment 字段注释],</span><br><span class="line">    字段名 数据类型名  &lt;--最后一个字段不要加&quot;,&quot;</span><br><span class="line">) [comment 表注释];</span><br></pre></td></tr></table></figure>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; create database bjpowernode;</span><br><span class="line">Query OK, 1 row affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; use bjpowernode;</span><br><span class="line">Database changed</span><br><span class="line">mysql&gt; create table stu(</span><br><span class="line">    -&gt; sid int,</span><br><span class="line">    -&gt; sname varchar(10),</span><br><span class="line">    -&gt; age int</span><br><span class="line">    -&gt; );</span><br><span class="line">Query OK, 0 rows affected (0.02 sec)</span><br></pre></td></tr></table></figure>
+<p>在这里面，字符串类型使用 <strong>varchar(5)</strong>，括号内放置最大字符长度。<br />
+可以使用<code> [comment 字段注释]/[comment 表注释]</code> 进行注释。</p>
+  <details>
+  <summary>详细的 char-us-varchar，各种数值类型对比</summary>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Value</th>
+<th style="text-align:center">CHAR(4)</th>
+<th style="text-align:center">CHAR(4)-Storage</th>
+<th style="text-align:center">VARCHAR(4)</th>
+<th style="text-align:center">VARCHAR(4)-Storage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">“”</td>
+<td style="text-align:center">’    ’</td>
+<td style="text-align:center">4 bytes</td>
+<td style="text-align:center">&quot;</td>
+<td style="text-align:center">1 byte</td>
+</tr>
+<tr>
+<td style="text-align:center">‘ab’</td>
+<td style="text-align:center">'ab  ’</td>
+<td style="text-align:center">4 bytes</td>
+<td style="text-align:center">‘ab’</td>
+<td style="text-align:center">3 bytes</td>
+</tr>
+<tr>
+<td style="text-align:center">‘abcd’</td>
+<td style="text-align:center">‘abcd’</td>
+<td style="text-align:center">4 bytes</td>
+<td style="text-align:center">‘abcd’</td>
+<td style="text-align:center">5 bytes</td>
+</tr>
+<tr>
+<td style="text-align:center">‘abcdefgh’</td>
+<td style="text-align:center">‘abcd’</td>
+<td style="text-align:center">4 bytes</td>
+<td style="text-align:center">‘abcd’</td>
+<td style="text-align:center">5 bytes</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Storage</th>
+<th style="text-align:left">Minimum Value</th>
+<th style="text-align:left">Maximum Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left">(Bytes)</td>
+<td style="text-align:left">(Signed/Unsigned)</td>
+<td style="text-align:left">(Signed/Unsigned)</td>
+</tr>
+<tr>
+<td style="text-align:left">TINYINT</td>
+<td style="text-align:left">1</td>
+<td style="text-align:left">-128</td>
+<td style="text-align:left">127</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">255</td>
+</tr>
+<tr>
+<td style="text-align:left">SMALLINT</td>
+<td style="text-align:left">2</td>
+<td style="text-align:left">-32768</td>
+<td style="text-align:left">32767</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">65535</td>
+</tr>
+<tr>
+<td style="text-align:left">MEDIUMINT</td>
+<td style="text-align:left">3</td>
+<td style="text-align:left">-8388608</td>
+<td style="text-align:left">8388607</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">16777215</td>
+</tr>
+<tr>
+<td style="text-align:left">INT</td>
+<td style="text-align:left">4</td>
+<td style="text-align:left">-2147483648</td>
+<td style="text-align:left">2147483647</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">4294967295</td>
+</tr>
+<tr>
+<td style="text-align:left">BIGINT</td>
+<td style="text-align:left">8</td>
+<td style="text-align:left">-9223372036854775808</td>
+<td style="text-align:left">9223372036854775807</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left"></td>
+<td style="text-align:left">0</td>
+<td style="text-align:left">18446744073709551615</td>
+</tr>
+</tbody>
+</table>
+  </details>
+<ul>
+<li>数据类型：
+<ul>
+<li>CHAR(n) 存储时右边会使用空格进行占位</li>
+<li>VARCHAR() 可变长度字符串，不进行占位，存储时会将长度存储为 prefix</li>
+<li>INT</li>
+<li>FLOAT / REAL</li>
+<li>YEAR: YYYY</li>
+<li>TIME: HH:MM:SS</li>
+<li>DATE: YYYY-MM-DD</li>
+<li>DATETIME: YYYY-MM-DD HH:MM:SS<br />
+比如：<code>insert into test values('2016-1-1', '2016- 1-1 3:10:10')</code>，分别对应 <code>date</code> 和 <code>datetime</code> 。</li>
+<li>TIMESTAMP: YYYY-MM-DD HH:MM:SS 描述的时间在不同时区索引出来可能是不同的，动态计算出对应时区时间。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>删除表文件： <code>drop table 表文件名;</code></p>
+</li>
+<li>
+<p>查看表文件中的字段信息： <code>desc 表文件名称;</code></p>
+</li>
+<li>
+<p>查看表文件中更详细的信息/创建的命令： <code>show create table 表文件名称;</code></p>
+</li>
+<li>
+<p>为表文件添加字段： <code>alter table 表文件名 add 新字段名 数据类型名称 &lt;attribute declaration&gt;;</code></p>
+</li>
+<li>
+<p>修改数据类型： <code>alter table 表文件名 modify 字段名 新数据类型;</code></p>
+</li>
+<li>
+<p>删除表文件字段： <code>alter table 表文件名 drop 字段名;</code></p>
+</li>
+</ul>
+<h3 id="表文件数据行管理命令"><a class="markdownIt-Anchor" href="#表文件数据行管理命令"></a> 表文件数据行管理命令</h3>
+<ul>
+<li>插入命令：要求mysql服务器向指定的表文件中添加数据行</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">insert into 表文件名 (字段名1,字段名2,字段名3)</span><br><span class="line">values(值1,值2,值3);        &lt;-字符串和日期的值使用单引号扩起来</span><br></pre></td></tr></table></figure>
+<ul>
+<li>批量插入：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">insert into 表文件名(字段1,字段2,字段3)</span><br><span class="line">values</span><br><span class="line">(值1,值2,值3),</span><br><span class="line">(值1,值2,值3),</span><br><span class="line">(值1,值2,值3);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>简化版本插入命令：<code>insert into 表文件名 values(值1,值2,值3);</code><br />
+如果插入数据时，每一个字段都可以赋值，此时插入命令不需要指定字段名，数据顺序此时要与表文件字段顺序相同</li>
+<li>删除命令：
+<ol>
+<li><code>delete from 表文件名;</code>删除所有数据</li>
+<li><code>delete from 表文件名 where 判断条件;</code>删除满足条件的数据行数据。判断数据一般放置关系条件或者逻辑条件。(等于使用单等号=)</li>
+</ol>
+</li>
+<li>更新命令：要求mysql服务器将指定的表文件数据进行更新
+<ol>
+<li>对所有数据行<code>update 表文件名 set 字段名1=值,字段名2=值 [WHERE 条件];</code></li>
+</ol>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; update stu set age=age+3;</span><br><span class="line">Query OK, 2 rows affected (0.00 sec)</span><br><span class="line">Rows matched: 2  Changed: 2  Warnings: 0</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>对指定数据行<code>update 表文件名 set 字段名1=值,字段名2=值 where 判断条件;</code>使用where来选择</li>
+</ol>
+</li>
+<li>数据行复制命令：<code>insert into B select * from A</code>可以将表A中的数据行复制到表B(要求表A与表B字段结构完全一致)</li>
+<li>表文件备份命令：<code>create table B select * from A</code>将表A进行一次备份，备份生成表B</li>
+</ul>
+<h3 id="查询命令-dql"><a class="markdownIt-Anchor" href="#查询命令-dql"></a> 查询命令 DQL</h3>
+<ul>
+<li>查询命令：<code>select * from 表文件名;</code>要求mysql服务器将指定的表文件数据进行展示</li>
+<li>语法：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SELECT 字段列表</span><br><span class="line">FROM 表名</span><br><span class="line">WHERE 条件列表</span><br><span class="line">GROUP BY 分组字段列表</span><br><span class="line">HAVING 分组后条件列表</span><br><span class="line">ORDER BY 排序字段列表</span><br><span class="line">LIMIT 分页参数</span><br></pre></td></tr></table></figure>
+<h3 id="mql执行计划explain"><a class="markdownIt-Anchor" href="#mql执行计划explain"></a> mql执行计划(explain)</h3>
+<ol>
+<li>命令格式：explain 查询命令</li>
+<li>命令作用：展示当前查询得到的结果是否通过索引来进行定位</li>
+<li>例子：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT * FROM emp WHERE ename=&#x27;smith&#x27;</span><br><span class="line">--&gt; EXPLAIN SELECT * FROM emp WHERE ename=&#x27;smith&#x27;</span><br><span class="line">--&gt; type: ref(索引查询) rows:1(查询次数)</span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li>判断：type属性表示执行效率。<br />
+<strong>all</strong>(对所有数据行进行遍历)<br />
+<strong>type</strong>(WHERE对所有数据行进行遍历，SELECT从索引中抓取)<br />
+<strong>range</strong>(WHERE直接通过索引来查询，但是不稳定，因为字段变化时会导致失效)<br />
+<strong>ref</strong>(WHERE直接通过索引来查询，一次只得到一行数据 --&gt; 该行数据没有重复)<br />
+<strong>const</strong>(通过主键索引来进行定位)</li>
+</ol>
+<p><strong>mysql如果发现通过索引得到数据行数&gt;1/3是，会自动放弃索引查询，type依然是all</strong></p>
+<h3 id="视图"><a class="markdownIt-Anchor" href="#视图"></a> 视图</h3>
+<ol>
+<li>定义：Mysql对象，用于存储 <strong>查询语句</strong> 。</li>
+<li>目的：提高查询语句使用效率，可复用性。</li>
+<li>命令：<code>CREATE VIEW 视图对象名 AS 查询语句;</code></li>
+<li>调用：<code>SELECT * FROM 视图对象名;</code>，还可以通过视图对象关联表文件数据行进行插入，删除，更新操作。</li>
+<li>作用：<strong>隐藏业务中涉及表关系，开发人员通过视图进行操作时不会知道具体操作的表，提高了安全性。</strong></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">-- 创建视图</span><br><span class="line">CREATE VIEW CanDrink AS</span><br><span class="line">SELECT distinct drinker, beer</span><br><span class="line">FROM Frequents, Sells</span><br><span class="line">WHERE Frequents.bar = Sells.bar;</span><br><span class="line"></span><br><span class="line">-- 使用视图</span><br><span class="line">select beer from CanDrink</span><br><span class="line">where drinker = &#x27;Bill&#x27;;</span><br></pre></td></tr></table></figure>
+<p>DBMS 会将视图先存储起来，然后交给下面的查询语句继续调用。<br />
+具体地，DBMS 并 <strong>不是存储了视图表格</strong>，而是存储了他的 <strong>查询语句</strong>（有点像关系代数），在后面调用视图时，会自动将该语句进行内嵌。</p>
+<blockquote>
+<p>The queries defining any views used by the query are also replaced by their algebraic equivalents, and “spliced into” the expression tree for the query.</p>
+</blockquote>
+<br>
+<p><strong>What Happens When We Query a View ?</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">-- build view</span><br><span class="line">CREATE VIEW LA- view AS</span><br><span class="line">SELECT buyer, seller, product, store</span><br><span class="line">FROM Person, Purchase</span><br><span class="line">WHERE Person.city = ‘LA’</span><br><span class="line">  AND Person.name = Purchase.buyer;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- query on view</span><br><span class="line">SELECT name, LA-view.store</span><br><span class="line">FROM LA-view, Product</span><br><span class="line">WHERE LA-view.product = Product.name AND Product.category = &#x27;shoes&#x27;</span><br></pre></td></tr></table></figure>
+<p>底层的实现为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SELECT name, Purchase.store</span><br><span class="line">FROM Person, Purchase, Product</span><br><span class="line">WHERE   Person.city = &#x27;LA&#x27; AND</span><br><span class="line">        Person.name = Purchase.buyer AND</span><br><span class="line">        Purchase.product = Product.name AND</span><br><span class="line">        Product.category = &#x27;shoes&#x27;;</span><br></pre></td></tr></table></figure>
+<br>
+<p>同时，内嵌之后，DBMS 会自动优化组合起来的查询语句，实现查询加快的效果。<br />
+<img src="https://pica.zhimg.com/80/v2-ab12768d5bd8a5992b05bfad83634406_1440w.png" alt="" /></p>
+<p>主要是两个步骤：</p>
+<ol>
+<li>将 select 操作向底层推，这样需要 join 的条目就少了</li>
+<li>将 project 操作向上推，先运算，再投影</li>
+</ol>
+<h3 id="存储引擎"><a class="markdownIt-Anchor" href="#存储引擎"></a> 存储引擎</h3>
+<ol>
+<li>定义：是mysql服务器对表文件内容的管理方式，目前主要采用INNODB，Myisam.</li>
+<li>管理命令：
+<ul>
+<li>查看支持存储引擎种类：<code>show engines</code>，默认使用innodb引擎</li>
+<li>修改引擎，<code>my.cnf文件</code>，在<code>/etc</code>配置文件夹下，<code>default-storage-engine=INNODB</code></li>
+<li>设置表文件呢依赖的存储引擎：<code>alter TABLE 表名 ENGINE=存储引擎</code></li>
+</ul>
+</li>
+<li>存储引擎特征：
+<ul>
+<li>Myisam：
+<ul>
+<li>修改表时，不会备份。提高效率，操作后无法取消本操作。</li>
+<li>使用三个表存储信息：<strong>test1.frm</strong>储存表文件字段信息，<strong>test1.myd</strong>储存表文件数据行信息，<strong>test1.myi</strong>存储表文件字段关联的索引信息。</li>
+</ul>
+</li>
+<li>INNODB：
+<ul>
+<li>对表内容修改时，首先进行一次备份，因此效率较慢。</li>
+<li>但是执行完毕后，可以使用备份取消当前操作，增加安全性。</li>
+<li>使用一个文件<strong>test1.frm</strong>存储所有信息。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="事物transaction"><a class="markdownIt-Anchor" href="#事物transaction"></a> 事物(transaction)</h3>
+<ol>
+<li>介绍：用于对当前表文件备份进行管理。</li>
+<li>命令格式：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">start transaction #通过服务器提供一个事物对象来管理备份接下来的操作</span><br><span class="line">delete from emp where deptno=30 #生成emp.bak</span><br><span class="line">delete from dept where deptno=30 #生成emp.bak</span><br><span class="line">ROLLBACK #取消本次操作</span><br><span class="line">COMMIT #提交操作：将本次操作的所有备份信息删除</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/03/MySQL%20info/mysql%20%E7%B4%A2%E5%BC%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/03/MySQL%20info/mysql%20%E7%B4%A2%E5%BC%95/" class="post-title-link" itemprop="url">mysql 索引</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-03 22:44:21" itemprop="dateCreated datePublished" datetime="2021-03-03T22:44:21-08:00">2021-03-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.8k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>9 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p><strong>mysql索引(index)</strong></p>
+<p>不加索引的时候，在匹配某个属性时，是一个一个进行匹配扫描的。</p>
+<ul>
+<li>优点
+<ul>
+<li>使用平衡树来存储数据，降低查询时间 -&gt; io 成本</li>
+<li>降低数据排序的成本 -&gt; cpu 成本</li>
+</ul>
+</li>
+<li>缺点
+<ul>
+<li>降低更新表的效率：<br />
+增删改数据都会改变平衡树各节点中的索引数据内容，破坏树结构。<br />
+因此，在每次数据改变时， DBMS必须去重新梳理树（索引）的结构以确保它的正确，</li>
+<li>索引列额外占用磁盘空间 -&gt; b+树</li>
+</ul>
+</li>
+</ul>
+<p>索引命令语法：</p>
+<ul>
+<li>添加索引：<code>CREATE INDEX 索引名 ON 表名(字段, ...)</code></li>
+<li>查看索引：<code>SHOW INDEX FROM 表名</code><br />
+这时会看到三个索引，因为服务器会默认为<strong>主键约束</strong>，<strong>外键约束</strong>，<strong>唯一性约束</strong>绑定索引。</li>
+<li>删除索引：<code>DROP INDEX 索引名 ON 表名</code>、</li>
+</ul>
+<p>常用的存储索引的数据结构：hashmap , b+ tree , R-tree , Ful-text</p>
+<p>索引分类：</p>
+<ol>
+<li>主键索引：默认自动创建，唯一</li>
+<li>唯一索引：默认自动创建，可以有多个</li>
+<li>常规索引：为了快速定位数据，可以有多个</li>
+<li>全文索引<code>FULLTEXT</code>：查找文本关键值，而不是比较索引值，可以有多个</li>
+</ol>
+<p>索引类型：</p>
+<ul>
+<li>
+<p>聚集索引（Clustered Index）：</p>
+<ul>
+<li>表中必须有，并且只能有一个</li>
+<li>将数据库表的数据行按照指定 search key 的顺序进行排序并存储</li>
+<li>将数据存储和索引放在一起，其对应的树的 <strong>叶子节点指向物理数据</strong>，非叶子节点就是索引</li>
+<li>加了索引之后，整个表就变成了一种 平衡树 结构。换句话说，就是整个表就变成了一个索引，存储顺序也发生了改变，即「聚集索引」。这就是为什么一张表只能有一个主键，因为只能有一种物理存储方式。</li>
+<li>[Coding, MySQL] 会自动创建聚集索引：
+<ol>
+<li>primary key if exists</li>
+<li>otherwise 1st unique key</li>
+<li>if no unique key , use the hidden row ID (we cant see)</li>
+</ol>
+</li>
+</ul>
+</li>
+<li>
+<p>二级索引/非聚集索引（Secondary / Non-Clustered Index），也就是我们平时经常提起和使用的 常规索引。</p>
+<ul>
+<li>可以没有，也可以是多个</li>
+<li>叶子节点指向的是对应的主键值</li>
+</ul>
+</li>
+</ul>
+<p>两种索引方式的都是采用平衡树作为数据结构。索引树结构中各节点的值来自于表中的索引字段。<br />
+如果给表中多个字段加上索引， 那么就会出现多个独立的索引结构，每个索引（非聚集索引）互相之间不存在关联。<br />
+每次给字段建一个新索引， 字段中的数据就会被复制一份出来， 用于生成索引。 因此， 给表添加索引，会增加表的体积， 占用磁盘存储空间。</p>
+<p>查询非聚集索引和聚集索引的区别在于</p>
+<ul>
+<li>聚集索引：可以直接通过对应的平衡树查到需要查找的数据</li>
+<li>非聚集索引 - 回表查询：首先通过聚集索引平衡树查到记录对应的主键值，再使用主键的值通过聚集索引平衡树查找到需要的数据</li>
+</ul>
+<p><img src="https://pic1.zhimg.com/v2-ef9b5d5d6407d80b937ca19d6be9dadc_b.jpg" alt="" /></p>
+<p>不管以任何方式查询表， 最终都会利用主键通过聚集索引来定位到数据， 聚集索引（主键）是通往真实数据所在的唯一路径。</p>
+<p>我们在建立索引之后，比如建立了 <code>birthday</code> 的索引，然后通过 <code>where birthday= ..</code> 来查询时：</p>
+<ol>
+<li>通过非聚集索引index_birthday查找birthday等于1991-11-1的所有记录的主键ID值</li>
+<li>通过得到的主键ID值执行聚集索引查找，找到主键ID值对就的真实数据（数据行）存储的位置</li>
+<li>从得到的真实数据中取得 select 字段的值返回</li>
+</ol>
+<p>B+Tree 对应两种搜索方式：</p>
+<ol>
+<li>Equality search：<code>Where age = 25</code>从根节点开始向下找，直到目标叶节点</li>
+<li>Range query
+<ul>
+<li>[a, b]：<code>Where 20 &lt;= age and age &lt;= 30</code>，从根节点开始，向下找，先找到第一个满足条件的叶节点，然后向后顺序遍历，直到不符合要求。</li>
+<li>[-, b]：<code>Where age &lt;= 30</code>，先找到左下角叶节点，然后遍历。</li>
+<li>[a, -]：<code>Where 20 &lt;= age</code> 先找到左边第一个叶节点，然后遍历打最右边节点。</li>
+</ul>
+</li>
+</ol>
+<h1 id="数据结构"><a class="markdownIt-Anchor" href="#数据结构"></a> 数据结构</h1>
+<h2 id="btree"><a class="markdownIt-Anchor" href="#btree"></a> B+Tree</h2>
+<p>原始 B+Tree 的叶子节点组成一个单向链表，在 MySQL 中又为其添加了一个反向指针，叶子节点构成了一个双向闭环链表，来增加数据访问速度。<br />
+内部节点存放的是索引，数据存放在叶子节点处。</p>
+<p>max-Degree：一个节点的最大子节点个数，即指针的个数，key的数量为 指针数量-1 。</p>
+<p>每个节点都是独立存放在单独的 页/block 中。</p>
+<p>优势：</p>
+<ol>
+<li>每个内部节点对应的 block 不存放数据，进而可以存放更多键和指针，可以降低层数，检索效率高。</li>
+<li>相较于 b树，叶子节点形成了链表，便于范围搜素和排序。</li>
+<li>相较于 hash，hash 只支持等值匹配，不支持范围匹配和排序。</li>
+</ol>
+<h2 id="hash-index"><a class="markdownIt-Anchor" href="#hash-index"></a> Hash Index</h2>
+<p>采用一定 hash 算法，将键值换算成为新的 hash 值，映射到 hash 表对应的槽位上。</p>
+<p>只用于等值匹配，不支持范围查询。实现时，比如<code>where name='lyl'</code> ，先得到 <code>'lyl'</code> 的 hash 值，然后直接去hash表读取其地址，得到数据。</p>
+<p>查询效率高，在没有 hash冲突 的情况下，只需要一次检索即可，一般比 B+Tree 查询要快。</p>
+<h1 id="sql-性能分析"><a class="markdownIt-Anchor" href="#sql-性能分析"></a> SQL 性能分析</h1>
+<ol>
+<li>
+<p>查询执行频次：<br />
+<code>SHOW GLOBAL STATUS LIKE 'COM_______'</code> ：查看当前数据库增删改查的访问频次，四个命令正好都是六个字母，所以是1+6个下划线。</p>
+</li>
+<li>
+<p>慢查询日志：用于定位哪些 sql 语句时间比较长<br />
+慢查询日志记录了所有执行时间超过指定参数 (long_query_time， 单位：秒，默认10秒) 的所有SQL语句的日志。<br />
+MySQL的慢查询日志默认没有开启，需要在MySQL的配置文件 <code>/etc/my.cnf</code> 中配置。</p>
+<ul>
+<li><code>show variables  like '%slow_query_log%';</code> 查看是否开启</li>
+<li><code>show variables/global like 'long_query_time%';</code> 查看预设时间，variables是当前会话的，global是全局的（文件中的）。</li>
+<li><code>show variables like 'slow_query_log_file';</code> 日志存放地址，可以通过 <code>tail -f</code> 命令实时查看</li>
+<li><code>set global slow_query_log=1;</code> 开启，只对当前数据库生效，如果MySQL重启后则会失效。</li>
+<li><code>set global long_query_time=4;</code> 设置时间，需要重新连接或新开一个会话才能看到修改值。</li>
+<li><code>/etc/my.cnf</code> -&gt; <code>slow_query_log=1</code>，<code>long_query_time=10</code>，<code>slow_query_log_file=/tmp/mysql_slow.log</code> 永久开启</li>
+</ul>
+</li>
+<li>
+<p>MySQL提供了日志分析工具 <code>mysqldumpslow</code></p>
+</li>
+<li>
+<p><code>show profile</code> 可以告诉我们操作耗时</p>
+<ul>
+<li>首先通过<code>SELECT @@have_profiling;</code> 查看是否支持该功能</li>
+<li>如果关闭，则通过 <code>SET profiling=1;</code> 进行开启</li>
+<li>查看每一条SOL的耗时: <code>show profiles;</code></li>
+<li>查看指定 query_id 的SQL语句各个阶段的耗时情况 <code>show profile for query [query _id];</code></li>
+<li>查看指定 query_id 的SQL语句CPU的使用情况: <code>show profile cpu for query [query id];</code></li>
+</ul>
+</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/03/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/CQL%20%E8%AF%AD%E8%A8%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/03/03/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/CQL%20%E8%AF%AD%E8%A8%80/" class="post-title-link" itemprop="url">CQL 语言</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-03 18:41:24" itemprop="dateCreated datePublished" datetime="2021-03-03T18:41:24-08:00">2021-03-03</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Knowledge-Graph/" itemprop="url" rel="index"><span itemprop="name">Knowledge Graph</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>1.7k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>8 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>文档：<a target="_blank" rel="noopener" href="https://neo4j.com/docs/cypher-manual/current/clauses/">https://neo4j.com/docs/cypher-manual/current/clauses/</a></p>
+<p>A Cypher query part can either read and match on the graph, or make updates on it, <strong>not both simultaneously.</strong></p>
+<p>When performing <strong>Reading</strong> performance, Cypher will <strong>not match</strong> the pattern <strong>until</strong> you ask for the results.</p>
+<p>In an updating query, all the <strong>reading</strong> will be <strong>firstly</strong> done totally, followed by all the <strong>writing</strong> performance.</p>
+<p>These parts are separated by the statement <code>WITH</code>.<br />
+<code>WITH</code> is like an event horizon — it’s <strong>a barrier</strong> between <strong>a plan</strong> and <strong>the finished execution</strong> of that plan.</p>
+<p>Using <code>WITH</code>, you specify how you want the aggregation to happen, and that the aggregation has to be finished before Cypher can start filtering.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">MATCH (n &#123;name: &#x27;John&#x27;&#125;)-[:FRIEND]-(friend)</span><br><span class="line">WITH n, count(friend) AS friendsCount</span><br><span class="line">WHERE friendsCount &gt; 3</span><br><span class="line">RETURN n, friendsCount</span><br></pre></td></tr></table></figure>
+<h2 id="introduction-to-cypher"><a class="markdownIt-Anchor" href="#introduction-to-cypher"></a> Introduction to Cypher</h2>
+<ul>
+<li>Basic mode:  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(nodes)-[:ARE_CONNECTED_TO]-&gt;(otherNodes)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>rounded brackets <code>(nodes)</code> to include the node</li>
+<li>arrow <code>-[:ARE_CONNECTED_TO]-&gt;</code> to declare the relationship</li>
+</ul>
+</li>
+</ul>
+<h3 id="nodes"><a class="markdownIt-Anchor" href="#nodes"></a> Nodes</h3>
+<ul>
+<li><strong>Nodes</strong> and <strong>relationships</strong> are the simple components of the <strong>pattern</strong>, which are the most valuable and powerful piece of the property graph model.</li>
+</ul>
+<br>
+<ul>
+<li>
+<p>Cypher comments: <code>//</code></p>
+</li>
+<li>
+<p>could use the nickname for a node like <code>(p)</code> for a person</p>
+</li>
+<li>
+<p>also could use <code>()</code> for an anonymous node. This means that you are not be able to return this node later in the query.</p>
+</li>
+<li>
+<p>assigning a node label, e.g. Person, Technology, and Company.<br />
+It is like a class, and it likes we are telling the Cypher to only check those labels for that label.<br />
+This helps Cypher distinguish between entities and optimize execution for your queries. It is always better to use node labels in your queries, where possible.</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">()                  //anonymous node (no label or variable) can refer to any node in the database</span><br><span class="line">(p:Person)          //using variable p and label Person</span><br><span class="line">(:Technology)       //no variable, label Technology</span><br><span class="line">(work:Company)      //using variable work and label Company</span><br></pre></td></tr></table></figure>
+<h3 id="relationships"><a class="markdownIt-Anchor" href="#relationships"></a> Relationships</h3>
+<p>Directed relationships: <code>--&gt;</code>or <code>&lt;--</code> between two nodes<br />
+Undirected relationships: <code>--</code> between two nodes</p>
+<p>Additional information, such as <strong>relationship type</strong> and <strong>relationship properties</strong> could be added.</p>
+<p>When using un-directional relationships <code>--</code> for query, Cypher would <strong>ignores any particular direction</strong> and <strong>retrieves the relationship and connected nodes</strong>, no matter what the physical direction is.<br />
+In this case, user needn’t know the specific relationship.</p>
+<p>But when using directional relationships <code>--&gt; / &lt;--</code> for query. The wrong direction will not return any results.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">//data stored with this direction</span><br><span class="line">CREATE (p:Person)-[:LIKES]-&gt;(t:Technology)</span><br><span class="line"></span><br><span class="line">//query relationship backwards will not return results</span><br><span class="line">MATCH (p:Person)&lt;-[:LIKES]-(t:Technology)</span><br><span class="line"></span><br><span class="line">//better to query with undirected relationship unless sure of direction</span><br><span class="line">MATCH (p:Person)-[:LIKES]-(t:Technology)</span><br></pre></td></tr></table></figure>
+<h3 id="node-or-relationship-properties"><a class="markdownIt-Anchor" href="#node-or-relationship-properties"></a> Node or relationship properties</h3>
+<p>properties are <code>name-value</code> pairs</p>
+<p>Node property: <code>(p:Person &#123;name: 'Sally'&#125;)</code><br />
+Relationship property: <code>-[rel:IS_FRIENDS_WITH &#123;since: 2018&#125;]-&gt;</code></p>
+<h3 id="patterns-in-cypher"><a class="markdownIt-Anchor" href="#patterns-in-cypher"></a> Patterns in Cypher</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(p:Person &#123;name: &quot;Sally&quot;&#125;)-[rel:LIKES]-&gt;(g:Technology &#123;type: &quot;Graphs&quot;&#125;)</span><br></pre></td></tr></table></figure>
+<h2 id="patterns"><a class="markdownIt-Anchor" href="#patterns"></a> Patterns</h2>
+<h3 id="node-syntax"><a class="markdownIt-Anchor" href="#node-syntax"></a> Node syntax</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">() // an anonymous, uncharacterized node</span><br><span class="line">(matrix) // every node with a variable</span><br><span class="line">(:Movie) // every node with a type/label</span><br><span class="line">(matrix:Movie)</span><br><span class="line">(matrix:Movie &#123;title: &#x27;The Matrix&#x27;&#125;) // every node with a property</span><br><span class="line">(matrix:Movie &#123;title: &#x27;The Matrix&#x27;, released: 1997&#125;)</span><br></pre></td></tr></table></figure>
+<p>For the Type name, we are used to assign an all-upper-format; and if there is space, we use to use <code>_</code> in place of the blank.<br />
+For the property value, if it is a char type, we should use quotation marks <code>' / &quot;</code> around it.</p>
+<h3 id="relationship-syntax"><a class="markdownIt-Anchor" href="#relationship-syntax"></a> Relationship syntax</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">--&gt;</span><br><span class="line">-[role]-&gt;  // variable</span><br><span class="line">-[:ACTED_IN]-&gt; // type/label</span><br><span class="line">-[role:ACTED_IN]-&gt;</span><br><span class="line">-[role:ACTED_IN &#123;roles: [&#x27;Neo&#x27;]&#125;]-&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="pattern-syntax"><a class="markdownIt-Anchor" href="#pattern-syntax"></a> Pattern syntax</h3>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(keanu:Person:Actor &#123;name: &#x27;Keanu Reeves&#x27;&#125;)</span><br><span class="line">    -[role:ACTED_IN &#123;roles: [&#x27;Neo&#x27;]&#125;]-&gt;</span><br><span class="line">    (matrix:Movie &#123;title: &#x27;The Matrix&#x27;&#125;)</span><br></pre></td></tr></table></figure>
+<h3 id="pattern-variables"><a class="markdownIt-Anchor" href="#pattern-variables"></a> Pattern variables</h3>
+<p>Cypher allows patterns to be assigned to variables.<br />
+This allows the matching paths to be inspected, used in other expressions.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acted_in = (:Person)-[:ACTED_IN]-&gt;(:Movie)</span><br></pre></td></tr></table></figure>
+<p>Then, this variable would contain the matched paths (2 nodes and 1 relationship).<br />
+Later we could use a number of functions to access details of a path, like <code>nodes(path)</code>, <code>relationships(path)</code>, and <code>length(path)</code>.</p>
+<h3 id="clauses"><a class="markdownIt-Anchor" href="#clauses"></a> Clauses</h3>
+<p>There are multiple clauses, each performs a specific task.<br />
+like:</p>
+<ul>
+<li>create and match patterns in the graph</li>
+<li>filter, project, sort, or paginate results</li>
+<li>compose partial statements</li>
+</ul>
+<h2 id="patterns-in-practice"><a class="markdownIt-Anchor" href="#patterns-in-practice"></a> Patterns in practice</h2>
+<h3 id="creating-and-returning-data"><a class="markdownIt-Anchor" href="#creating-and-returning-data"></a> Creating and Returning data</h3>
+<h4 id="create"><a class="markdownIt-Anchor" href="#create"></a> CREATE</h4>
+<p>The simplest clause is called <code>CREATE</code>. It creates the patterns (nodes and relationship) that you specify.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CREATE (:Movie &#123;title: &#x27;The Matrix&#x27;, released: 1997&#125;)</span><br></pre></td></tr></table></figure>
+<p>After running this statement, Cypher returns <strong>the number of changes</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Created Nodes: 1</span><br><span class="line">Added Labels: 1</span><br><span class="line">Set Properties: 2</span><br><span class="line">Rows: 0</span><br></pre></td></tr></table></figure>
+<h3 id="return"><a class="markdownIt-Anchor" href="#return"></a> RETURN</h3>
+<p>to return the created data</p>
+<p>The <code>RETURN</code> clause in Cypher specifies <strong>what values or results</strong> to return from a Cypher query:</p>
+<ul>
+<li>node</li>
+<li>relationships</li>
+<li>node and relationship properties</li>
+<li>patterns</li>
+</ul>
+<p><code>RETURN</code> is not required when doing write procedures, but <strong>is needed for reads</strong>.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">CREATE (a:Person &#123;name: &#x27;Tom Hanks&#x27;, born: 1956&#125;)-[r:ACTED_IN &#123;roles: [&#x27;Forrest&#x27;]&#125;]-&gt;(m:Movie &#123;title: &#x27;Forrest Gump&#x27;, released: 1994&#125;)</span><br><span class="line">CREATE (d:Person &#123;name: &#x27;Robert Zemeckis&#x27;, born: 1951&#125;)-[:DIRECTED]-&gt;(m)</span><br><span class="line">RETURN a, d, r, m</span><br></pre></td></tr></table></figure>
+<h3 id="matching-patterns"><a class="markdownIt-Anchor" href="#matching-patterns"></a> Matching patterns</h3>
+<p>assign the pattern to <code>MATCH</code> to describe what you are looking for.</p>
+<p>A <code>MATCH</code> statement searches for the patterns you specify and return one row per successful pattern match.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">// all nodes labeled with the Movie label.</span><br><span class="line">MATCH (m:Movie)</span><br><span class="line">RETURN m</span><br><span class="line"></span><br><span class="line">// look for a specific person, like Keanu Reeves.</span><br><span class="line">MATCH (p:Person &#123;name: &#x27;Keanu Reeves&#x27;&#125;)</span><br><span class="line">RETURN p</span><br><span class="line"></span><br><span class="line">// the movies&#x27; titles that Tom Hanks acted in and roles he played.</span><br><span class="line">MATCH (p:Person &#123;name: &#x27;Tom Hanks&#x27;&#125;)-[r:ACTED_IN]-&gt;(m:Movie)</span><br><span class="line">RETURN m.title, r.roles</span><br></pre></td></tr></table></figure>
+<h3 id="aliasing-return-values"><a class="markdownIt-Anchor" href="#aliasing-return-values"></a> Aliasing return values</h3>
+<p>Sometimes the return name or property is complex, so we could also alias the property with a cleaner name using <code>AS</code> at the <code>RETURN</code> line.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">MATCH (tom:Person &#123;name:&#x27;Tom Hanks&#x27;&#125;)-[rel:DIRECTED]-(movie:Movie)</span><br><span class="line">RETURN tom.name AS name, tom.born AS `Year Born`, movie.title AS title, movie.released AS `Year Released`</span><br></pre></td></tr></table></figure>
+<p>If there is a space in the nickname, we should use the backtick character `.<br />
+And if there is a space in in the Type name, or property value, we could use <code>''</code>.</p>
+<h2 id="attaching-structure"><a class="markdownIt-Anchor" href="#attaching-structure"></a> Attaching structure</h2>
+<p>extend the graph based on some existing nodes:</p>
+<ol>
+<li>first <code>MATCH</code> the existing connection points</li>
+<li>attach the newly created nodes with relationships using <code>CREATE</code></li>
+</ol>
+<p>It is also possible to <code>CREATE</code> a node and a relationship simultaneously, but we’d better <code>CREATE</code> one by one for better readability.</p>
+<blockquote>
+<p>If the <code>MATCH</code> command return many rows, we could move <code>CREATE</code> before the <code>MATCH</code> line, so that it needn’t create new node for each line.</p>
+</blockquote>
+<h2 id="completing-patterns"><a class="markdownIt-Anchor" href="#completing-patterns"></a> Completing patterns</h2>
+<p>Sometimes when we do <code>CREATE</code> command, we are not sure whether the node/relationship has existed.</p>
+<p>In this case, we could use <code>MERGE</code> command to express a repeatable update operation.</p>
+<p>It would check for the existence of the data before <code>CREATE</code>. Also we could <strong>add</strong> some properties using the <code>ON CREATE</code>.<br />
+But <code>ON CREATE SET</code> <strong>could only add a property</strong>, if the property has existed, <strong>no changing</strong> would be performed.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MERGE (m:Movie &#123;title: &#x27;Cloud Atlas&#x27;&#125;)</span><br><span class="line">ON CREATE SET m.released = 2012</span><br><span class="line">RETURN m</span><br></pre></td></tr></table></figure>
+<p>It comes with large cost check for existing matches first, especially on large graphs. So if we are sure to <strong>not create duplicate</strong> data use <code>CREATE</code> over <code>MERGE</code>.</p>
+<p>Also, <code>MERGE</code> works for relationships:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">MATCH (m:Movie &#123;title: &#x27;Cloud Atlas&#x27;&#125;)</span><br><span class="line">MATCH (p:Person &#123;name: &#x27;Tom Hanks&#x27;&#125;)</span><br><span class="line">MERGE (p)-[r:ACTED_IN]-&gt;(m)</span><br><span class="line">ON CREATE SET r.roles =[&#x27;Zachry&#x27;]</span><br><span class="line">RETURN p, r, m</span><br></pre></td></tr></table></figure>
+<p>if the relationship direction is arbitrary, we could use <code>-[r:ACTED_IN]-</code>.</p>
+<p>If we only pass one node for <code>MERGE</code> in a relationship, it would <code>CREATE</code> both the relationship and the other node.</p>
+<h2 id="getting-the-correct-results"><a class="markdownIt-Anchor" href="#getting-the-correct-results"></a> Getting the correct results</h2>
+<h3 id="filtering-results"><a class="markdownIt-Anchor" href="#filtering-results"></a> Filtering results</h3>
+<p>After <code>MATCH</code>, using <code>WHERE</code> clause to use any number of boolean expressions, predicates, combined with <code>AND</code>, <code>OR</code>, <code>XOR</code> and <code>NOT</code>.</p>
+<p>Actually it is equivalent to the query with the condition in the pattern.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">MATCH (m:Movie)</span><br><span class="line">WHERE m.title = &#x27;The Matrix&#x27;</span><br><span class="line">RETURN m</span><br><span class="line"></span><br><span class="line">==</span><br><span class="line">MATCH (m:Movie &#123;title: &#x27;The Matrix&#x27;&#125;)</span><br><span class="line">RETURN m</span><br></pre></td></tr></table></figure>
+<p>There are optional conditions:</p>
+<ol>
+<li>property matching: <code>node.property_key = &quot;value&quot;</code></li>
+<li>numeric comparisons: <code>node.property_key &gt;&lt;= int</code></li>
+<li>matching regular expressions: <code>p.name =~ 'K.+'</code></li>
+<li>the existence of values within a list: <code>&quot;target_str&quot; IN node.property_key</code></li>
+<li>a pattern predicate restricts:</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MATCH (p:Person)-[:ACTED_IN]-&gt;(m)</span><br><span class="line">WHERE NOT (p)-[:DIRECTED]-&gt;()  // has never directed any movies</span><br><span class="line">RETURN p, m</span><br></pre></td></tr></table></figure>
+<h4 id="querying-ranges-of-values"><a class="markdownIt-Anchor" href="#querying-ranges-of-values"></a> Querying ranges of values</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MATCH (p:Person)</span><br><span class="line">WHERE 3 &lt;= p.yearsExp &lt;= 7</span><br><span class="line">RETURN p</span><br></pre></td></tr></table></figure>
+<h4 id="testing-if-a-property-exists"><a class="markdownIt-Anchor" href="#testing-if-a-property-exists"></a> Testing if a property exists</h4>
+<p>In Neo4j, a property <strong>only exists (is stored) if it has a value</strong>. A null property is not stored.<br />
+we could use <code>IS NOT NULL</code> for these nodes with the property.</p>
+<h4 id="checking-strings-partial-values-fuzzy-searches"><a class="markdownIt-Anchor" href="#checking-strings-partial-values-fuzzy-searches"></a> Checking strings — partial values, fuzzy searches</h4>
+<p><code>p.name STARTS WITH 'M'</code><br />
+<code>p.name CONTAINS 'a'</code><br />
+<code>p.name ENDS WITH 'n'</code></p>
+<p>use regular expressions: <code>WHERE p.name =~ 'Jo.*'</code></p>
+<h4 id="in-a-list"><a class="markdownIt-Anchor" href="#in-a-list"></a> in a list</h4>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">WHERE p.yearsExp IN [1, 5, 6]</span><br></pre></td></tr></table></figure>
+<h4 id="filtering-on-patterns-inner-join"><a class="markdownIt-Anchor" href="#filtering-on-patterns-inner-join"></a> Filtering on patterns ( Inner join )</h4>
+<p>can also filter results based on relationships or patterns</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">//Query1: find which people are friends of someone who works for Neo4j</span><br><span class="line">MATCH (p:Person)-[r:IS_FRIENDS_WITH]-&gt;(friend:Person)</span><br><span class="line">WHERE exists((p)-[:WORKS_FOR]-&gt;(:Company &#123;name: &#x27;Neo4j&#x27;&#125;))</span><br><span class="line">RETURN p, r, friend;</span><br><span class="line"></span><br><span class="line">//Query2: find Jennifer&#x27;s friends who do not work for a company</span><br><span class="line">MATCH (p:Person)-[r:IS_FRIENDS_WITH]-&gt;(friend:Person)</span><br><span class="line">WHERE p.name = &#x27;Jennifer&#x27;</span><br><span class="line">AND NOT exists((friend)-[:WORKS_FOR]-&gt;(:Company))</span><br><span class="line">RETURN friend.name;</span><br></pre></td></tr></table></figure>
+<h4 id="optional-patterns-outre-join"><a class="markdownIt-Anchor" href="#optional-patterns-outre-join"></a> Optional patterns( Outre join )</h4>
+<p>In Cypher, you can use an <code>OPTIONAL MATCH</code> pattern to try to match it, but if it doesn’t find results, those rows will return null for those values.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">//Find all people whose name starts with J and who may work for a company.</span><br><span class="line">MATCH (p:Person)</span><br><span class="line">WHERE p.name STARTS WITH &#x27;J&#x27;</span><br><span class="line">OPTIONAL MATCH (p)-[:WORKS_FOR]-(other:Company)</span><br><span class="line">RETURN p.name, other.name;</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">+--------------------------------+</span><br><span class="line">| p.name      | other.name       |</span><br><span class="line">+--------------------------------+</span><br><span class="line">| &#x27;Jennifer&#x27;  | &#x27;Neo4j&#x27;          |</span><br><span class="line">| &#x27;John&#x27;      | &#x27;XYZ&#x27;            |</span><br><span class="line">| &#x27;Joe&#x27;       | null             |</span><br><span class="line">+--------------------------------+</span><br></pre></td></tr></table></figure>
+<h4 id="more-complex-patterns"><a class="markdownIt-Anchor" href="#more-complex-patterns"></a> More complex patterns</h4>
+<p>we could expand our pattern to perform more complex relationships:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">//Query2: find who likes graphs besides Jennifer that she is also friends with</span><br><span class="line">MATCH (j:Person &#123;name: &#x27;Jennifer&#x27;&#125;)-[:LIKES]-&gt;(:Technology &#123;type: &#x27;Graphs&#x27;&#125;)&lt;-[:LIKES]-(p:Person),</span><br><span class="line">      (j)-[:IS_FRIENDS_WITH]-(p)</span><br><span class="line">RETURN p.name;</span><br></pre></td></tr></table></figure>
+<p>Also, we could use <code>,</code> to use multiple conditional patterns. It is also a good way to replace <code>WHERE exists(&lt;pattern&gt;)</code>.</p>
+<h3 id="returning-results"><a class="markdownIt-Anchor" href="#returning-results"></a> Returning results</h3>
+<p>after <code>RETURN</code>,  we could add some simple expressions to operate the returned value:</p>
+<ol>
+<li>index: <code>names[0]</code>, <code>movies[1..-1]</code>, <code>substring('2014-07-01', 0, 4)</code></li>
+<li>length(array)</li>
+<li>toInteger(‘12’)</li>
+<li>coalesce(p.nickname, ‘n/a’)</li>
+</ol>
+<p><code>UNIQUE</code> could trim out duplicate entities.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">//Query: find people who have a twitter or like graphs or query languages</span><br><span class="line">MATCH (user:Person)</span><br><span class="line">WHERE user.twitter IS NOT null</span><br><span class="line">WITH user</span><br><span class="line">MATCH (user)-[:LIKES]-(t:Technology)</span><br><span class="line">WHERE t.type IN [&#x27;Graphs&#x27;,&#x27;Query Languages&#x27;]</span><br><span class="line">RETURN DISTINCT user.name</span><br></pre></td></tr></table></figure>
+<h4 id="limiting-number-of-results"><a class="markdownIt-Anchor" href="#limiting-number-of-results"></a> Limiting number of results</h4>
+<p><code>LIMIT</code> keyword takes the output of the query and limits the volume returned based on the number you specify.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">//Query: find the top 3 people who have the most friends</span><br><span class="line">MATCH (p:Person)-[r:IS_FRIENDS_WITH]-(other:Person)</span><br><span class="line">RETURN p.name, count(other.name) AS numberOfFriends</span><br><span class="line">ORDER BY numberOfFriends DESC</span><br><span class="line">LIMIT 3</span><br></pre></td></tr></table></figure>
+<p><a target="_blank" rel="noopener" href="https://neo4j.com/docs/getting-started/current/cypher-intro/results/#cypher-intro-results-aggregating">https://neo4j.com/docs/getting-started/current/cypher-intro/results/#cypher-intro-results-aggregating</a></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/02/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/py2neo%E4%BB%8B%E7%BB%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1549,530 +2615,6 @@ python values = {‘loss’: loss, ‘acc’: acc, …, ‘metric_n’: metric_n
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Pytorch_lightning/2.Callbacks/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/08/Coding/Pytorch_lightning/2.Callbacks/" class="post-title-link" itemprop="url">Pytorch_lightning 2.Callbacks</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-02-08 22:10:47" itemprop="dateCreated datePublished" datetime="2021-02-08T22:10:47-08:00">2021-02-08</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Pytorch-Lightning/" itemprop="url" rel="index"><span itemprop="name">Pytorch Lightning</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>101</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>1 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="earlystopping"><a class="markdownIt-Anchor" href="#earlystopping"></a> EarlyStopping</h1>
-<p>默认在每一个  validation epoch 结束后进行判断</p>
-<p><code>from lightning.pytorch.callbacks.early_stopping import EarlyStopping</code></p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">EarlyStopping(monitor=&quot;val_loss&quot;, mode=&quot;min&quot;)</span><br><span class="line">EarlyStopping(monitor=&quot;val_accuracy&quot;, min_delta=0.00, patience=3, verbose=False, mode=&quot;max&quot;)</span><br></pre></td></tr></table></figure>
-<p>额外的参数：</p>
-<ol>
-<li>stopping_threshold，一旦被监控的目标大于等于这个值，终止训练</li>
-<li>divergence_threshold，一旦被监控的目标小于等于这个值，终止训练</li>
-<li>check_finite，当被监控的值为 NaN 或者 infinite 时，终止训练</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Sklearn/sklearn%20Model_Selection/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/08/Coding/Sklearn/sklearn%20Model_Selection/" class="post-title-link" itemprop="url">sklearn Model_Selection</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-02-08 22:10:47" itemprop="dateCreated datePublished" datetime="2021-02-08T22:10:47-08:00">2021-02-08</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Sklearn/" itemprop="url" rel="index"><span itemprop="name">Sklearn</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>651</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>3 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><font size=6>sklearn.Model_Selection</font></p>
-<h2 id="train_test_split"><a class="markdownIt-Anchor" href="#train_test_split"></a> train_test_split()</h2>
-<p>将数组或矩阵拆分为随机训练和测试子集</p>
-<h3 id="方法参数"><a class="markdownIt-Anchor" href="#方法参数"></a> 方法参数</h3>
-<ul>
-<li><code>*arrays</code>：序列或者可以索引的对象列表</li>
-<li><code>test_size = None</code>：float or int, default=None。
-<ul>
-<li>float：[0.0, 1.0]，表示测试集比例</li>
-<li>int：测试集样本数</li>
-<li>None：为<code>train_size</code>的补集</li>
-<li>如果两者都没设置，则默认<code>0.25</code></li>
-</ul>
-</li>
-<li><code>train_size = None</code></li>
-<li><code>random_state = None</code>：int, RandomState instance or None<br />
-split前的shuffle方式</li>
-<li><code>shuffle =True</code></li>
-<li><code>stratify</code>：array-like, default=None</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/02/08/Coding/Sklearn/sklearn%20Model_Selection/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/08/Coding/Numpy/numpy%E5%BA%93%E7%9A%84%E7%AE%80%E5%8D%95%E8%AE%B2%E8%A7%A3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/08/Coding/Numpy/numpy%E5%BA%93%E7%9A%84%E7%AE%80%E5%8D%95%E8%AE%B2%E8%A7%A3/" class="post-title-link" itemprop="url">numpy库的简单讲解</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-02-08 20:34:45" itemprop="dateCreated datePublished" datetime="2021-02-08T20:34:45-08:00">2021-02-08</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/" itemprop="url" rel="index"><span itemprop="name">Data Analysis Package</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Data-Analysis-Package/Numpy/" itemprop="url" rel="index"><span itemprop="name">Numpy</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>5 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="numpy-n维数组容器"><a class="markdownIt-Anchor" href="#numpy-n维数组容器"></a> Numpy: N维数组容器</h3>
-<p>引入了ndarray-多维数组的概念，可用于储存和处理大型矩阵。</p>
-<h3 id="一些基本操作"><a class="markdownIt-Anchor" href="#一些基本操作"></a> 一些基本操作：</h3>
-<h4 id="导入numpy库"><a class="markdownIt-Anchor" href="#导入numpy库"></a> 导入numpy库：</h4>
-<p><code>import numpy as np</code></p>
-<h4 id="创建ndarray对象"><a class="markdownIt-Anchor" href="#创建ndarray对象"></a> 创建ndarray对象：</h4>
-<ol>
-<li><code>np.array(列表)</code><br />
-输入列表，并返回其ndarray形式</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a = [random.uniform(100.0, 200) for i in range(10)]</span><br><span class="line">a = np.array(a)</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>
-<p><code>np.arange()</code><br />
-参数：<br />
-a. 1个参数a，生成0到a-1的列表<br />
-b. 2个参数a,b，生成a到b-1的列表<br />
-c. 3个参数a,b,c，生成a到b-1的列表，步长为c</p>
-</li>
-<li>
-<p><code>np.linspace(起始值，终结值，元素数量)</code>可以将元素均匀分布</p>
-</li>
-<li>
-<p><code>zeros(),ones(),empty()</code><br />
-参数：<br />
-a. 长度，必需<br />
-b. dtype=“”，非必选<br />
-empty()生成的其元素是任意值，等待被赋值。</p>
-</li>
-</ol>
-<h4 id="ndarray对象的一些基本属性"><a class="markdownIt-Anchor" href="#ndarray对象的一些基本属性"></a> ndarray对象的一些基本属性：</h4>
-<ol>
-<li>shape：尺寸</li>
-<li>dtype：内部元素的数据类型</li>
-<li>T：自身的转置矩阵<br />
-<img src="http://i1.fuimg.com/733078/ec7dde96d174a479.jpg" alt="Markdown" /></li>
-</ol>
-<ul>
-<li>批量运算：<br />
-<img src="http://i1.fuimg.com/733078/ea4fa165e149d011.jpg" alt="Markdown" /></li>
-</ul>
-<h4 id="一些常用的方法"><a class="markdownIt-Anchor" href="#一些常用的方法"></a> 一些常用的方法：</h4>
-<ol>
-<li>
-<p><code>sum()</code>： 返回所有元素的和</p>
-</li>
-<li>
-<p>ndarray数组截取：</p>
-<ul>
-<li><strong>索引截取</strong>：<code>被截取数组[起始索引:结尾索引:步长]</code></li>
-</ul>
- <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = np.arange(20)</span><br><span class="line">c = a[0:15:3]</span><br><span class="line">print(c) --&gt; [ 0  3  6  9 12 15]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>注意：<br />
-不包含结尾索引。<br />
-numpy的截取是一个指针指向原数组，不会重新开辟内存。所以改变截取数组也会改变原数组。可以使用copy()来操作，不影响原数组。</li>
-<li>多维数组的截取：<code>被截取数组[行切片，列切片]</code></li>
-</ul>
- <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">a = np.arange(15).reshape((3,5))</span><br><span class="line">print(a)</span><br><span class="line">print(a[0:2, 0:2])</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">[[ 0  1  2  3  4]</span><br><span class="line">[ 5  6  7  8  9]</span><br><span class="line">[10 11 12 13 14]]</span><br><span class="line"></span><br><span class="line">[[0 1]</span><br><span class="line">[5 6]]</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>布尔型截取</strong>：传入一个相同长度的布尔形式的数组索引，过滤，返回对应值为true的值的数组.<br />
-可以使用批量处理和布尔型截取来筛选数据，注意多个条件使用：并且-&gt;(条件1)&amp;(条件2) ；或-&gt;(条件1)|(条件2)</li>
-</ul>
- <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a = [random.randint(1, 10) for i in range(10)]</span><br><span class="line">a = np.array(a)   --&gt; [ 2  1  9  5 10  1  6  9  9  3]</span><br><span class="line">print(a)</span><br><span class="line"># 多个条件使用：1. 并且 (条件1)&amp;(条件2) 2. 或 (条件1)|(条件2)</span><br><span class="line">print(a[(a&gt;5) &amp; (a%2==0)]) --&gt;[ 2  1  9  5 10  1  6  9  9  3]</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>花式索引</strong>：传入一个索引的列表 (列表套列表)</li>
-</ul>
- <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a =np.arange(10)       --&gt; [0 1 2 3 4 5 6 7 8 9]</span><br><span class="line">b = a[ [1,3,4,6,7] ]     --&gt; [1 3 4 6 7]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>可以使用这三种索引方式组合来索引多维数组</li>
-</ul>
-</li>
-<li>
-<p><code>copy()</code>：复制某个数组，对复制数组修改不会影响原数组。</p>
-</li>
-<li>
-<p><code>reshape(size的元祖数量)</code>：改变矩阵尺寸</p>
-</li>
-<li>
-<p><code>np.abs()</code>：返回ndarray每个元素绝对值的数组</p>
-</li>
-<li>
-<p><code>np.sqrt()</code>：返回开方，负数开方为nan</p>
-</li>
-<li>
-<p><code>np.round()/ np.rint()</code>：每个元素四舍五入</p>
-</li>
-<li>
-<p><code>np.trunc()</code>：向0取整</p>
-</li>
-<li>
-<p><code>np.floor() 和  np.ceil()</code>：向下和向上取整</p>
-</li>
-<li>
-<p><code>np.modf()</code>：返回整数和小数部分数组，共返回2个元素</p>
-</li>
-<li>
-<p><code>np.isnan</code>：判断是否为一个数字</p>
-</li>
-<li>
-<p><code>np.inf</code>表示最大的数，通常是被除数为0的结果。</p>
-</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = np.array([3,4,5,6,7])</span><br><span class="line">b = np.array([3,0,0,0,7])</span><br><span class="line">print(a/b) --&gt; [ 1. inf inf inf  1.]</span><br></pre></td></tr></table></figure>
-<ol start="13">
-<li><code>np.var()</code>方差 <code>np.std()</code>标准差</li>
-<li><code>np.max() np.min()</code>, <code>np.argmax()</code>返回最大数的下标, <code>np.argmin()</code>返回最小值的下标</li>
-</ol>
-<h3 id="np中的random库"><a class="markdownIt-Anchor" href="#np中的random库"></a> np中的random库</h3>
-<p>作用：可以用于生成随机数组<br />
-参数：前两个参数为随机区间，最后一个为数组的尺存(可以是一个元组)<br />
-方法：</p>
-<ol>
-<li><code>randint(x,y,size)</code> 生成随机整数，[x, y)</li>
-<li><code>rand()</code> 生成0到1的随机数，<code>rand(x)</code>生成生成0到1的x个元素的一维数组，<code>rand(x,y)</code>生成x*y的数组</li>
-<li><code>randn()</code>以给定的形状创建一个数组，数组元素来符合标准正态分布N(0,1)</li>
-<li><code>choice(x,y)</code> 从数组x中随机选择元素，生成y尺寸大小的数组</li>
-</ol>
-<h4 id="numpyrandomrandomstate"><a class="markdownIt-Anchor" href="#numpyrandomrandomstate"></a> numpy.random.RandomState()</h4>
-<p>为一个伪随机数生成器</p>
-<blockquote>
-<p>伪随机数是用确定性的算法计算出来的似来自[0,1]均匀分布的随机数序列。并不真正的随机，但具有类似于随机数的统计特征，如均匀性、独立性等。(摘自《百度百科》)</p>
-</blockquote>
-<p>直接传入数字，只要数字相同，则生成数相同。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/02/Coding/Python/@staticmethod%E5%92%8C@classmethod/" class="post-title-link" itemprop="url">staticmethod & classmethod</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-02-02 22:23:51" itemprop="dateCreated datePublished" datetime="2021-02-02T22:23:51-08:00">2021-02-02</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>511</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>3 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>一般来说，要使用某个类的方法，需要先实例化一个对象再调用方法。<br />
-而使用 <code>@staticmethod</code> 或 <code>@classmethod</code>，就可以不需要实例化，直接 <code>类名.方法名()</code> 来调用。</p>
-<h2 id="区别"><a class="markdownIt-Anchor" href="#区别"></a> 区别</h2>
-<p>一般来说，Class 内部的 Method 首个参数必须是表示类本身的 self（cls） 参数。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">def annotate_events(self, tokens: List[str], events: List[Event])</span><br></pre></td></tr></table></figure>
-<ul>
-<li><code>@staticmethod</code> 为静态方法装饰器，不需要表示自身对象的 self 和自身类的 cls 参数，就跟使用函数一样。
-<ul>
-<li>如果内部需要调用这个类的一些属性方法，则只能直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 。</li>
-<li>但是如果调用正常的类方法的话，不会默认传入 <code>self</code> 参数，则需要额外参数 <code>类名</code> 作为第一个参数。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        print(A.a)  # &quot;a&quot;</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;)) # 这里需要传入类名 A</span><br><span class="line">        print(A.foo2(&#x27;mamq&#x27;))</span><br><span class="line">            # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br></pre></td></tr></table></figure>
-<br>
-<ul>
-<li><code>@classmethod</code> 类方法装饰器，也不需要 self 参数，但第一个参数需要是表示自身类的 cls 参数。
-<ul>
-<li>如果内部需要调用这个类的一些属性方法，除了直接 <code>类名.属性名</code> 或 <code>类名.方法名()</code> 外，还可以用 <code>cls()</code> 先初始化类，再来调用类的属性，类的方法，实例化对象等，避免硬编码。</li>
-</ul>
-</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">class A(object):</span><br><span class="line">    a = &#x27;a&#x27;</span><br><span class="line"></span><br><span class="line">    @staticmethod</span><br><span class="line">    def foo1(name):</span><br><span class="line">        # print(A.a)  # 正常</span><br><span class="line">        # print(A.foo2(A, &#x27;mamq&#x27;))</span><br><span class="line">        print(A.foo2(A, &#x27;mamq&#x27;))  # 报错: unbound method foo2() must be called with A instance as first argument (got str instance instead)</span><br><span class="line"></span><br><span class="line">    def foo2(self, name):</span><br><span class="line">        print(self.a)</span><br><span class="line">        print(&#x27;hello&#x27;, name)</span><br><span class="line"></span><br><span class="line">    @classmethod</span><br><span class="line">    def foo3(cls, name):</span><br><span class="line">        # print(&#x27;hello&#x27;, name)</span><br><span class="line">        print(cls.a)</span><br><span class="line">        print(cls().a) # 两者相同，都能运行</span><br><span class="line"></span><br><span class="line">        print(cls.foo1(&quot;f1&quot;))</span><br><span class="line">        print(cls().foo1(&quot;f1&quot;)) # 两者</span><br><span class="line"></span><br><span class="line">        print(cls.foo2(name)) # 报错，普通方法传入的是 self，而不是 class，所以需要实例化</span><br><span class="line">        print(cls().foo2(name))</span><br></pre></td></tr></table></figure>
-<h2 id="self-和-cls"><a class="markdownIt-Anchor" href="#self-和-cls"></a> self 和 cls</h2>
-<p><code>cls</code> 和 <code>self</code> 其实只是一种命名习惯习惯, 是在 PEP8中定义的。<br />
-<code>cls</code> 表示类本身，所以需要实例化。<br />
-<code>self</code> 表示类的实例化，直接调用就好。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -2141,7 +2683,7 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">356</span>
+          <span class="site-state-item-count">360</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -2150,6 +2692,10 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
           
         <span class="site-state-item-count">40</span>
         <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
       </div>
   </nav>
 </div>
@@ -2193,13 +2739,13 @@ numpy的截取是一个指针指向原数组，不会重新开辟内存。所以
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">615k</span>
+    <span title="Symbols count total">619k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">51:17</span>
+    <span title="Reading time total">51:33</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
