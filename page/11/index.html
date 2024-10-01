@@ -179,6 +179,377 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/02/09/NLP/LLM/Llama/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A foolish, slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/09/NLP/LLM/Llama/" class="post-title-link" itemprop="url">Llama</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-02-09 23:12:07" itemprop="dateCreated datePublished" datetime="2023-02-09T23:12:07-08:00">2023-02-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/LLM-Model/" itemprop="url" rel="index"><span itemprop="name">LLM Model</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>4.5k</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>22 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <span id="more"></span>
+<h1 id="为什么现在都是-decoder-only-架构"><a class="markdownIt-Anchor" href="#为什么现在都是-decoder-only-架构"></a> 为什么现在都是 decoder only 架构 ？</h1>
+<ol>
+<li>
+<p>Encoder 的低秩问题</p>
+<p>双向 Attention 的注意力矩阵容易退化为低秩状态，而 <strong>causal attention 的注意力矩阵是下三角矩阵，必然是满秩的，建模能力更强，表达能力更强；</strong></p>
+<p>Encoder-Decoder架构之所以能够在某些场景下表现更好，大概只是因为它多了一倍参数。所以，在同等参数量、同等推理成本下，Decoder-only架构就是最优选择了。</p>
+</li>
+<li>
+<p>预训练任务难度</p>
+<p>纯粹的decoder-only架构 + 「next token prediction 预训练」，每个位置所能接触的信息比其他架构少，要预测下一个token难度更高，当模型足够大，数据足够多的时候，「decoder-only模型」 学习通用表征的上限更高。</p>
+<p>Bert 的双向模型可以看到前向和后向，这在预测的时候是天然的优势，但在训练的时候其实反而降低了学习难度，bert的双向提高了下限也拉低了上限。</p>
+<p>相同规模的 GPT 和 BERT 模型，GPT 的效果要比 BERT 差。但是从另一个角度去想，如果能够把 <strong>「预测未来」</strong> 这个事情做好的话，它最终所能达到的效果的天花板一定是更高的。</p>
+</li>
+<li>
+<p>泛化性质</p>
+<p>In-context learning 对 LLM 有 few-shot fine tune 的作用，few shot / zero shot 效果更强。</p>
+<p>decoder-only 模型在没有任何 tuning 数据的情况下、zero-shot 表现最好，而 encoder-decoder 则需要在一定量的标注数据上做 multitask finetuning 才能激发最佳性能。</p>
+</li>
+<li>
+<p>大数据训练+大参数模型的涌现能力替代了multitask fine-tuning</p>
+<p>5B参数量+170B token 数据量时，在做 multitask fine-tuning 后 encoder-decoder 相比 decoder-only 反而在新任务（zero-shot）上会有一定的优势。</p>
+<p>但是，随着参数量进一步增加，encoder-decoder 在 multitask fine-tuning 上的优势在大参数量时被LLM的推理能力给拉平了。也就是 LLM 可以自动地从大数据里面做 self multitask fine-tuning 。</p>
+</li>
+<li>
+<p>causal attention （就是decoder-only的单向attention）具有隐式的位置编码功能 。</p>
+</li>
+</ol>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/651248009">【llm大语言模型】一文看懂llama2(原理,模型,训练)</a></p>
+<h1 id="如何计算模型参数量"><a class="markdownIt-Anchor" href="#如何计算模型参数量"></a> <strong>如何计算模型参数量？</strong></h1>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled.png" alt="Untitled" /></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo separator="true">⋅</mo><mi>H</mi><mo>+</mo><mn>12</mn><mo separator="true">⋅</mo><mi>L</mi><mo separator="true">⋅</mo><msup><mi>H</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">V·H+12·L·H^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mpunct">⋅</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mpunct">⋅</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">L</span><span class="mpunct">⋅</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> 适用于：GPT-3 ； llama2-7B和llama2-13B</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mi>H</mi><mo>+</mo><mn>12.65</mn><mi>L</mi><mo>∗</mo><msup><mi>H</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">VH+12.65L*H^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mord">.</span><span class="mord">6</span><span class="mord">5</span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> 适用于：llama2-34B ；llama2-70B</p>
+<h1 id="llama-1"><a class="markdownIt-Anchor" href="#llama-1"></a> LLAMA 1</h1>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/648774481">LLaMa-1 技术详解</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/lyhue1991/torchkeras/blob/master/examples/Dive_into_Llama.ipynb"></a></p>
+<p><strong>在给定的计算预算下，最佳性能并不是由最大的模型实现的，而是由更多数据训练的较小模型实现的</strong>。</p>
+<ul>
+<li>
+<p>模型尺寸参数</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><menclose notation="top bottom left right"><mtable rowspacing="0.15999999999999992em" columnalign="left left left left left left left" columnlines="solid solid solid solid solid solid" columnspacing="1em" rowlines="solid solid solid solid"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 参数 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 维度(dim) </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> head个数 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> layer层数 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 学习率 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> batch size </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> token数 </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 6.7B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>4096</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>32</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>32</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>3.0</mn><mi mathvariant="normal">e</mi><mo>−</mo><mn>4</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><mi mathvariant="normal">M</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.0</mn><mrow><mtext> </mtext><mi mathvariant="normal">T</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 13.0B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>5120</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>40</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>40</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>3.0</mn><mi mathvariant="normal">e</mi><mo>−</mo><mn>4</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><mi mathvariant="normal">M</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.0</mn><mrow><mtext> </mtext><mi mathvariant="normal">T</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 32.5B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>6656</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>52</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>60</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.5</mn><mi mathvariant="normal">e</mi><mo>−</mo><mn>4</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><mi mathvariant="normal">M</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.4</mn><mrow><mtext> </mtext><mi mathvariant="normal">T</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 65.2B </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>8192</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>64</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>80</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.5</mn><mi mathvariant="normal">e</mi><mo>−</mo><mn>4</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><mi mathvariant="normal">M</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>1.4</mn><mrow><mtext> </mtext><mi mathvariant="normal">T</mi></mrow></mrow></mstyle></mtd></mtr></mtable></menclose></mrow><annotation encoding="application/x-tex">\begin{array}{|l|l|l|l|l|l|l|}\hline \text { 参数 } &amp; \text { 维度(dim) } &amp; \text { head个数 } &amp; \text { layer层数 } &amp; \text { 学习率 } &amp; \text { batch size } &amp; \text { token数 } \\\hline \text { 6.7B } &amp; 4096 &amp; 32 &amp; 32 &amp; 3.0 \mathrm{e}-4 &amp; 4 \mathrm{M} &amp; 1.0 \mathrm{~T} \\\hline \text { 13.0B } &amp; 5120 &amp; 40 &amp; 40 &amp; 3.0 \mathrm{e}-4 &amp; 4 \mathrm{M} &amp; 1.0 \mathrm{~T} \\\hline \text { 32.5B } &amp; 6656 &amp; 52 &amp; 60 &amp; 1.5 \mathrm{e}-4 &amp; 4 \mathrm{M} &amp; 1.4 \mathrm{~T} \\\hline \text { 65.2B } &amp; 8192 &amp; 64 &amp; 80 &amp; 1.5 \mathrm{e}-4 &amp; 4 \mathrm{M} &amp; 1.4 \mathrm{~T} \\\hline\end{array}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:6.040000000000001em;vertical-align:-2.7500000000000004em;"></span><span class="mord"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2900000000000005em;"><span style="top:-5.25em;"><span class="pstrut" style="height:5.25em;"></span><span class="mtable"><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">参数</span><span class="mord"> </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> 6.7B </span></span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> 13.0B </span></span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> 32.5B </span></span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> 65.2B </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">维度</span><span class="mord">(dim) </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">0</span><span class="mord">9</span><span class="mord">6</span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">5</span><span class="mord">1</span><span class="mord">2</span><span class="mord">0</span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">6</span><span class="mord">6</span><span class="mord">5</span><span class="mord">6</span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">8</span><span class="mord">1</span><span class="mord">9</span><span class="mord">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> head</span><span class="mord cjk_fallback">个数</span><span class="mord"> </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">2</span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">0</span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">5</span><span class="mord">2</span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">6</span><span class="mord">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> layer</span><span class="mord cjk_fallback">层数</span><span class="mord"> </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">2</span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">0</span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">6</span><span class="mord">0</span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">8</span><span class="mord">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">学习率</span><span class="mord"> </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">.</span><span class="mord">0</span><span class="mord"><span class="mord mathrm">e</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">4</span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">.</span><span class="mord">0</span><span class="mord"><span class="mord mathrm">e</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">4</span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">5</span><span class="mord"><span class="mord mathrm">e</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">4</span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">5</span><span class="mord"><span class="mord mathrm">e</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> batch size </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord"><span class="mord mathrm">M</span></span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord"><span class="mord mathrm">M</span></span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord"><span class="mord mathrm">M</span></span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord"><span class="mord mathrm">M</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.2500000000000004em;"><span style="top:-5.410000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> token</span><span class="mord cjk_fallback">数</span><span class="mord"> </span></span></span></span><span style="top:-4.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">T</span></span></span></span><span style="top:-3.01em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">T</span></span></span></span><span style="top:-1.8099999999999998em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">4</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">T</span></span></span></span><span style="top:-0.6099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">4</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">T</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:6.000000000000001em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-2.7500000000000004em;"></span></span></span><span style="top:-2.4999999999999996em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.6999999999999997em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-4.9em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-6.1000000000000005em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-7.300000000000001em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-8.5em;"><span class="pstrut" style="height:5.25em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.7500000000000004em;"><span></span></span></span></span></span></span></span></span></p>
+<p>B 对应 10亿</p>
+</li>
+<li>
+<p>训练数据</p>
+<p>LLaMa 预训练数据大约包含 1.4T tokens，对于绝大部分的训练数据，在训练期间模型只见到过1次，Wikipedia 和 Books 这两个数据集见过2次。</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><menclose notation="top bottom left right"><mtable rowspacing="0.15999999999999992em" columnalign="left left left left" columnlines="solid solid solid" columnspacing="1em" rowlines="solid solid solid solid solid solid solid"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 数据集 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 样本比例 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Epochs </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> 磷盘大小 </mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> CommonCrawl </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>67.0</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>1.10</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>3.3</mn><mrow><mtext> </mtext><mi mathvariant="normal">T</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> C4 </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>15.0</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>1.06</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>783</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Github </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4.5</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>0.64</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>328</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Wikipedia </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4.5</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>2.45</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>83</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> Books </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4.5</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>2.23</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>85</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> ArXiv </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>2.5</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>1.06</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>92</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext> StackExchange </mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>2.0</mn><mi mathvariant="normal">%</mi></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>1.03</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>78</mn><mrow><mtext> </mtext><mi mathvariant="normal">G</mi><mi mathvariant="normal">B</mi></mrow></mrow></mstyle></mtd></mtr></mtable></menclose><menclose notation="top bottom"><mtable rowspacing="0.15999999999999992em" columnalign="left left left left" columnlines="solid solid solid" columnspacing="1em"></mtable></menclose></mrow><annotation encoding="application/x-tex">\begin{array}{|l|l|l|l|}\hline \text { 数据集 } &amp; \text { 样本比例 } &amp; \text { Epochs } &amp; \text { 磷盘大小 } \\\hline \text { CommonCrawl } &amp; 67.0 \% &amp; 1.10 &amp; 3.3 \mathrm{~TB} \\\hline \text { C4 } &amp; 15.0 \% &amp; 1.06 &amp; 783 \mathrm{~GB} \\\hline \text { Github } &amp; 4.5 \% &amp; 0.64 &amp; 328 \mathrm{~GB} \\\hline \text { Wikipedia } &amp; 4.5 \% &amp; 2.45 &amp; 83 \mathrm{~GB} \\\hline \text { Books } &amp; 4.5 \% &amp; 2.23 &amp; 85 \mathrm{~GB} \\\hline \text { ArXiv } &amp; 2.5 \% &amp; 1.06 &amp; 92 \mathrm{~GB} \\\hline \text { StackExchange } &amp; 2.0 \% &amp; 1.03 &amp; 78 \mathrm{~GB} \\\hline\end{array}\begin{array}{|l|l|l|l|}
+  \end{array}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:9.64em;vertical-align:-4.55em;"></span><span class="mord"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:5.09em;"><span style="top:-7.050000000000001em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="mtable"><span class="vertical-separator" style="height:9.6em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-4.55em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:5.050000000000001em;"><span style="top:-7.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">数据集</span><span class="mord"> </span></span></span></span><span style="top:-6.010000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> CommonCrawl </span></span></span></span><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> C4 </span></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> Github </span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> Wikipedia </span></span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> Books </span></span></span></span><span style="top:-0.00999999999999951em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> ArXiv </span></span></span></span><span style="top:1.1899999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> StackExchange </span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:4.55em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:9.6em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-4.55em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:5.050000000000001em;"><span style="top:-7.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">样本比例</span><span class="mord"> </span></span></span></span><span style="top:-6.010000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">6</span><span class="mord">7</span><span class="mord">.</span><span class="mord">0</span><span class="mord">%</span></span></span><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">5</span><span class="mord">.</span><span class="mord">0</span><span class="mord">%</span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">.</span><span class="mord">5</span><span class="mord">%</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">.</span><span class="mord">5</span><span class="mord">%</span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">4</span><span class="mord">.</span><span class="mord">5</span><span class="mord">%</span></span></span><span style="top:-0.00999999999999951em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span><span class="mord">.</span><span class="mord">5</span><span class="mord">%</span></span></span><span style="top:1.1899999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span><span class="mord">.</span><span class="mord">0</span><span class="mord">%</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:4.55em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:9.6em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-4.55em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:5.050000000000001em;"><span style="top:-7.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> Epochs </span></span></span></span><span style="top:-6.010000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">1</span><span class="mord">0</span></span></span><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span><span class="mord">6</span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">0</span><span class="mord">.</span><span class="mord">6</span><span class="mord">4</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span><span class="mord">.</span><span class="mord">4</span><span class="mord">5</span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span><span class="mord">.</span><span class="mord">2</span><span class="mord">3</span></span></span><span style="top:-0.00999999999999951em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span><span class="mord">6</span></span></span><span style="top:1.1899999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span><span class="mord">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:4.55em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:9.6em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-4.55em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:5.050000000000001em;"><span style="top:-7.21em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord text"><span class="mord"> </span><span class="mord cjk_fallback">磷盘大小</span><span class="mord"> </span></span></span></span><span style="top:-6.010000000000001em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">.</span><span class="mord">3</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">T</span><span class="mord mathrm">B</span></span></span></span><span style="top:-4.8100000000000005em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">7</span><span class="mord">8</span><span class="mord">3</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">3</span><span class="mord">2</span><span class="mord">8</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">8</span><span class="mord">3</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span><span style="top:-1.2099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">8</span><span class="mord">5</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span><span style="top:-0.00999999999999951em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">9</span><span class="mord">2</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span><span style="top:1.1899999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">7</span><span class="mord">8</span><span class="mord"><span class="mspace nobreak"> </span><span class="mord mathrm">G</span><span class="mord mathrm">B</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:4.55em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="vertical-separator" style="height:9.6em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:-4.55em;"></span></span></span><span style="top:-2.500000000000001em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.7em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-4.8999999999999995em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-6.1em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-7.3em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-8.5em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-9.700000000000001em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-10.9em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span><span style="top:-12.100000000000001em;"><span class="pstrut" style="height:7.050000000000001em;"></span><span class="hline" style="border-bottom-width:0.04em;"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:4.55em;"><span></span></span></span></span></span><span class="mord"><span class="mtable"><span class="vertical-separator" style="height:0em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:0.25em;"></span><span class="vertical-separator" style="height:0em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:0.25em;"></span><span class="vertical-separator" style="height:0em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:0.25em;"></span><span class="vertical-separator" style="height:0em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:0.25em;"></span><span class="vertical-separator" style="height:0em;border-right-width:0.04em;border-right-style:solid;margin:0 -0.02em;vertical-align:0.25em;"></span></span></span></span></span></span></p>
+</li>
+<li>
+<p>模型细节</p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled1.png" alt="Untitled" /></p>
+<ol>
+<li>
+<p>Tokenizer：使用的 byte- pair encoding (BPE)</p>
+</li>
+<li>
+<p>Pre-Norm + RMSNorm : 为了提高训练稳定性，对每个Transformer子层的输入进行归一化，而不是对输出进行归一化。</p>
+<ul>
+<li>
+<p>在 Attention 和 MLP 前面加一个 Pre-RMS Norm ； 对比 pre-norm 和 post-norm</p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Post norm</span></span><br><span class="line">SubLayerOutput = SubLayer(Input)</span><br><span class="line">Output = LayerNorm(SubLayerOutput + Input)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Pre norm</span></span><br><span class="line">NormalizedInput = LayerNorm(Input)</span><br><span class="line">SubLayerOutput = SubLayer(NormalizedInput)</span><br><span class="line">Output = SubLayerOutput + Input</span><br><span class="line"></span><br><span class="line"><span class="comment"># Deep norm</span></span><br><span class="line"><span class="comment"># 在 post norm基础上，DeepNorm在执行层归一化之前Up-Scale了残差连接。</span></span><br><span class="line">SubLayerOutput = SubLayer(Input)</span><br><span class="line">Output = LayerNorm(Input*a + SubLayerOutput)</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>同时使用的 RMS Norm，代码公式对比</p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled2.png" alt="左边为 LN ， 右边为 RMS" /></p>
+<p>左边为 LN ， 右边为 RMS</p>
+<p>在 layer norm 的基础上进行了修改，发现 LN 的减去均值没有什么作用，所以这里使用：</p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mi>x</mi><msqrt><mrow><mtext>Mean</mtext><mo stretchy="false">(</mo><msup><mi>x</mi><mn>2</mn></msup><mo stretchy="false">)</mo><mo>+</mo><mi>ϵ</mi></mrow></msqrt></mfrac></mstyle><mo>∗</mo><mi>W</mi></mrow><annotation encoding="application/x-tex">y = \dfrac{x}{\sqrt {\text{Mean}(x^2)+\epsilon}} * W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.23756em;vertical-align:-1.13em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.10756em;"><span style="top:-2.175em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.935em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mord text"><span class="mord">Mean</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.740108em;"><span style="top:-2.9890000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">ϵ</span></span></span><span style="top:-2.8950000000000005em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg width='400em' height='1.28em' viewBox='0 0 400000 1296' preserveAspectRatio='xMinYMin slice'><path d='M263,681c0.7,0,18,39.7,52,119
+c34,79.3,68.167,158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120
+c340,-704.7,510.7,-1060.3,512,-1067
+l0 -0
+c4.7,-7.3,11,-11,19,-11
+H40000v40H1012.3
+s-271.3,567,-271.3,567c-38.7,80.7,-84,175,-136,283c-52,108,-89.167,185.3,-111.5,232
+c-22.3,46.7,-33.8,70.3,-34.5,71c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1
+s-109,-253,-109,-253c-72.7,-168,-109.3,-252,-110,-252c-10.7,8,-22,16.7,-34,26
+c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26s76,-59,76,-59s76,-60,76,-60z
+M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.30499999999999994em;"><span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.13em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">W</span></span></span></span></p>
+<p>注意</p>
+<p>分子：没有减均值</p>
+<p>分母：求的「RMS ：均方根（Root Mean Square）」，而不是方差。</p>
+<p>外部：仅仅乘以一个可训练 gamma，没有加偏置</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Attention 中的 Q，K 使用了 <strong>旋转位置嵌入（RoPE）</strong></p>
+<p>优点是这种方法不仅可以处理位置信息，还可以处理距离信息，因为旋转操作可以很好地反映出元素之间的相对位置关系；缺点是它需要更多的计算资源，因为旋转操作比简单的向量加法更复杂。</p>
+</li>
+<li>
+<p>Casual Mask : 确保模型只能看到前面的tokens</p>
+</li>
+<li>
+<p>MLP 用 SwiGLU 来替代 ReLU 激活函数</p>
+<p>从 relu-&gt;SwiGLU，因为涉及到多一维度的线性表示，所以会面临着带来 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>L</mi><msup><mi>H</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">4LH^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141079999999999em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord mathnormal">L</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.08125em;">H</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> 的参数量新增和计算量增加。而llama中怎么克服这一点的呢？llama是把SwiGLU中的W，V，W2的矩阵维度从(dim， dim)变成(dim, 2/3 dim)，从而打平参数量和计算量。</p>
+</li>
+<li>
+<p>AdamW 优化器： β1 = 0.9, β2 = 0.95。</p>
+</li>
+</ol>
+</li>
+<li>
+<p>高效实现</p>
+<ol>
+<li><strong>Causal Multi-Head Attention</strong> (基于 x-formers)，不存储注意力权重，且不计算 mask 掉的 query 和 key 的值。</li>
+<li>手动实现了Transformer的激活函数，而没有用pytorch库的autograd，以得到更优的训练速度。同时使用了并行化技术提高训练速度。</li>
+<li>重计算激活值 。手动实现 transformer 层的反向传递函数，保存了计算成本高的 activations，例如线性层的输出。</li>
+<li>通过使用 model parallelism 和 sequence parallelism 来减少显存的使用量。</li>
+<li>尽可能地将 activations 的计算和GPU之间的通讯进行并行。</li>
+</ol>
+</li>
+</ul>
+<!--
+## Alpaca
+
+[Stanford CRFM](https://crfm.stanford.edu/2023/03/13/alpaca.html)
+
+- 简介
+
+    **a model fine-tuned from the LLaMA 7B model on 52K instruction-following demonstrations generated in the style of [self-instruct](https://arxiv.org/abs/2212.10560) using text-davinci-003**
+
+    ![Untitled](/images/NLP/LLM/Llama,Alpaca/Untitled.jpeg)
+
+    **two important challenges to training a high-quality instruction-following model：**
+
+    1. **a strong pretrained language model   —> LLaMA**
+    2. **high-quality instruction-following data  —> self-instruct**
+        1. **started with the 175 human-written instruction-output pairs from the [self-instruct seed set](https://github.com/yizhongw/self-instruct)**
+        2. **prompted text-davinci-003 to generate more instructions**
+        3. **improved over the self-instruct method by simplifying the generation pipeline → reduced the cost ($500)**
+
+         **results in 52K unique instructions and the corresponding outputs**
+
+
+    Then **fine-tuned the LLaMA models ($100)**
+
+    **( Fully Sharded Data Parallel and mixed precision training )** -->
+<h1 id="llama-2"><a class="markdownIt-Anchor" href="#llama-2"></a> LLAMA 2</h1>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/653303123">一文读懂Llama 2（从原理到实战）</a></p>
+<p>context length 4096</p>
+<ul>
+<li>
+<p>预训练参数</p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled3.png" alt="Untitled" /></p>
+<p>注意没有开源 34 B 版本，7B和13B的架构与LLaMA 1相同，可直接用于商业应用。</p>
+<p>字节对编码（BPE）算法，</p>
+<p>使用SentencePiece实现。将所有数字拆分为单独的数字，并使用字节来分解未知的UTF-8字符。总数词汇量为<strong>32k</strong>个token。</p>
+<p>超参数：</p>
+<ul>
+<li>AdamW 优化器，β1 = 0.9, β2 = 0.95, eps = 10.5</li>
+<li>cosine 学习率调度，warmup of 2000 steps ，最终学习率衰减到最大值的10%</li>
+<li>权重衰减（weight decay） 0.1</li>
+<li>梯度裁剪（gradient clipping） 1.0</li>
+</ul>
+<p>训练Token数：1.4 T → 2T</p>
+<p>序列长度: 2048 → 4096</p>
+<p>核心点: 更高质量的SFT&amp;RLHF</p>
+</li>
+<li>
+<p>网络结构改进</p>
+<p>与Llama相同的是采用RMSNorm归一化、SwiGLU激活函数、RoPE位置嵌入、词表的构建与大小 。</p>
+<p>增加GQA（分组查询注意力），扩增了模型输入最大长度，语料库增加了40% 。</p>
+</li>
+</ul>
+<h2 id="gqa-34b-70b"><a class="markdownIt-Anchor" href="#gqa-34b-70b"></a> GQA - 34B, 70B</h2>
+<p>MHA（Multi-head Attention ： 标准的多头注意力机制，h个Query、Key 和 Value 矩阵。</p>
+<p>MQA（multi-query attention）让所有的 head 共享 1 个 KV projection 矩阵；</p>
+<p>GQA（grouped-query attention ）使用 <strong>8 个 KV projections</strong>（选择8是因为A100 8GPUs） 来减少内存占用。</p>
+<hr />
+<p>首先是缓存机制，一旦模型规模很大长度很长时，<strong>KV 根本就存不进缓存</strong>。</p>
+<p>比如 Llama 7B 模型，hidden size 是 4096，那么每个 timestep 需缓存参数量为 4096<em>2</em>32=262144，假设半精度保存就是 512KB，1024 长度那就要 512MB 。</p>
+<p>于是退一步，放不进缓存可以放 DRAM 上去，而 DRAM 内存也就是我们常说的 GPU 显存。<br />
+但 DRAM 读取到计算芯片和 SRAM 到计算芯片的速度，差了一个量级的，这会让计算芯片一直在等待。</p>
+<p>→ <strong>Flash Attention</strong>，<strong>Paged Attention ; Flash Attention 就是减少了计算 SoftMax 时从 DRAM 内存读取数据次数，从而提高了效率。</strong></p>
+<p>同样，MQA 也是一个软件层面上翻墙的一个方法。</p>
+<p>MQA  让 <strong>Q 仍然保持原来的头数</strong>，但 <strong>K 和 V 只有一个头(mean)</strong>，不同head 之间共享同一个key矩阵和value矩阵。</p>
+<p>即：预测一个 token，原本需要  8 头 query token 对 8 头 key / value token ；现在是 8 头 query token 对 1 头 key /  value token 。</p>
+<p>这样只需要传输 一个 head  的 token 就好，相当于减到 1/8 的传输量。实验发现，吞吐量提升 30 - 40  %</p>
+<p>实际上 MQA 运算量和 MHA 是差不多的，可理解为<strong>读取一组 KV 头</strong>之后，<strong>给所有 Q 头用；但是传输量减少很多，同时也可以增加 batch - size 。</strong></p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled6.png" alt="Untitled" /></p>
+<p>而 GQA 呢，是 MHA 和 MQA 的折衷方案，既不想损失性能太多，又想获得 MQA 带来的推理加速好处。</p>
+<p>具体思想是，不是所有 Q 头共享一组 KV，而是<strong>分组一定头数 Q 共享一组 KV</strong>，比如上面图片就是两组 Q 共享一组 KV。</p>
+<p>如果要用 MQA 和 GQA，可以是从头训练的时候就加上，也可以像 GQA 论文里面一样，用已有的开源模型，挑一些头取<strong>个 mean 用来初始化</strong> MQA 或 GQA 继续训练一段时间。</p>
+<ul>
+<li>
+<p>代码：</p>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建原始的 multi head attention</span></span><br><span class="line">self.Wqkv = nn.Linear(    <span class="comment"># 【关键】Multi-Head Attention 的创建方法</span></span><br><span class="line">            self.d_model,</span><br><span class="line">            <span class="number">3</span> * self.d_model,  <span class="comment"># 有 query, key, value 3 个矩阵, 所以是 3 * d_model</span></span><br><span class="line">            device=device</span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line"><span class="comment"># 【关键】每个 tensor 都是 (b_s, seq_len, hdden_size)</span></span><br><span class="line">query, key, value = qkv.chunk( <span class="number">3</span>,  dim=<span class="number">2</span> ) <span class="comment"># 均匀切分函数</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ==================================================================================================================</span></span><br><span class="line"><span class="comment"># 现在创建新的 Multi Query Attention</span></span><br><span class="line">self.Wqkv = nn.Linear(                  <span class="comment"># 【关键】Multi-Query Attention 的创建方法</span></span><br><span class="line">    self.d_model,</span><br><span class="line">    self.d_model + <span class="number">2</span> * self.head_dim,   <span class="comment"># 只创建 query 的 head 向量，所以只有 1 个 d_model</span></span><br><span class="line">    device=device,                      <span class="comment"># 而 key 和 value 不再具备单独的头向量</span></span><br><span class="line">)</span><br><span class="line">query, key, value = qkv.split(                        <span class="comment"># query -&gt; (b_s, seq_len, hdden_size)</span></span><br><span class="line">    [self.d_model, self.head_dim, self.head_dim],     <span class="comment"># key   -&gt; (b_s, seq_len, head_size)</span></span><br><span class="line">    dim=<span class="number">2</span>                                             <span class="comment"># value -&gt; (b_s, seq_len, head_size)</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 然后是广播进行 attention</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">scaled_multihead_dot_product_attention</span>(<span class="params"></span></span><br><span class="line"><span class="params">        query, <span class="comment"># (b_s, seq_len, hidden_size)</span></span></span><br><span class="line"><span class="params">        key,   <span class="comment"># (b_s, seq_len, head_size)</span></span></span><br><span class="line"><span class="params">        value, <span class="comment"># (b_s, seq_len, head_size)</span></span></span><br><span class="line"><span class="params">        n_heads,</span></span><br><span class="line"><span class="params">        multiquery=<span class="literal">False</span>,</span></span><br><span class="line"><span class="params">    </span>):</span><br><span class="line">    q = rearrange(query, <span class="string">&#x27;b s (h d) -&gt; b h s d&#x27;</span>, h=n_heads)         <span class="comment"># (b_s, seq_len, hidden_size) -&gt; (b_s, head_num, seq_len, head_size)</span></span><br><span class="line">    kv_n_heads = <span class="number">1</span> <span class="keyword">if</span> multiquery <span class="keyword">else</span> n_heads</span><br><span class="line">    k = rearrange(key, <span class="string">&#x27;b s (h d) -&gt; b h d s&#x27;</span>, h=kv_n_heads)        <span class="comment"># (b_s, seq_len, hidden_size) -&gt; (b_s, head_num, head_size, seq_len) if not multiquery</span></span><br><span class="line">                                                                    <span class="comment"># (b_s, seq_len, head_size) -&gt; (b_s, 1, head_size, seq_len)  if multiquery</span></span><br><span class="line"></span><br><span class="line">    v = rearrange(value, <span class="string">&#x27;b s (h d) -&gt; b h s d&#x27;</span>, h=kv_n_heads)      <span class="comment"># (b_s, seq_len, hidden_size) -&gt; (b_s, head_num, seq_len, head_size) if not multiquery</span></span><br><span class="line">                                                                    <span class="comment"># (b_s, seq_len, head_size) -&gt; (b_s, 1, seq_len, head_size)  if multiquery</span></span><br><span class="line"></span><br><span class="line">    attn_weight = q.matmul(k) * softmax_scale                       <span class="comment"># (b_s, head_num, seq_len, seq_len)</span></span><br><span class="line">    attn_weight = torch.softmax(attn_weight, dim=-<span class="number">1</span>)                <span class="comment"># (b_s, head_num, seq_len, seq_len)</span></span><br><span class="line"></span><br><span class="line">    out = attn_weight.matmul(v)                                     <span class="comment"># (b_s, head_num, seq_len, seq_len) * (b_s, 1, seq_len, head_size) = (b_s, head_num, seq_len, head_size)</span></span><br><span class="line">    out = rearrange(out, <span class="string">&#x27;b h s d -&gt; b s (h d)&#x27;</span>)                    <span class="comment"># (b_s, seq_len, hidden_size)</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> out, attn_weight, past_key_value</span><br></pre></td></tr></table></figure>
+<p>每一个 token 变成：</p>
+<p>原始维度的 query（768 = 8 * 96），保留头数</p>
+<p>单一头对应的 key 和 value  ： 96</p>
+<p>所以总共为</p>
+</li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/_4OxoRLxhOcjGf0Q4Tvp2Q">为什么现在大家都在用 MQA 和 GQA？</a></p>
+<h2 id="llama-2-chat"><a class="markdownIt-Anchor" href="#llama-2-chat"></a> <strong>LLaMA-2-chat</strong></h2>
+<p>Meta 在 LLaMA 2 基础上，通过监督微调创建 LLaMA-2-chat 的初始版本。<br />
+接下来，LLaMA-2-chat 使用人类反馈强化学习（RLHF）进行迭代细化，其中包括拒绝采样和近端策略优化（PPO）。<br />
+LLaMA-2 都有对应的 chat 版本 ，注意没有开源 34 B 版本，算作没有。</p>
+<p>细节：</p>
+<p>一个常见的问题是模型可能会忘记给定的指令。例如，您可能要求她以特定的格式生成回复，但经过一段时间后，LLM 会忘记它。为了解决这个问题，本文的作者提出了一种新的方法 Ghost Attention（GAtt），它帮助模型在多个回合中控制对话流程。</p>
+<p><strong>SFT：</strong></p>
+<p>为了提高模型训练效率，将多组数据进行拼接，尽量填满4096，每条数据直接用停止符隔开，计算loss时仅计算每条样本target内容的loss。</p>
+<p><strong>RM：</strong></p>
+<p>要求标注者写一个提示，模型输出多个回复。（为了保证多样性，使用 2 个 model response，并使用不同的 temperature。</p>
+<p>然后根据提供的标准在两个采样的模型回应之间进行选择。</p>
+<p>两个 Reward Model：Helpfulness Reward Model 用于评估回应的帮助程度；Safety Reward Model 用于评估回应的安全性</p>
+<p>有用性上：要求标注者标记他们对所选回应相对于另一种回应的偏好程度：要么他们的选择：明显更好（significantly better），更好（better），稍微更好（slightly better），或者微不足道地更好/不确定（negligibly better/unsure）。</p>
+<p>在安全性上，对两个结果会标记都符合安全性、只有一个复合安全性、都不符合安全性，以此收集安全性数据。</p>
+<p><strong>RLHF IFT（迭代微调）：</strong></p>
+<p>训练了五个连续版本的RLHF模型</p>
+<p>在每一轮迭代时，让模型重新生成回复。助于保持 Reward Model 在分布上，并为最新模型维持准确奖励。</p>
+<p><strong>拒绝采样</strong>微调：模型输出时采样K个结果，选择奖励值最高的一个，在强化学习阶段进行梯度更新。</p>
+<p>只有70B模型进行了拒绝采样微调，而其他小模型的微调数据来自于大模型拒绝采样数据，相当于用大模型蒸馏小模型。</p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled7.png" alt="Untitled" /></p>
+<p><img src="/images/NLP/LLM/Llama,Alpaca/Untitled8.png" alt="Untitled" /></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/644680366">LLaMA2 RLHF 技术细节</a></p>
+<h1 id="llama-3"><a class="markdownIt-Anchor" href="#llama-3"></a> LLAMA 3</h1>
+<p><a target="_blank" rel="noopener" href="https://ai.meta.com/blog/meta-llama-3/">https://ai.meta.com/blog/meta-llama-3/</a></p>
+<p>Llama3 -8B / -70B / -400B</p>
+<p>模型架构：</p>
+<ul>
+<li>a tokenizer with a vocabulary of 128K tokens</li>
+<li>adopted grouped query attention (GQA) across all sizes</li>
+<li>max seq length : llama1 2k -&gt; llama2 4k -&gt; llama3 8k</li>
+</ul>
+<p>Training data：</p>
+<ul>
+<li>over 15T tokens ，是 llama（2T） 的 7 倍，并且代码数据量是 llama2 的四倍。</li>
+<li>5% 的数据是非英语，covers over 30 languages</li>
+<li>a series of data-filtering pipelines：
+<ul>
+<li>Heuristic Filters</li>
+<li>NSFW Filters</li>
+</ul>
+<blockquote>
+<p>NSFW 是“Not Safe For Work”的缩写，意为“不适合工作场合”。在计算机领域，NSFW 通常用来描述那些可能包含成人内容、色情内容或其他不适宜在工作环境或公共场合展示的内容。在数据过滤管道中，NSFW 过滤器通常用于排除这些不适宜的内容，以确保训练数据的质量和适用性。</p>
+</blockquote>
+<ul>
+<li>Semantic Deduplication Approaches</li>
+<li>Text Classifiers to predict Data Quality</li>
+</ul>
+<blockquote>
+<p>我们发现前几代 Llama 在识别高质量数据方面表现出色，因此我们使用 Llama 2 生成了训练数据，用于支撑 Llama 3 的文本质量分类器。</p>
+</blockquote>
+</li>
+</ul>
+<p>Scaling up pretraining</p>
+<ul>
+<li>利用 scaling law 在训练前预估模型在下游任务上的表现，用于选择训练数据的配比<br />
+作者发现根据 scaling law，训练 8B 模型需要大约 200B 的 token，但是即使超出了这么多 token，模型效果还是会增长，所以最终都用 15T tokens 去训练。</li>
+<li>训练最大参数量的模型时，使用 3D 并行，能在 16K 个 GPU 上同时训练。（ 太牛了</li>
+</ul>
+<p>post-training ：Instruction fine-tuning</p>
+<ul>
+<li>SFT + PPO + DPO</li>
+<li>prompt 的质量很重要，所以这里进行了多轮筛查</li>
+<li>通过 PPO 和 DPO 从偏好排序中学习，也极大地提高了 Llama 3 在推理和编码任务上的性能。我们发现，如果向模型提出一个它难以回答的推理问题，有时模型会生成正确的推理轨迹：模型知道如何产生正确答案，但不知道如何选择它。通过偏好排序的训练，使模型能够学会如何选择正确答案。</li>
+</ul>
+<h1 id="llama-31"><a class="markdownIt-Anchor" href="#llama-31"></a> LLAMA 3.1</h1>
+<p><a target="_blank" rel="noopener" href="https://scontent-lax3-1.xx.fbcdn.net/v/t39.2365-6/453304228_1160109801904614_7143520450792086005_n.pdf?_nc_cat=108&amp;ccb=1-7&amp;_nc_sid=3c67a6&amp;_nc_ohc=22QmL5CfN0AQ7kNvgG1vTcL&amp;_nc_ht=scontent-lax3-1.xx&amp;oh=00_AYD7vergT0RltdGxawl-NDTAbqsg9YFEJipkcJ1FLzOOTw&amp;oe=66D54F07">The Llama 3 Herd of Models</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/710744592">LLama3.1 Tech Report 解读与思考</a><br />
+<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/710780476">大模型结构的进化（一）：LLaMA 3.1结构及影响解析</a></p>
+<p>发布了 LLAMA 3 中提到的正训练的 400 B model，同时顺便更新 8B 和 70B 版本的模型。</p>
+<p>所以最终三个尺寸：8B, 70B, 405B models</p>
+<p>数据：</p>
+<ul>
+<li>配比：<br />
+Our final data mix contains roughly 50% of tokens corresponding to general knowledge, 25% of mathematical and reasoning tokens, 17% code tokens, and 8% multilingual tokens.</li>
+</ul>
+<p>模型架构：</p>
+<ul>
+<li>上下文长度 128k</li>
+<li>不断增加长度，一共六轮，每一轮都需要满足：<br />
+(1) model performance on short-context evaluations has recovered completely<br />
+(2) the model perfectly solves “needle in a haystack” tasks up to that length.</li>
+</ul>
+<p>post-training ：<strong>iterative</strong> , supervised finetuning (SFT), rejection sampling (RS), and direct preference optimization (DPO)</p>
+<ul>
+<li>SFT：数据合成，主题分类(Topic Classification)，质量分类(Quality Scoring), 难度分类(Difficulty Scoring)以及语义去重(Semantic deduplication)。</li>
+<li>reward model + DPO，没有 PPO 的部分 。（ Qwen 也只用了 DPO，所以 Reward Model 重要，而 dpo 还是 ppo 可能没有那么重要）</li>
+<li>DPO的重点是: Masking out formatting tokens in DPO loss以及Regularization with NLL loss</li>
+<li>reward model: We train a reward model (RM) covering different capabilities on top of the pre-trained checkpoint。 直接用预训练后的模型做reward model。用它来筛数据搞Rejection Sampling和DPO。</li>
+<li>整个post training需要迭代六轮，每轮重标一次preference data训练reward model，然后RS，PPO。</li>
+<li>每次的流程相同，不同的地方在于拒绝采样阶段用来对给定Prompt产生回答的LLM模型，会从上一轮流程最后产生的若干不同DPO模型（不同超参等）里选择最好的那个在下一轮拒绝采样阶段给Prompt生成答案。很明显，随着迭代的增加DPO模型越来越好，所以拒绝采样里能选出的最佳答案质量越来越高，SFT模型就越好，如此形成正反馈循环。</li>
+<li>可以看出，尽管RLHF 和DPO两种模式都包含RM，但是用的地方不一样，RLHF是把RM打分用在PPO强化学习阶段，而LLaMA 3则用RM来筛选高质量SFT数据。而且因为拒绝采样的回答是由LLM产生的，可知这里大量采用了合成数据来训练SFT模型。</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2023/02/06/NLP/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90/Multi-View/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1317,102 +1688,10 @@ MAE:  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/NLP/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0CTG/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A foolish, slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/12/30/NLP/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0CTG/" class="post-title-link" itemprop="url">对比学习CTG</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-12-30 22:43:06" itemprop="dateCreated datePublished" datetime="2022-12-30T22:43:06-08:00">2022-12-30</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/Text-Generation/" itemprop="url" rel="index"><span itemprop="name">Text Generation</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>3.8k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>19 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>Paper: <a target="_blank" rel="noopener" href="https://aclanthology.org/2022.findings-acl.229.pdf">2022 ACL - Controllable Natural Language Generation with Contrastive Prefixes</a></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/12/30/NLP/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90/%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0CTG/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/10/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/10/">10</a><span class="page-number current">11</span><a class="page-number" href="/page/12/">12</a><span class="space">&hellip;</span><a class="page-number" href="/page/36/">36</a><a class="extend next" rel="next" href="/page/12/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+    <a class="extend prev" rel="prev" href="/page/10/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/10/">10</a><span class="page-number current">11</span><a class="page-number" href="/page/12/">12</a><span class="space">&hellip;</span><a class="page-number" href="/page/37/">37</a><a class="extend next" rel="next" href="/page/12/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
   </nav>
 
 
@@ -1477,7 +1756,7 @@ MAE:  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">360</span>
+          <span class="site-state-item-count">361</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1533,13 +1812,13 @@ MAE:  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">619k</span>
+    <span title="Symbols count total">620k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">51:33</span>
+    <span title="Reading time total">51:42</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
