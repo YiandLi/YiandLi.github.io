@@ -33,8 +33,11 @@
 <meta property="og:image" content="http://example.com/images/NLP/LLM/LossSpike/LargeVLMTrain4.png">
 <meta property="og:image" content="http://example.com/images/NLP/LLM/LossSpike/LargeVLMTrain5.png">
 <meta property="og:image" content="http://example.com/images/NLP/LLM/LossSpike/TheoryAdamInstability1.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/Y5y41CDaHRZtb4-WIHd_-RDjHUkzhVFt_mco5WLC6Ss.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/n_DvzUnw5eii96hteO71AvJ7Kcn18OZpShPFAq-MEwQ.original.fullsize.png">
+<meta property="og:image" content="https://cdn.mathpix.com/snip/images/5aV_LLskmkMGb3M6t6YDqZZorKIa8pHTCySP4kGsD3k.original.fullsize.png">
 <meta property="article:published_time" content="2024-04-13T04:31:30.000Z">
-<meta property="article:modified_time" content="2024-07-19T12:58:01.710Z">
+<meta property="article:modified_time" content="2024-10-18T23:42:01.718Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/NLP/LLM/LossSpike/LargeVLMTrain1.png">
 
@@ -234,14 +237,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.7k</span>
+              <span>2.9k</span>
             </span>
             <span class="post-meta-item" title="Reading time">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>11 mins.</span>
+              <span>19 mins.</span>
             </span>
 
         </div>
@@ -375,6 +378,52 @@ M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">�
 <li>减小 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">ε</span></span></span></span> 大小</li>
 <li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">ε</span></span></span></span> 是否也可以做衰减，随着训练过程逐渐减小</li>
 </ol>
+<h1 id="博客汇总"><a class="markdownIt-Anchor" href="#博客汇总"></a> 博客汇总</h1>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/t8xrARpBaXTacl8ibKJeQw">可怕！llm训练的bug，梯度累计设置过大，会导致最终loss过大。</a></p>
+<ol>
+<li>
+<p>短序列：上下文短，信息不足，所以不容易预测，loss 偏大（梯度累积再给他加权），于是观测到的现象就是“梯度累积 loss 偏大”。其实它是偏向了短序列的 loss，而不是往大的方向偏。</p>
+</li>
+<li>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/721652210">SFT loss 计算的那些坑（多轮合并/packing）</a><br />
+SFT中算loss通常来讲都是样本内作token-level mean，样本间作sequence-level mean。如果不同样本间作token-level mean，则会使target token数量多的样本更受重视（相当于被upsample），从而引入不同样本间的不平衡。<a target="_blank" rel="noopener" href="http://github.com/THUDM/LongAl">github.com/THUDM/LongAl</a></p>
+</li>
+</ol>
+<p>SFT 的 naive 训练方法：每一个 instance 是一个 <code>concat(input_ids, labels)</code>，然后就可以把训练跑起来。<br />
+然而，这样的训练效率实际上非常低。通常有两个加速方法：1. 多轮合并 2. packing。<br />
+无论是哪种方法，加速后都需要保证 <strong>loss 和原来是等价的</strong> ，这也就是最关键的问题！<br />
+1. Naive 版本，当前一个 session，有三轮对话，将 chatbot 的每一次输出都作为一个 instance 进行训练：<br />
+<img src="https://cdn.mathpix.com/snip/images/Y5y41CDaHRZtb4-WIHd_-RDjHUkzhVFt_mco5WLC6Ss.original.fullsize.png" /><br />
+这样计算的loss可以表示为:<br />
+$$<br />
+\text { loss }=\frac{1}{3}\left(\frac{l_1}{n_1}+\frac{l_2}{n_2}+\frac{l_3}{n_3}\right)<br />
+$$<br />
+其中 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>l</mi><mi mathvariant="normal">i</mi></msub></mrow><annotation encoding="application/x-tex">l_\mathrm{i}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.84444em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31750199999999995em;"><span style="top:-2.5500000000000003em;margin-left:-0.01968em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 表示第 i 个 response 的 loss, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">n</mi><mi mathvariant="normal">i</mi></msub></mrow><annotation encoding="application/x-tex">\mathrm{n}_\mathrm{i}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">n</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31750199999999995em;"><span style="top:-2.5500000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 表示第 i 个 response 输出的 token 数量（对应绿色部分）<br />
+是一种 response level avg，这个时候，如果 l3 比较长，l1 比较短，那么其实 l1 的每个 token 分到的 loss 是比较高的（因为分母更小）。<br />
+2. Naive 版本存在前缀重复计算的问题，导致训练效率低下。理论上我们可以直接一次行直接前向传播这一整个 session ，即将三轮三个样本合并成一个样本。<br />
+<img src="https://cdn.mathpix.com/snip/images/n_DvzUnw5eii96hteO71AvJ7Kcn18OZpShPFAq-MEwQ.original.fullsize.png" /><br />
+理论上看作一个样本，仅计算绿色部分的 token loss 即可，利用 pytroch 的ce loss:<br />
+$$<br />
+\ell(x, y)= \begin{cases}\sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{y_n} \cdot 1\left{y_n \neq \text { ignore_index }\right}} l_n, &amp; \text { if reduction = ‘mean’; } \ \sum_{n=1}^N l_n, &amp; \text { if reduction = ‘sum’ }\end{cases}<br />
+$$<br />
+所以我们会得到这样的 loss:<br />
+$$<br />
+\text { loss }=\frac{l_1+l_2+l_3}{n_1+n_2+n_3}<br />
+$$<br />
+即一种 token level avg ，但是这样会导致一个问题，即短 response 分到的 loss 就比之前小了，总体上是弱化短回复的 loss 。<br />
+3. 多样本 packing：将所有样本拼接成一条，并且加入 attention mask 保证后面的样本看不见前面的token。<br />
+<img src="https://cdn.mathpix.com/snip/images/5aV_LLskmkMGb3M6t6YDqZZorKIa8pHTCySP4kGsD3k.original.fullsize.png" /><br />
+和之前一样，如果不修改 loss 计算方法，packing 的样本之间会存在因为长度不同，导致训练不充分的问题。</p>
+<pre><code>正确方法：
+一般情况下，loss 计算会经历三次平均：
+
+1. micro batch 维度，分母是这个 micro batch 中的所有 label 不是 -100 的 token 数 （如上所述，有问题）
+2. DP 维度，分母是 DP size / GPU数量 ；（其实也存在问题，假设两张卡，一张上一条样本，有两个 packed response ，另一张也是一个样本 有一个 packed response，其实这样平均两个 response 的卡的 loss 是被减少了的）
+3. 梯度累加维度，分母是梯度累加数（和 2 同理）
+
+我们这里要做的就是禁用这三个平均，统一用 global batch 的对话轮数作为分母，即 $\frac &#123;\sum \frac&#123;\text&#123;total token loss in this response&#125;&#125;&#123;\text&#123;response token num&#125;&#125;&#125;&#123;\text&#123;response num&#125;&#125;$ ，在新版 megatron 框架中，开启开关 --calculate-per-token-loss 即可禁用 DP 和梯度累加的平均，然后修改 loss_func，每个 micro batch 都需要返回这个 micro batch 的轮数，最后框架会自动将所有轮数求和，作为分母。对于分子，需要除以这个轮次的token 数。正确实现代码如下
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">loss_func</span>(<span class="params">output_tensor, loss_mask, loss_token_num, turn_num</span>):</span><br><span class="line">    losses = output_tensor.view(-<span class="number">1</span>).<span class="built_in">float</span>()</span><br><span class="line">    loss_mask = loss_mask.view(-<span class="number">1</span>).<span class="built_in">float</span>()</span><br><span class="line">    loss_token_num = loss_token_num.view(-<span class="number">1</span>).<span class="built_in">float</span>()</span><br><span class="line">    <span class="comment"># label: [-100, -100, a, a, a, -100, b, b, -100, -100, c, c, c, -100, -100]</span></span><br><span class="line">    <span class="comment"># loss_mask: [0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0]</span></span><br><span class="line">    <span class="comment"># losses: [a0, a1, a2, a3, a4, b0, b1, b2, c0, c1, c2, c3, c4, d0, d1]</span></span><br><span class="line">    <span class="comment"># losses * loss_mask = [0, 0, a2, a3, a4, 0, b1, b2, 0, 0, c2, c3, c4, 0, 0]</span></span><br><span class="line">    <span class="comment"># loss_token_num: [3, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 3, 3, 1, 1]</span></span><br><span class="line">    <span class="comment"># losses * loss_mask / loss_token_num = [0, 0, a2/3, a3/3, a4/3, 0, b1/2, b2/2, 0, 0, c2/3, c3/3, c4/3, 0, 0]</span></span><br><span class="line">    <span class="comment"># sum = 1/3 (a2 + a3 + a4) + 1/2 (b1 + b2) + 1/3 (c2 + c3 + c4)</span></span><br><span class="line">    loss = torch.<span class="built_in">sum</span>(losses * loss_mask / loss_token_num)</span><br><span class="line"></span><br><span class="line">    loss_and_turn_num = torch.cat([loss.view(<span class="number">1</span>), turn_num.view(<span class="number">1</span>)])</span><br><span class="line">    <span class="comment"># Reduce loss for logging.</span></span><br><span class="line">    loss_and_turn_num = loss_and_turn_num.clone().detach()</span><br><span class="line">    torch.distributed.all_reduce(loss_and_turn_num, group=mpu.get_data_parallel_group())</span><br><span class="line">    <span class="comment"># 新版返回结构，开启 calculate_per_token_loss 开关后，返回三个值</span></span><br><span class="line">    <span class="comment"># 第一个是反向传播实际使用的 loss, 所有 packing 的 loss 求和</span></span><br><span class="line">    <span class="comment"># 第二个是 turn_num, 优化器状态更新时会使用对这个值求和然后缩放梯度</span></span><br><span class="line">    <span class="comment"># 第三个是用于日志打印的 loss, 包含两个值，第一个是所有 loss 求和作为分子，第二个是所有 turn_num 求和作为分母</span></span><br><span class="line">    <span class="keyword">return</span> loss, turn_num, &#123;<span class="string">&quot;lm loss&quot;</span>: (loss_and_turn_num[<span class="number">0</span>], loss_and_turn_num[<span class="number">1</span>])&#125;</span><br></pre></td></tr></table></figure>
+</code></pre>
 
     </div>
 
@@ -455,7 +504,7 @@ M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">�
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#stable-and-low-precision-training-for-large-scale-vision-language-models"><span class="nav-number">1.</span> <span class="nav-text"> Stable and low-precision training for large-scale vision-language models</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#a-theory-on-adam-instability-in-large-scale-machine-learning"><span class="nav-number">2.</span> <span class="nav-text"> A Theory on Adam Instability in Large-Scale Machine Learning</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#stable-and-low-precision-training-for-large-scale-vision-language-models"><span class="nav-number">1.</span> <span class="nav-text"> Stable and low-precision training for large-scale vision-language models</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#a-theory-on-adam-instability-in-large-scale-machine-learning"><span class="nav-number">2.</span> <span class="nav-text"> A Theory on Adam Instability in Large-Scale Machine Learning</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8D%9A%E5%AE%A2%E6%B1%87%E6%80%BB"><span class="nav-number">3.</span> <span class="nav-text"> 博客汇总</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -468,7 +517,7 @@ M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">361</span>
+          <span class="site-state-item-count">364</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -520,13 +569,13 @@ M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">�
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">620k</span>
+    <span title="Symbols count total">626k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">68:57</span>
+    <span title="Reading time total">69:34</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
