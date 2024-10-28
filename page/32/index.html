@@ -179,6 +179,292 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E6%96%99%E5%BA%93%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E6%96%99%E5%BA%93%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B/" class="post-title-link" itemprop="url">语料库代码实例</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-23 21:43:31" itemprop="dateCreated datePublished" datetime="2021-04-23T21:43:31-07:00">2021-04-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Intro/" itemprop="url" rel="index"><span itemprop="name">Intro</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>663</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="加载语料库对象"><a class="markdownIt-Anchor" href="#加载语料库对象"></a> 加载语料库对象</h2>
+<p>通过传入分词的txt文档（每句一行，单次使用空格隔开），输出一个特定<code>List&lt; List&lt;IWord&gt; &gt;</code>类语料库对象。</p>
+<ul>
+<li>分词语料库可以使用<code>hanlp</code>中<code>CorpusLoader</code>对象的<code>convert2SentenceList</code>方法加载：</li>
+</ul>
+<ol>
+<li>自定义一个txt文档，充当语料库，使用空格隔开：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">my_cws_corpus.txt&gt;&gt;&gt;</span><br><span class="line"></span><br><span class="line">商品 和 服务</span><br><span class="line">商品 和服 物美价廉</span><br><span class="line">服务 和 货币</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>
+<p><strong>获取<code>CorpusLoader</code>类：</strong><code>CorpusLoader = SafeJClass('com.hankcs.hanlp.corpus.document.CorpusLoader')</code></p>
+</li>
+<li>
+<p>调用其<code>convert2SentenceList</code>方法载入分词语料：<code>sents = CorpusLoader.convert2SentenceList(path)</code><br />
+该方法返回<code>List&lt; List&lt;IWord&gt; &gt;</code>类型，大list中的每个元素都是一个单词列表，每个IWord都是一个单词。</p>
+</li>
+</ol>
+<h2 id="统计n-gram语法"><a class="markdownIt-Anchor" href="#统计n-gram语法"></a> 统计n-gram语法</h2>
+<ol>
+<li><strong>得到库中特定<code>maker</code>类</strong>，用于统计n-gram语法，即统计临近单词组出现的概率</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">NatureDictionaryMaker = SafeJClass(&#x27;com.hankcs.hanlp.corpus.dictionary.NatureDictionaryMaker&#x27;)</span><br><span class="line">maker = NatureDictionaryMaker()</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>
+<p>使用maker类的<code>compute</code>方法统计语料<code>List&lt; List&lt;IWord&gt; &gt;</code>类型：<br />
+<code>maker.compute(sents)</code></p>
+</li>
+<li>
+<p>调用maker类的<code>saveTxtTo</code>方法，传入一个文件名，写入统计结果：<code>maker.saveTxtTo(model_path)</code></p>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># 利用分词词典，构建语法模型</span><br><span class="line">def train_bigram(corpus_path, model_path):</span><br><span class="line">    sents = CorpusLoader.convert2SentenceList(corpus_path)</span><br><span class="line">    for sent in sents:</span><br><span class="line">        for word in sent:</span><br><span class="line">            word.setLabel(&quot;n&quot;)</span><br><span class="line">    maker = NatureDictionaryMaker()</span><br><span class="line">    maker.compute(sents)</span><br><span class="line">    maker.saveTxtTo(model_path)</span><br><span class="line"></span><br><span class="line">train_bigram(path, &#x27;resultDic&#x27;)</span><br></pre></td></tr></table></figure>
+<p>在这里，使用<code>word</code>中的<code>setLabel</code>方法，设置每个单词词性均为名词。</p>
+<ol start="4">
+<li>可以看到输出了三个文件：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">resultDic.tr.txt &gt;&gt;&gt;</span><br><span class="line"></span><br><span class="line">resultDic.txt &gt;&gt;&gt; 一元语法模型</span><br><span class="line"></span><br><span class="line">    和 n 2</span><br><span class="line">    和服 n 1</span><br><span class="line">    商品 n 2</span><br><span class="line">    始##始 begin 3</span><br><span class="line">    服务 n 2</span><br><span class="line">    末##末 end 3</span><br><span class="line">    物美价廉 n 1</span><br><span class="line">    货币 n 1</span><br><span class="line"></span><br><span class="line">resultDic.ngram.txt &gt;&gt;&gt; 二元语法模型</span><br><span class="line"></span><br><span class="line">    和@服务 1</span><br><span class="line">    和@货币 1</span><br><span class="line">    和服@物美价廉 1</span><br><span class="line">    商品@和 1</span><br><span class="line">    商品@和服 1</span><br><span class="line">    始##始@商品 2</span><br><span class="line">    始##始@服务 1</span><br><span class="line">    服务@和 1</span><br><span class="line">    服务@末##末 1</span><br><span class="line">    物美价廉@末##末 1</span><br><span class="line">    货币@末##末 1</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>末##末</code>和<code>始##始</code>分别表示结尾开头，词性也是库定义。</li>
+<li>一元词典中，每行表示<strong>单词，词性，词性的频次</strong><br />
+二元词典中，使用 <strong>@<strong>来分隔两个单词，然后接上</strong>单词的频次</strong></li>
+</ul>
+<h2 id="使用二元语法进行预测解码"><a class="markdownIt-Anchor" href="#使用二元语法进行预测解码"></a> 使用二元语法进行预测/解码</h2>
+<p>预测是指利用模型对句子样本进行推断的过程，即利用模型推断分词序列，也称解码 decode。</p>
+<ul>
+<li>加载模型-&gt;预测<br />
+首先我们已经使用java中的’com.hankcs.hanlp.corpus.dictionary.NatureDictionaryMaker’创建了模型词典，接下来我们需要加载这些词典。<br />
+一元语法使用<code>CoreDictionary</code>类，二元语法使用<code>CoreBiGramTableDictionary</code>类。他们都是静态工具类，无需创建实例。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># 利用语料库进行预测</span><br><span class="line">def load_bigarm(model_path):</span><br><span class="line">    HanLP.Config.CoreDictionaryPath = model_path + &quot;.txt&quot;</span><br><span class="line">    HanLP.Config.BiGramDictionaryPath = model_path + &quot;.ngram.txt&quot;</span><br><span class="line"></span><br><span class="line">    # 引入java类</span><br><span class="line">    CoreDictionary = SafeJClass(&#x27;com.hankcs.hanlp.dictionary.CoreDictionary&#x27;)</span><br><span class="line">    CoreBiGramTableDictionary = SafeJClass(&#x27;com.hankcs.hanlp.dictionary.CoreBiGramTableDictionary&#x27;)</span><br><span class="line"></span><br><span class="line">    # 得到频率</span><br><span class="line">    print(CoreDictionary.getTermFrequency(&quot;商品&quot;))</span><br><span class="line">    print(CoreBiGramTableDictionary.getBiFrequency(&quot;商品&quot;, &quot;和&quot;))</span><br><span class="line"></span><br><span class="line">load_bigarm(&quot;resultDic&quot;)</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt;</span><br><span class="line">2</span><br><span class="line">1</span><br></pre></td></tr></table></figure>
+<p>可以看到“商品”和“商品@和”的频率分别为2，1</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B/" class="post-title-link" itemprop="url">语言模型</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-23 15:08:58" itemprop="dateCreated datePublished" datetime="2021-04-23T15:08:58-07:00">2021-04-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/NLP/Intro/" itemprop="url" rel="index"><span itemprop="name">Intro</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>925</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>6 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>机器无法分别同一个句子的两种分词结果的好坏，则我们可以制定一个语料库，放置分好词的句子，然后统计所有切分方式的出现。</p>
+<h2 id="语言模型-language-model-lm"><a class="markdownIt-Anchor" href="#语言模型-language-model-lm"></a> 语言模型 Language Model LM</h2>
+<p>对语言现象的数学抽象：给定一个句子w，语言模型就是计算句子的出现频率。<br />
+但是语料库句子有限，实际上大部分遇到的句子都是语料库之外的，这种现象被称为<strong>OOV</strong>，或者<strong>数据稀疏</strong>。</p>
+<h3 id="构建语言模型"><a class="markdownIt-Anchor" href="#构建语言模型"></a> 构建语言模型</h3>
+<p>句子由单词构成，虽然句子无限，但是单词却是有限的。我们可以将句子表示为单词列表 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>w</mi><mn>2</mn></msub><msub><mi>w</mi><mn>3</mn></msub><msub><mi>w</mi><mn>4</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mi>k</mi></msub></mrow><annotation encoding="application/x-tex">w=w_1w_2w_3w_4...w_k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>，然后构建语言模型。</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.24999999999999992em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>w</mi><mn>2</mn></msub><msub><mi>w</mi><mn>3</mn></msub><msub><mi>w</mi><mn>4</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mi>k</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>1</mn></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><mo>∗</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>2</mn></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>0</mn></msub><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false">)</mo><mo>∗</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo>∗</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>0</mn></msub><msub><mi>w</mi><mn>1</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mi>k</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+p(w) &amp;= p(w_1w_2w_3w_4...w_k)\\
+     &amp;= p(w_1|w_0) * p(w_2|w_0w_1) * ... * p(w_{k+1}|w_0w_1...w_k)
+\end{aligned}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3.0000000000000004em;vertical-align:-1.2500000000000002em;"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.7500000000000002em;"><span style="top:-3.91em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mclose">)</span></span></span><span style="top:-2.41em;"><span class="pstrut" style="height:3em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.2500000000000002em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.7500000000000002em;"><span style="top:-3.91em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.41em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.2500000000000002em;"><span></span></span></span></span></span></span></span></span></span></span></span></p>
+<ul>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mn>0</mn></msub><mo>=</mo><mi>B</mi><mi>O</mi><mi>S</mi></mrow><annotation encoding="application/x-tex">w_0 = BOS</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span></span></span>，Begin of sentence，有时也用 &lt;s&gt;表示<br />
+<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mi>E</mi><mi>O</mi><mi>S</mi></mrow><annotation encoding="application/x-tex">w_{k+1} = EOS</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.638891em;vertical-align:-0.208331em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span></span></span>，End of sentence，有时也用 &lt;/s&gt;表示</li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>x</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mi>y</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(w_x|w_y)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.151392em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>则表示单词x出现在单词y后面的概率，即下一单词出现的后验概率。使用上述的累乘操作，我们就能估算出任意一句话的概率。</li>
+<li>计算后验概率：使用<strong>极大似然估计（Maximum Likelihood Estimation，MLE）</strong>: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>0</mn></msub><msub><mi>w</mi><mn>1</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>c</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>0</mn></msub><msub><mi>w</mi><mn>1</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mi>t</mi></msub><mo stretchy="false">)</mo></mrow><mrow><mi>c</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>0</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">p(w_t|w_0w_1...w_{t-1}) = \frac{c(w_0w_1...w_t)}{c(w_0...w_{t-1})}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.53em;vertical-align:-0.52em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.01em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="mopen mtight">(</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31731428571428577em;"><span style="top:-2.357em;margin-left:-0.02691em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mord mtight">.</span><span class="mord mtight">.</span><span class="mord mtight">.</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3173142857142857em;"><span style="top:-2.357em;margin-left:-0.02691em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.20252142857142857em;"><span></span></span></span></span></span></span><span class="mclose mtight">)</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.485em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="mopen mtight">(</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31731428571428577em;"><span style="top:-2.357em;margin-left:-0.02691em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31731428571428577em;"><span style="top:-2.357em;margin-left:-0.02691em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mord mtight">.</span><span class="mord mtight">.</span><span class="mord mtight">.</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.29634285714285713em;"><span style="top:-2.357em;margin-left:-0.02691em;margin-right:0.07142857142857144em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.52em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><br />
+比如：对于语料库 {[商品 和 服务], [商品 和服 物美价廉], [服务 和 货币]}<br />
+p(商品｜BOS) = 2/3<br />
+p(和｜BOS商品) = BOS商品和：1/BOS商品：2 = 1/2<br />
+p(服务｜BOS商品和)= 1<br />
+…<br />
+p(商品 和 服务) = 2/3 * 1/2 * 1 * 1 = 1/3</li>
+</ul>
+<h4 id="问题"><a class="markdownIt-Anchor" href="#问题"></a> 问题</h4>
+<ol>
+<li>数据系数：数据库中可能统计不到长句子的频次</li>
+<li>计算代价大：k越长，则占用的内存越多</li>
+</ol>
+<h3 id="马尔可夫假设"><a class="markdownIt-Anchor" href="#马尔可夫假设"></a> 马尔可夫假设</h3>
+<ul>
+<li>定义：每件事情发生的概率只取决于前一个事情。此时语言模型称为<strong>二元语法</strong>模型<br />
+在二元语法模型中，表现为：每个单词出现的概率只取决于前一个单词。</li>
+<li>公式：</li>
+</ul>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.24999999999999992em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>w</mi><mn>2</mn></msub><msub><mi>w</mi><mn>3</mn></msub><msub><mi>w</mi><mn>4</mn></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mi>k</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>1</mn></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><mo>∗</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mn>2</mn></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mn>1</mn></msub><mo stretchy="false">)</mo><mo>∗</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo>∗</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mi>k</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><munderover><mo>∏</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></munderover><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}
+p(w) &amp;= p(w_1w_2w_3w_4...w_k)\\
+     &amp;= p(w_1|w_0) * p(w_2|w_1) * ... * p(w_{k+1}|w_k)\\
+     &amp;= \prod_{t=1}^{k+1}p(w_t|w_{t-1})
+\end{aligned}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:6.403226000000001em;vertical-align:-2.951613000000001em;"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.451613em;"><span style="top:-6.447726em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mclose">)</span></span></span><span style="top:-4.947726em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"></span></span><span style="top:-2.451612999999999em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.951613000000001em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:3.451613em;"><span style="top:-6.447726em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">4</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-4.947726em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.451612999999999em;"><span class="pstrut" style="height:3.836113em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.8361130000000003em;"><span style="top:-1.882887em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.050005em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∏</span></span></span><span style="top:-4.300005em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.267113em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.951613000000001em;"><span></span></span></span></span></span></span></span></span></span></span></span></p>
+<ul>
+<li>优点：解决了<strong>数据稀疏</strong>的问题；并且二元连接的总数量远小于句子的数量，长度也更短，优化了储存和查询。</li>
+<li>和上面的方法相比，单词间概率对语料库之外的句子同样有效。</li>
+</ul>
+<h3 id="n元语法"><a class="markdownIt-Anchor" href="#n元语法"></a> n元语法</h3>
+<p>类似马尔可夫假设，n元语法表示每个单词的概率仅仅取决于前n-1个单词<br />
+<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo><mo>=</mo><msubsup><mo>∏</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>k</mi><mo>+</mo><mi>n</mi><mo>=</mo><mn>1</mn></mrow></msubsup><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(w) = \prod_{t=1}^{k+n=1}p(w_t|w_{t-n+1}...w_{t-1})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.2887179999999998em;vertical-align:-0.29971000000000003em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∏</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9890079999999999em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">+</span><span class="mord mathnormal mtight">n</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mathnormal mtight">n</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></p>
+<h3 id="平滑策略"><a class="markdownIt-Anchor" href="#平滑策略"></a> 平滑策略</h3>
+<ul>
+<li>问题：即便是一元语法也会存在情况：某个分词列表的元素从未出现过，这时，会导致整个相乘的结果变为0，就是<strong>数据稀疏问题</strong>的结果。</li>
+<li>改进：<strong>使用低阶n元语法平滑高阶n元语法</strong>。</li>
+<li>公式：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>=</mo><mi>λ</mi><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mi mathvariant="normal">∣</mi><msub><mi>w</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>λ</mi><mo stretchy="false">)</mo><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(w_t|w_{t-1}) = \lambda p(w_t|w_{t-1}) + (1-\lambda)p(w_t)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">λ</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">λ</span><span class="mclose">)</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span><br />
+在一元语法中：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mo stretchy="false">)</mo><mo>=</mo><mi>λ</mi><mi>p</mi><mo stretchy="false">(</mo><msub><mi>w</mi><mi>t</mi></msub><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>λ</mi><mo stretchy="false">)</mo><mfrac><mn>1</mn><mi>N</mi></mfrac></mrow><annotation encoding="application/x-tex">p(w_t) = \lambda p(w_t) + (1-\lambda)\frac{1}{N}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">λ</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.02691em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.190108em;vertical-align:-0.345em;"></span><span class="mord mathnormal">λ</span><span class="mclose">)</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.845108em;"><span style="top:-2.6550000000000002em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">N</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></li>
+</ul>
+<p>除了数据稀疏问题之外，当语料很大时，当 n-gram  的 n 也比较大时，我们有多个 n-gram，即词表也是很大的，造成了长尾分布。</p>
+<p>所以后来尝试使用 DNN 来估计这个概率。</p>
+<h2 id="语料库"><a class="markdownIt-Anchor" href="#语料库"></a> 语料库</h2>
+<h3 id="知名的中文分词语料库"><a class="markdownIt-Anchor" href="#知名的中文分词语料库"></a> 知名的中文分词语料库</h3>
+<ol>
+<li>1998年《人民日报》语料库PKU，不推荐</li>
+<li>微软亚洲研究院语料库MSR</li>
+<li>繁体中文分词语料库：香港城市大学的CITYU和台湾中央研究所的AS</li>
+</ol>
+<h3 id="语料库统计"><a class="markdownIt-Anchor" href="#语料库统计"></a> 语料库统计</h3>
+<p>词语种类：不重复单词的个数<br />
+总次数：所有单词词频的和</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/23/NLP/%E5%85%A5%E9%97%A8/%E5%88%86%E8%AF%8D%E5%87%86%E7%A1%AE%E7%8E%87%E8%AF%84%E6%B5%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -781,130 +1067,6 @@ IV指登陆词</p>
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/Coding/Python/anaconda/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/22/Coding/Python/anaconda/" class="post-title-link" itemprop="url">anaconda</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-04-22 14:27:36" itemprop="dateCreated datePublished" datetime="2021-04-22T14:27:36-07:00">2021-04-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>674</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>4 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>安装anaconda，到指定位置：<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_43120985/article/details/118163799">https://blog.csdn.net/weixin_43120985/article/details/118163799</a></p>
-<p>conda command: <a target="_blank" rel="noopener" href="https://www.cnblogs.com/anliven/p/9998662.html">https://www.cnblogs.com/anliven/p/9998662.html</a></p>
-<h1 id="基本命令"><a class="markdownIt-Anchor" href="#基本命令"></a> 基本命令</h1>
-<p><code>conda env list</code> : 查看已有环境列表<br />
-<code>conda create -n 环境名称 python=版本(例如3.7)</code> : 创建环境<br />
-<code>conda remove -n pytorch --all</code> : 删除环境</p>
-<p><code>source activate tplinker</code> : 进入环境<br />
-<code>source deactivate</code> : 退出当前运行环境，再次登录进服务器就是默认进入你安装的Conda环境</p>
-<p>安装包：<code>conda install &lt;pkg&gt;</code><br />
-删除包：<code>conda remove &lt;pkg&gt;</code> / <code>conda uninstall &lt;pkg&gt;</code></p>
-<h2 id="conda-install-和-pip-install"><a class="markdownIt-Anchor" href="#conda-install-和-pip-install"></a> conda install 和 pip install</h2>
-<p>如果Conda和Anaconda中都没有找到需要安装的包，可以通过pip命令安装。先激活指定的环境，然后通过pip命令安装指定的包，<br />
-为什么 <code>anaconda</code> 环境中，还需要用 <code>pip</code> 安装包？</p>
-<ol>
-<li>有时conda无法安装我们需要的包，我们需要用pip将其装到conda环境里。</li>
-<li>坑：需要判断目前我们用的pip指令，会把包装到哪里，通常情况下，pip不像conda一样，他不知道环境，我们首先要确保我们用的是本环境的pip。<br />
-<code>which -a pip</code> 查看此时用的pip为哪个环境。如果本conda环境没有 pip，则进入环境后用 <code>conda install pip</code>。</li>
-</ol>
-<p><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/395145313">请问大神们，pip install 和conda install有什么区别吗？</a><br />
-<strong>一般原则，在新环境中，如果装多个packages，既用到conda，又用到pip，那就先conda 的都装好，再pip，如果能用一种装到底，就不要来回换着用。</strong></p>
-<ul>
-<li><code>conda install xxx</code>：这种方式安装的库都会放在anaconda3/pkgs目录下，这样的好处就是，当在某个环境下已经下载好了某个库，再在另一个环境中还需要这个库时，就可以直接从pkgs目录下将该库复制至新环境而不用重复下载。</li>
-<li><code>pip install xxx</code>：分两种情况，一种情况就是当前conda环境的python是conda安装的，和系统的不一样，那么xxx会被安装到anaconda3/envs/current_env/lib/python3.x/site-packages文件夹中，如果当前conda环境用的是系统的python，那么xxx会通常会被安装到~/.local/lib/python3.x/site-packages文件夹中</li>
-<li>查看导入时候的优先级：<code>python -m site</code></li>
-</ul>
-<h1 id="导出复制-环境"><a class="markdownIt-Anchor" href="#导出复制-环境"></a> 导出/复制 环境</h1>
-<p><code>conda env export &gt; environment.yaml</code> : 把 conda install 的环境导出<br />
-<code>pip freeze &gt; requirements.txt</code>   : 把pip install 的环境导出</p>
-<p>两个环境不重叠，复制则为：<br />
-<code>conda env create -f environment.yaml</code><br />
-<code>pip install -r requirements.txt</code></p>
-<h1 id="镜像"><a class="markdownIt-Anchor" href="#镜像"></a> 镜像</h1>
-<p><code>conda config --show</code> &gt;&gt; <code>channels</code></p>
-<p>删除：<code>conda config --remove channels url地址</code><br />
-添加：<code>conda config --add channels https://mirrors.bfsu.edu.cn/anaconda/cloud/pytorch</code></p>
-<h1 id="bug"><a class="markdownIt-Anchor" href="#bug"></a> bug</h1>
-<p>activate 时候出现：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CommandNotFoundError: Your shell has not been properly configured to use &#x27;conda activate&#x27;.</span><br><span class="line">To initialize your shell, run</span><br></pre></td></tr></table></figure>
-<p>使用</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 激活环境</span><br><span class="line">source activate</span><br><span class="line"># 退出环境</span><br><span class="line">source deactivate</span><br><span class="line"># 然后重新激活</span><br><span class="line">conda activate &lt;env-name&gt;</span><br></pre></td></tr></table></figure>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/Coding/Python/Pathlib/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1038,6 +1200,130 @@ IV指登陆词</p>
 </ol>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">source_dir = Path(<span class="string">f&quot;/kaggle/input/platypus2-70b-instruct-part<span class="subst">&#123;part&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="keyword">for</span> path <span class="keyword">in</span> source_dir.glob(<span class="string">&quot;*&quot;</span>):</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            (checkpoint_path / path.name).symlink_to(path)</span><br><span class="line">        <span class="keyword">except</span>:</span><br><span class="line">            <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
 <p>一般对 symlink 进行操作，会有个布尔参数 <code>follow_symlinks</code>，用于指定是否跟踪符号链接。比如在调用 <code>Path.chmod()</code> 方法时，默认情况下会跟踪符号链接。这意味着如果指定的路径是一个符号链接，它将会改变符号链接指向的原始文件的权限。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/Coding/Python/anaconda/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="A slow learner.">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yili">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/04/22/Coding/Python/anaconda/" class="post-title-link" itemprop="url">anaconda</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-22 14:27:36" itemprop="dateCreated datePublished" datetime="2021-04-22T14:27:36-07:00">2021-04-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Coding/Python/" itemprop="url" rel="index"><span itemprop="name">Python</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="Symbols count in article">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">Symbols count in article: </span>
+              <span>674</span>
+            </span>
+            <span class="post-meta-item" title="Reading time">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">Reading time &asymp;</span>
+              <span>4 mins.</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>安装anaconda，到指定位置：<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_43120985/article/details/118163799">https://blog.csdn.net/weixin_43120985/article/details/118163799</a></p>
+<p>conda command: <a target="_blank" rel="noopener" href="https://www.cnblogs.com/anliven/p/9998662.html">https://www.cnblogs.com/anliven/p/9998662.html</a></p>
+<h1 id="基本命令"><a class="markdownIt-Anchor" href="#基本命令"></a> 基本命令</h1>
+<p><code>conda env list</code> : 查看已有环境列表<br />
+<code>conda create -n 环境名称 python=版本(例如3.7)</code> : 创建环境<br />
+<code>conda remove -n pytorch --all</code> : 删除环境</p>
+<p><code>source activate tplinker</code> : 进入环境<br />
+<code>source deactivate</code> : 退出当前运行环境，再次登录进服务器就是默认进入你安装的Conda环境</p>
+<p>安装包：<code>conda install &lt;pkg&gt;</code><br />
+删除包：<code>conda remove &lt;pkg&gt;</code> / <code>conda uninstall &lt;pkg&gt;</code></p>
+<h2 id="conda-install-和-pip-install"><a class="markdownIt-Anchor" href="#conda-install-和-pip-install"></a> conda install 和 pip install</h2>
+<p>如果Conda和Anaconda中都没有找到需要安装的包，可以通过pip命令安装。先激活指定的环境，然后通过pip命令安装指定的包，<br />
+为什么 <code>anaconda</code> 环境中，还需要用 <code>pip</code> 安装包？</p>
+<ol>
+<li>有时conda无法安装我们需要的包，我们需要用pip将其装到conda环境里。</li>
+<li>坑：需要判断目前我们用的pip指令，会把包装到哪里，通常情况下，pip不像conda一样，他不知道环境，我们首先要确保我们用的是本环境的pip。<br />
+<code>which -a pip</code> 查看此时用的pip为哪个环境。如果本conda环境没有 pip，则进入环境后用 <code>conda install pip</code>。</li>
+</ol>
+<p><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/395145313">请问大神们，pip install 和conda install有什么区别吗？</a><br />
+<strong>一般原则，在新环境中，如果装多个packages，既用到conda，又用到pip，那就先conda 的都装好，再pip，如果能用一种装到底，就不要来回换着用。</strong></p>
+<ul>
+<li><code>conda install xxx</code>：这种方式安装的库都会放在anaconda3/pkgs目录下，这样的好处就是，当在某个环境下已经下载好了某个库，再在另一个环境中还需要这个库时，就可以直接从pkgs目录下将该库复制至新环境而不用重复下载。</li>
+<li><code>pip install xxx</code>：分两种情况，一种情况就是当前conda环境的python是conda安装的，和系统的不一样，那么xxx会被安装到anaconda3/envs/current_env/lib/python3.x/site-packages文件夹中，如果当前conda环境用的是系统的python，那么xxx会通常会被安装到~/.local/lib/python3.x/site-packages文件夹中</li>
+<li>查看导入时候的优先级：<code>python -m site</code></li>
+</ul>
+<h1 id="导出复制-环境"><a class="markdownIt-Anchor" href="#导出复制-环境"></a> 导出/复制 环境</h1>
+<p><code>conda env export &gt; environment.yaml</code> : 把 conda install 的环境导出<br />
+<code>pip freeze &gt; requirements.txt</code>   : 把pip install 的环境导出</p>
+<p>两个环境不重叠，复制则为：<br />
+<code>conda env create -f environment.yaml</code><br />
+<code>pip install -r requirements.txt</code></p>
+<h1 id="镜像"><a class="markdownIt-Anchor" href="#镜像"></a> 镜像</h1>
+<p><code>conda config --show</code> &gt;&gt; <code>channels</code></p>
+<p>删除：<code>conda config --remove channels url地址</code><br />
+添加：<code>conda config --add channels https://mirrors.bfsu.edu.cn/anaconda/cloud/pytorch</code></p>
+<h1 id="bug"><a class="markdownIt-Anchor" href="#bug"></a> bug</h1>
+<p>activate 时候出现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CommandNotFoundError: Your shell has not been properly configured to use &#x27;conda activate&#x27;.</span><br><span class="line">To initialize your shell, run</span><br></pre></td></tr></table></figure>
+<p>使用</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 激活环境</span><br><span class="line">source activate</span><br><span class="line"># 退出环境</span><br><span class="line">source deactivate</span><br><span class="line"># 然后重新激活</span><br><span class="line">conda activate &lt;env-name&gt;</span><br></pre></td></tr></table></figure>
 
       
     </div>
@@ -1462,272 +1748,6 @@ IV指登陆词</p>
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/Coding/Transformers/BetterTransformer/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/22/Coding/Transformers/BetterTransformer/" class="post-title-link" itemprop="url">BetterTransformer</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-04-22 14:27:36" itemprop="dateCreated datePublished" datetime="2021-04-22T14:27:36-07:00">2021-04-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/" itemprop="url" rel="index"><span itemprop="name">Coding</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Coding/Transformers/" itemprop="url" rel="index"><span itemprop="name">Transformers</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>341</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>2 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/perf_infer_gpu_many">https://huggingface.co/docs/transformers/perf_infer_gpu_many</a></p>
-<p><a target="_blank" rel="noopener" href="https://pytorch.org/blog/out-of-the-box-acceleration/">https://pytorch.org/blog/out-of-the-box-acceleration/</a></p>
-<p><a target="_blank" rel="noopener" href="https://colab.research.google.com/drive/1Lv2RCG_AT6bZNdlL1oDDNNiwBBuirwI-?usp=sharing"> the Google Colab demo </a></p>
-<p>Converts Transformers models to use <strong>the PyTorch-native fastpath execution</strong>, which calls optimized kernels like Flash Attention under the hood.</p>
-<p>Flash Attention can only be used for models using <strong>fp16</strong> or <strong>bf16</strong> dtype.</p>
-<p>可以加速模型中 encoder layer 的计算，依赖于 fastpath 的实现，即</p>
-<ol>
-<li>Convert layer to faster-calculation version</li>
-</ol>
-<ul>
-<li>
-<p>For Encoder layer : 算子优化，将多个操作进行融合，使用一个内核直接完成 layer 上的变换。</p>
-<ul>
-<li>A base speedup is achieved through the use of <strong>fused kernels</strong> implementing multiple operations more efficiently in <strong>a single kernel</strong>.</li>
-</ul>
-</li>
-<li>
-<p>For Decoder layer : converts all attention operations to use the <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html"><code>torch.nn.functional.scaled_dot_product_attention</code> operator (SDPA)</a>.<br />
-SDPA can also call Flash Attention kernels or memory-efficient kernels under the hood.<br />
-To enable <strong>Flash Attention</strong> or to check that it is available in a given setting (hardware, problem size), use <code>torch.backends.cuda.sdp_kernel</code> as a context manager</p>
-  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">model = AutoModelForCausalLM.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>)</span><br><span class="line"><span class="comment"># convert the model to BetterTransformer</span></span><br><span class="line">model.to_bettertransformer()</span><br><span class="line"></span><br><span class="line">input_text = <span class="string">&quot;Hello my dog is cute and&quot;</span></span><br><span class="line">inputs = tokenizer(input_text, return_tensors=<span class="string">&quot;pt&quot;</span>).to(<span class="string">&quot;cuda&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ++++</span></span><br><span class="line"><span class="keyword">with</span> torch.backends.cuda.sdp_kernel(enable_flash=<span class="literal">True</span>, enable_math=<span class="literal">False</span>, enable_mem_efficient=<span class="literal">False</span>):</span><br><span class="line">    outputs = model.generate(**inputs)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(tokenizer.decode(outputs[<span class="number">0</span>], skip_special_tokens=<span class="literal">True</span>))</span><br></pre></td></tr></table></figure>
-<p>Form more info: <a target="_blank" rel="noopener" href="https://pytorch.org/blog/out-of-the-box-acceleration/">https://pytorch.org/blog/out-of-the-box-acceleration/</a></p>
-</li>
-</ul>
-<ol start="2">
-<li>For Encoder layer: exploits the sparsity due to padded tokens, related to the padding ratio in the input token sequences.<br />
-使用 nested tensors ，new type of torch tensor，可以支持变长的tensor，来避免 padding token 的运算 。</li>
-</ol>
-<p>4bit 训练 + BetterTransformer：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig</span><br><span class="line"></span><br><span class="line">quantization_config = BitsAndBytesConfig(</span><br><span class="line">    load_in_4bit=<span class="literal">True</span>,</span><br><span class="line">    bnb_4bit_compute_dtype=torch.float16</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">tokenizer = AutoTokenizer.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>)</span><br><span class="line">model = AutoModelForCausalLM.from_pretrained(<span class="string">&quot;facebook/opt-350m&quot;</span>, quantization_config=quantization_config)</span><br><span class="line"></span><br><span class="line">input_text = <span class="string">&quot;Hello my dog is cute and&quot;</span></span><br><span class="line">inputs = tokenizer(input_text, return_tensors=<span class="string">&quot;pt&quot;</span>).to(<span class="string">&quot;cuda&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> torch.backends.cuda.sdp_kernel(enable_flash=<span class="literal">True</span>, enable_math=<span class="literal">False</span>, enable_mem_efficient=<span class="literal">False</span>):</span><br><span class="line">    outputs = model.generate(**inputs)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(tokenizer.decode(outputs[<span class="number">0</span>], skip_special_tokens=<span class="literal">True</span>))</span><br></pre></td></tr></table></figure>
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-Hans">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/04/22/NLP/%E5%85%A5%E9%97%A8/%E5%AD%97%E5%85%B8%E6%A0%91%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="A slow learner.">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Yili">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/04/22/NLP/%E5%85%A5%E9%97%A8/%E5%AD%97%E5%85%B8%E6%A0%91%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" class="post-title-link" itemprop="url">字典树数据结构</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-04-22 14:27:36" itemprop="dateCreated datePublished" datetime="2021-04-22T14:27:36-07:00">2021-04-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/" itemprop="url" rel="index"><span itemprop="name">NLP</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/NLP/Intro/" itemprop="url" rel="index"><span itemprop="name">Intro</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="Symbols count in article">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">Symbols count in article: </span>
-              <span>1.3k</span>
-            </span>
-            <span class="post-meta-item" title="Reading time">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">Reading time &asymp;</span>
-              <span>9 mins.</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="匹配算法的数据结构-字典树前缀树"><a class="markdownIt-Anchor" href="#匹配算法的数据结构-字典树前缀树"></a> 匹配算法的数据结构 – 字典树/前缀树</h1>
-<p>匹配算法的操作需要不断判断字符串是否在词典中，如果使用一般的集合TreeMap的话，复杂度为O(log n)，这里我们引用一种新的数据结构：字典树。<br />
-字典树就是典型的前缀树：前缀相同的单词一定通过同一节点。</p>
-<ul>
-<li>一些定义：<br />
-<strong>边</strong>代表字符<br />
-<strong>字符集合</strong>定义了所有边上可能出现的字符。<br />
-<strong>节点</strong>则标记是否为词尾，只是为了方便描述而加上的。<br />
-如果从根可以走到<strong>终点节点</strong>，则这一条<strong>路径</strong>的所有边构成一个单词。</li>
-<li>一些操作：增删改查</li>
-<li>如果“自然”不存在于前缀树中，则所有以“自然”开头的单词都不存在于前缀树中，所以我们可以提前终止扫描。</li>
-</ul>
-<h1 id="基本数据结构"><a class="markdownIt-Anchor" href="#基本数据结构"></a> 基本数据结构</h1>
-<h2 id="节点-node"><a class="markdownIt-Anchor" href="#节点-node"></a> 节点 Node</h2>
-<p>在python中，是一个继承object的类，名为Node。</p>
-<ul>
-<li>属性：1. children字典，键表示边，值表示节点标志。  2. value值，表示当前的节点标志，即<strong>查询到的前缀</strong>。</li>
-<li>方法：add_child，输入边上字符char，节点状态value，和标签overwrite判断是否覆盖。</li>
-</ul>
-<p>伪代码：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">add_child(char, value, overwrite)：</span><br><span class="line">    child = 判断当前节点是否有待插入节点</span><br><span class="line">    如果没有待插入节：</span><br><span class="line">        child = 新建 Node(value)</span><br><span class="line">        插入到self中的children字典中去 children[输入边字符] = 节点标志</span><br><span class="line">    else：  //（如果有这个节点，child不是none）</span><br><span class="line">        如果overwrite标志为true：</span><br><span class="line">            重写children中的value值</span><br><span class="line">    return child</span><br></pre></td></tr></table></figure>
-<p>python代码：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"># char表示子节点键，表示当前的字符串，value表示字节节点的值</span><br><span class="line"># 返回插入的child（Node类）</span><br><span class="line">def _add_child(self, char, value, overwrite=False):</span><br><span class="line">    # 判断是否有该节点</span><br><span class="line">    child = self._children.get(char)</span><br><span class="line">    # 未找到该子节点返回none</span><br><span class="line">    if child is None:</span><br><span class="line">        # 新建节点并且添加到子节点列表</span><br><span class="line">        child = Node(value)</span><br><span class="line">        self._children[char] = child</span><br><span class="line">    # 如果允许重写</span><br><span class="line">    elif overwrite:</span><br><span class="line">        child._value = value</span><br><span class="line">    return child</span><br></pre></td></tr></table></figure>
-<h2 id="字典树-trie"><a class="markdownIt-Anchor" href="#字典树-trie"></a> 字典树 Trie</h2>
-<p>字典树继承了Node类，同时加入了contains，getitem(key)，setitem(方法)。<br />
-- 查询，如果父节点有满足条件的边，则转移到子节点；否则失败查询不到。<br />
-- 增加，本质也是查询，不过在状态转移失败时加入子节点。</p>
-<ul>
-<li>代码：这里使用了python的魔术方法</li>
-</ul>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">class Trie(Node):</span><br><span class="line">    def __init__(self) -&gt; None:</span><br><span class="line">        super().__init__(None)</span><br><span class="line"></span><br><span class="line">    def __contains__(self, key):</span><br><span class="line">        return self[key] is not None</span><br><span class="line"></span><br><span class="line">    def __getitem__(self, key):</span><br><span class="line">        state = self</span><br><span class="line">        # key是一个字符串列表，不断更新state</span><br><span class="line">        for char in key:</span><br><span class="line">            print(&quot;__getitem__：&quot;, char)</span><br><span class="line">            state = state._children.get(char)</span><br><span class="line">            if state is None:</span><br><span class="line">                return None</span><br><span class="line">        # 返回的是value值</span><br><span class="line">        return state._value</span><br><span class="line"></span><br><span class="line">    def __setitem__(self, key, value):</span><br><span class="line">        state = self</span><br><span class="line">        # 先查询</span><br><span class="line">        for i, char in enumerate(key):</span><br><span class="line">            if i &lt; len(key) - 1:</span><br><span class="line">                # 不断返回子节点，中途出现没有则直接添加</span><br><span class="line">                state = state._add_child(char, None, False)</span><br><span class="line">            # 找到最后的节点，只有叶节点才允许覆盖</span><br><span class="line">            else:</span><br><span class="line">                state = state._add_child(char, value, True)</span><br></pre></td></tr></table></figure>
-<p>value是我们手动赋给他们的值<br />
-一般只有单词结尾的字符才有value<br />
-一般是一个标注，表示这个单词的一些属性</p>
-<h2 id="散列函数"><a class="markdownIt-Anchor" href="#散列函数"></a> 散列函数</h2>
-<ul>
-<li>散列的概念属于查找，它不以关键字的比较为基本操作，采用直接寻址技术。</li>
-<li>hash函数就是把任意长的输入字符串变化成整数的一种函数。</li>
-<li>相同对象，散列值必须相同。</li>
-<li>完美散列：对象不同，散列值不同。</li>
-</ul>
-<h3 id="python中的散列"><a class="markdownIt-Anchor" href="#python中的散列"></a> python中的散列</h3>
-<p>python中没有char类型，词散列函数的结果是str类型的散列函数，64位系统返回的是64位的整数。<br />
-但是Unicode字符只有136690个，哈希值过于分散。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ python3</span><br><span class="line">&gt;&gt;&gt; hash(&#x27;池&#x27;) - hash(&#x27;江&#x27;)</span><br><span class="line">-18199997415614011790</span><br></pre></td></tr></table></figure>
-<h3 id="java中的散列"><a class="markdownIt-Anchor" href="#java中的散列"></a> java中的散列</h3>
-<p>java中支持char数据类型，并且编码为UTF-16，即每个字符映射为16位整数，恰好是完美散列。</p>
-<h1 id="字典树的其他应用"><a class="markdownIt-Anchor" href="#字典树的其他应用"></a> 字典树的其他应用</h1>
-<h2 id="停用词过滤"><a class="markdownIt-Anchor" href="#停用词过滤"></a> 停用词过滤</h2>
-<p>HanLP提供了一个小巧的停用词词典，位于data/dictionary/stopwords.txt，收录了常见的中英文无意义词汇，每行一个词语。</p>
-<ul>
-<li>代码示例：</li>
-</ul>
-<ol>
-<li>得到停用词字典树</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"># 加载字典到DAT</span><br><span class="line"># 从路径加载</span><br><span class="line"># 返回DAT类型的停用词字典树</span><br><span class="line">def load_from_file(path):</span><br><span class="line">    map = JClass(&#x27;java.util.TreeMap&#x27;)()</span><br><span class="line">    with open(path) as src:</span><br><span class="line">        for word in src:</span><br><span class="line">            word = word.strip()</span><br><span class="line">            map[word] = word</span><br><span class="line">    return JClass(&#x27;com.hankcs.hanlp.collection.trie.DoubleArrayTrie&#x27;)(map)</span><br><span class="line"></span><br><span class="line"># 从单词列表加载</span><br><span class="line">def load_from_words(*words):</span><br><span class="line">    map = JClass(&#x27;java.util.TreeMao&#x27;)()</span><br><span class="line">    for word in words:</span><br><span class="line">        map[word] = word</span><br><span class="line">    return JClass(&#x27;com.hankcs.hanlp.collection.trie.DoubleArrayTrie&#x27;)(map)</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>根据停用词字典树过滤分词数组：</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">def remove_stop_termlist(termlist, trie):</span><br><span class="line">    return [term.word for term in termlist if not trie.containsKey(term.word)]</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>测试</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"># 加载字典树</span><br><span class="line">trie = load_from_file(HanLP.Config.CoreStopWordDictionaryPath)</span><br><span class="line">HanLP.Config.ShowTermNature = False</span><br><span class="line">text = &quot;这个东西也就那个样子吧比较一般了&quot;</span><br><span class="line"></span><br><span class="line"># 分词</span><br><span class="line">segment = DoubleArrayTrieSegment()</span><br><span class="line">termList = segment.seg(text)</span><br><span class="line">print(&quot;分词结果：&quot;, termList)</span><br><span class="line"></span><br><span class="line"># 删除停用词</span><br><span class="line">print(&quot;去除停用（file）：&quot;, remove_stop_termlist(termList, trie))</span><br><span class="line"></span><br><span class="line"># 删除自定义单词</span><br><span class="line">trie = load_from_words(&quot;比较&quot;, &#x27;也&#x27;, &#x27;就&#x27;, &#x27;吧&#x27;, &#x27;了&#x27;, &#x27;这个&#x27;, &#x27;那个&#x27;)</span><br><span class="line">print(&quot;去除停用（words)：&quot;, remove_stop_termlist(termList, trie))</span><br></pre></td></tr></table></figure>
-<h2 id="停用词替换操作"><a class="markdownIt-Anchor" href="#停用词替换操作"></a> 停用词替换操作</h2>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">from jpype import JString</span><br><span class="line"></span><br><span class="line">def replace_stropwords_text(text, replacement, trie):</span><br><span class="line">    searcher = trie.getLongestSearcher(JString(text), 0)</span><br><span class="line">    offset = 0</span><br><span class="line">    result = &#x27;&#x27;</span><br><span class="line">    while searcher.next():</span><br><span class="line">        begin = searcher.begin</span><br><span class="line">        end = begin + searcher.length</span><br><span class="line">        if begin &gt; offset:</span><br><span class="line">            result += text[offset: begin]</span><br><span class="line">        result += replacement</span><br><span class="line">        offset = end</span><br><span class="line">    if offset &lt; len(text):</span><br><span class="line">        result += text[offset:]</span><br><span class="line">    return result</span><br><span class="line"></span><br><span class="line">if __name__ == &#x27;__main__&#x27;:</span><br><span class="line">    text = &quot;停用词的意义相对而言无关紧要的词吧&quot;</span><br><span class="line">    trie = load_from_words(&quot;的&quot;, &quot;相对而言&quot;, &quot;吧&quot;)</span><br><span class="line">    print(&quot;不分词去掉停用词:&quot;, replace_stropwords_text(text, &quot;**&quot;, trie))</span><br><span class="line"></span><br><span class="line">&gt;&gt;&gt; 不分词去掉停用词: 停用词**意义**无关紧要**词**</span><br></pre></td></tr></table></figure>
-<h2 id="繁简转换"><a class="markdownIt-Anchor" href="#繁简转换"></a> 繁简转换</h2>
-<p>P89</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1796,7 +1816,7 @@ To enable <strong>Flash Attention</strong> or to check that it is available in a
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">364</span>
+          <span class="site-state-item-count">366</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1848,13 +1868,13 @@ To enable <strong>Flash Attention</strong> or to check that it is available in a
       <i class="fa fa-chart-area"></i>
     </span>
       <span class="post-meta-item-text">Symbols count total: </span>
-    <span title="Symbols count total">626k</span>
+    <span title="Symbols count total">629k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span class="post-meta-item-text">Reading time total &asymp;</span>
-    <span title="Reading time total">69:34</span>
+    <span title="Reading time total">69:53</span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
